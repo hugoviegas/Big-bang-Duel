@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Rye&family=Permanent+Marker&family=Oswald:wght@300;400;700&family=Outfit:wght@300;400;700&display=swap');
+
+@import './animations.css';
+@import './western.css';
+
+@theme {
+  --color-sand: #D4A855;
+  --color-sand-light: #F0D080;
+  --color-brown-dark: #3B1F0A;
+  --color-brown-mid: #7B4A1E;
+  --color-brown-light: #A0522D;
+  --color-red-west: #C0392B;
+  --color-red-700: #8B0000;
+  --color-gold: #FFD700;
+  --color-sky: #87CEEB;
+  --color-sunset-1: #FF6B35;
+  --color-sunset-2: #F7C59F;
+  --color-black-ink: #1A0A00;
+  --color-parchment: #F5E6C8;
+
+  --font-western: "Rye", serif;
+  --font-marker: "Permanent Marker", cursive;
+  --font-stats: "Oswald", sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-parchment);
+    color: var(--color-black-ink);
+    font-family: var(--font-marker);
+    overflow-x: hidden;
+  }
+}
