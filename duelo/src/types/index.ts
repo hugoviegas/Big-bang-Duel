@@ -88,9 +88,13 @@ export interface LeaderboardEntry {
 export interface Room {
   id: string;
   hostId: string;
+  hostName: string;
   guestId: string | null;
+  guestName: string | null;
+  hostChoice: string | null;
+  guestChoice: string | null;
   mode: GameMode;
-  status: 'waiting' | 'in_progress' | 'finished';
-  gameState: GameState;
+  status: 'waiting' | 'in_progress' | 'resolving' | 'finished';
+  gameState?: GameState;
   createdAt: number;
 }

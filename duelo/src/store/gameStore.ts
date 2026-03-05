@@ -206,8 +206,36 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     }, 1200);
   },
 
-  syncFromFirebase: (_roomData, _isHost) => {
-    // Firebase sync placeholder
+  syncFromFirebase: (roomData, isHost) => {
+    if (!roomData) return;
+
+    const myRole = isHost ? 'host' : 'guest';
+    const otherRole = isHost ? 'guest' : 'host';
+
+    // Basic state update
+    set(state => ({
+      mode: roomData.mode || state.mode,
+      roomId: roomData.id,
+      isOnline: true,
+      phase: roomData.status === 'in_progress' ? (state.phase === 'idle' ? 'selecting' : state.phase) : state.phase,
+      player: {
+        ...state.player,
+        life: roomData[`${myRole}Life`] ?? state.player.life,
+        ammo: roomData[`${myRole}Ammo`] ?? state.player.ammo,
+        selectedCard: roomData[`${myRole}Choice`] as CardType || null,
+      },
+      opponent: {
+        ...state.opponent,
+        displayName: isHost ? (roomData.guestName || 'Inimigo') : (roomData.hostName || 'Host'),
+        life: roomData[`${otherRole}Life`] ?? state.opponent.life,
+        ammo: roomData[`${otherRole}Ammo`] ?? state.opponent.ammo,
+        selectedCard: roomData.status === 'resolving' ? (roomData[`${otherRole}Choice`] as CardType) : null,
+      }
+    }));
+
+    // If both have chosen, and we are not yet resolving, maybe local state needs to trigger?
+    // Actually, in online mode, we should wait for a designated 'resolving' status from Firebase 
+    // to ensure both see the same result at the same time.
   },
 
   setPhase: (phase) => set({ phase }),

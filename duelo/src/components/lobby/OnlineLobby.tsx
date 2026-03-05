@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFirebaseRoom } from '../../hooks/useFirebase';
+import { useGameStore } from '../../store/gameStore';
 
 const CHARACTERS = [
   { id: 'marshal', name: 'The Marshal', img: '/assets/characters/the_marshal.png' },
@@ -18,6 +19,8 @@ export function OnlineLobby() {
   const handleCreate = async () => {
     const roomId = await createRoom('normal');
     if (roomId) {
+      // Initialize locally as host
+      useGameStore.getState().initializeGame('normal', true, roomId, undefined, selectedChar);
       navigate(`/game?room=${roomId}`);
     }
   };
@@ -30,6 +33,8 @@ export function OnlineLobby() {
     }
     const success = await joinRoom(joinCode.toUpperCase());
     if (success) {
+      // Initialize locally as guest
+      useGameStore.getState().initializeGame('normal', true, joinCode.toUpperCase(), undefined, selectedChar);
       navigate(`/game?room=${joinCode.toUpperCase()}`);
     } else {
       setError('Sala não encontrada ou cheia');

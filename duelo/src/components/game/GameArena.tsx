@@ -5,18 +5,25 @@ import { StatusBar } from './StatusBar';
 import { CardHand } from './CardHand';
 import { TurnResultOverlay } from './TurnResult';
 import { GameOver } from './GameOver';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useMatchSync } from '../../hooks/useFirebase';
 
 export function GameArena() {
   const { player, opponent, phase, turn, lastResult } = useGameStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const roomId = searchParams.get('room');
+
+  // Sync with Firebase if online
+  useMatchSync(roomId);
 
   useEffect(() => {
     const state = useGameStore.getState();
-    if (state.phase === 'idle') {
+    // Only redirect if NOT in an online room AND phase is idle
+    if (state.phase === 'idle' && !roomId) {
       navigate('/menu');
     }
-  }, [navigate]);
+  }, [navigate, roomId]);
 
   const isShaking = phase === 'animating' && lastResult && (lastResult.playerLifeLost > 0 || lastResult.opponentLifeLost > 0);
 

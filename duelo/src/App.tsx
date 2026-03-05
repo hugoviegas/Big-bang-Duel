@@ -13,6 +13,7 @@ function App() {
       <Route path="/game" element={<GamePage />} />
       <Route path="/online" element={<OnlinePage />} />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
+      <Route path="*" element={<IndexPage />} />
     </Routes>
   );
 }

@@ -11,8 +11,11 @@ const CARD_DETAILS: Record<CardType, { label: string; description: string; cost:
   counter: { label: 'Contra-golpe', description: 'Desvia e contra-ataca. Gasta 1 bala. Só funciona contra tiros.', cost: 1 }
 };
 
+import { useFirebaseRoom } from '../../hooks/useFirebase';
+
 export function CardHand() {
-  const { mode, player, phase, selectCard, resolveTurn, isOnline } = useGameStore();
+  const { mode, player, phase, selectCard, resolveTurn, isOnline, roomId } = useGameStore();
+  const { submitChoice } = useFirebaseRoom();
 
   const handleSelect = (cardId: string) => {
     if (phase !== 'selecting') return;
@@ -23,6 +26,8 @@ export function CardHand() {
     if (player.selectedCard && phase === 'selecting') {
       if (!isOnline) {
         resolveTurn();
+      } else if (roomId) {
+        submitChoice(roomId, player.selectedCard);
       }
     }
   };
