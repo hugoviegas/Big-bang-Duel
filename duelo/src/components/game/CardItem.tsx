@@ -3,49 +3,53 @@ import type { CardType } from '../../types';
 interface CardItemProps {
   id: CardType;
   label: string;
+  description: string;
   ammoCost: number;
   isSelected?: boolean;
   isSelectable?: boolean;
   onClick?: () => void;
 }
 
-export function CardItem({ id, label, ammoCost, isSelected, isSelectable = true, onClick }: CardItemProps) {
-  const getCardImage = (cardId: CardType) => {
-    const fileMap: Record<CardType, string> = {
-      shot: 'card_shoot.png',
-      double_shot: 'card_double_shoot.png',
-      dodge: 'card_dodge.png',
-      reload: 'card_reload.png',
-      counter: 'card_counter.png'
-    };
-    return `/assets/cards/${fileMap[cardId]}`;
-  };
+const CARD_IMAGES: Record<CardType, string> = {
+  shot: '/assets/cards/card_shoot.png',
+  double_shot: '/assets/cards/card_double_shoot.png',
+  dodge: '/assets/cards/card_dodge.png',
+  reload: '/assets/cards/card_reload.png',
+  counter: '/assets/cards/card_counter.png'
+};
 
+export function CardItem({ id, label, description, ammoCost, isSelected, isSelectable = true, onClick }: CardItemProps) {
   return (
     <button 
       onClick={isSelectable ? onClick : undefined}
       disabled={!isSelectable}
       className={`
-        card-item relative shrink-0 w-28 h-40 transition-all duration-300 pointer-events-auto
-        flex flex-col items-center justify-end p-2 overflow-hidden bg-parchment
-        ${isSelected ? 'selected scale-110 z-10 -translate-y-4' : 'hover:-translate-y-2'}
-        ${!isSelectable ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}
+        card-item relative shrink-0 w-[80px] h-[110px] sm:w-[90px] sm:h-[125px] md:w-[100px] md:h-[140px]
+        flex flex-col items-center justify-end overflow-hidden group
+        ${isSelected ? 'selected scale-105 -translate-y-3 z-10' : 'hover:-translate-y-2'}
+        ${!isSelectable ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer'}
       `}
       style={{
-        backgroundImage: "url('" + getCardImage(id) + "')",
+        backgroundImage: "url('" + CARD_IMAGES[id] + "')",
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        boxShadow: isSelected ? '0 10px 25px rgba(0,0,0,0.5), 0 0 15px rgba(212,168,85,0.8)' : '0 4px 6px rgba(0,0,0,0.3)',
-        borderRadius: '12px',
-        border: isSelected ? '3px solid var(--color-gold)' : '3px solid var(--color-brown-dark)'
+        borderRadius: '10px',
+        border: isSelected ? '3px solid var(--color-gold)' : '2px solid var(--color-brown-dark)',
+        boxShadow: isSelected 
+          ? '0 8px 20px rgba(0,0,0,0.5), 0 0 15px rgba(255,215,0,0.6)' 
+          : '0 4px 8px rgba(0,0,0,0.4)',
       }}
+      title={description}
     >
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-0" />
-      <div className="relative z-10 w-full text-center">
-        <div className="font-western tracking-wider text-sand-light uppercase text-sm drop-shadow-md mb-1">{label}</div>
-        <div className="font-stats text-xs font-bold text-red-west w-full bg-parchment/90 rounded border border-brown-dark shadow">
-          {ammoCost > 0 ? "CUSTO: " + ammoCost + " B." : (id === 'reload' ? '+1 BALA' : 'GRÁTIS')}
+      {/* Dark gradient overlay at bottom */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent z-0 rounded-[8px]" />
+      
+      {/* Card info */}
+      <div className="relative z-10 w-full p-1.5 text-center">
+        <div className="font-western text-[10px] sm:text-xs text-sand-light tracking-wider leading-tight drop-shadow-md">{label}</div>
+        <div className="font-stats text-[9px] sm:text-[10px] font-bold mt-0.5 px-1 py-0.5 rounded bg-black/40 text-sand-light/90">
+          {ammoCost > 0 ? ammoCost + " BALA" + (ammoCost > 1 ? 'S' : '') : (id === 'reload' ? '+1 BALA' : 'GRÁTIS')}
         </div>
       </div>
     </button>

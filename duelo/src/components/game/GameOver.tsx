@@ -1,57 +1,127 @@
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 
+const AVATAR_IMAGES: Record<string, string> = {
+  marshal: '/assets/characters/the_marshal.png',
+  skull: '/assets/characters/the_skull.png',
+  la_dama: '/assets/characters/la_dama.png',
+  player1: '/assets/characters/the_marshal.png',
+  villain: '/assets/characters/the_skull.png',
+  bot: '/assets/characters/the_skull.png',
+};
+
 export function GameOver() {
-  const { winnerId, player, opponent, quitGame } = useGameStore();
+  const { winnerId, player, opponent, history, turn, mode, quitGame, initializeGame, botDifficulty } = useGameStore();
   const navigate = useNavigate();
 
   let title = 'EMPATE!';
-  let color = 'text-yellow-400';
+  let titleColor = 'text-gold';
+  let bgGradient = 'from-yellow-900/90 to-black/90';
+  let winnerAvatar = '';
+
   if (winnerId === player.id) {
     title = 'VITÓRIA!';
-    color = 'text-green-400';
+    titleColor = 'text-green-400';
+    bgGradient = 'from-green-900/80 to-black/90';
+    winnerAvatar = AVATAR_IMAGES[player.avatar] || AVATAR_IMAGES.marshal;
   } else if (winnerId === opponent.id) {
     title = 'DERROTA!';
-    color = 'text-red-500';
+    titleColor = 'text-red-500';
+    bgGradient = 'from-red-900/80 to-black/90';
+    winnerAvatar = AVATAR_IMAGES[opponent.avatar] || AVATAR_IMAGES.skull;
+  } else {
+    winnerAvatar = '/assets/ui/logo_bbd.png';
   }
 
-  const handleMainMenu = () => {
+  // Calculate stats
+  const playerCardsUsed = history.reduce((acc, h) => {
+    acc[h.playerCard] = (acc[h.playerCard] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const mostUsedCard = Object.entries(playerCardsUsed).sort((a, b) => b[1] - a[1])[0];
+  const totalPlayerDamage = history.reduce((sum, h) => sum + h.opponentLifeLost, 0);
+  const totalDamageTaken = history.reduce((sum, h) => sum + h.playerLifeLost, 0);
+
+  const handleRematch = () => {
+    initializeGame(mode, false, undefined, botDifficulty || 'medium', player.avatar);
+    // Phase is set to 'selecting' by initializeGame, so we stay on /game
+  };
+
+  const handleMenu = () => {
     quitGame();
     navigate('/menu');
   };
 
+  const CARD_LABELS: Record<string, string> = {
+    shot: 'Tiro', double_shot: 'Tiro Duplo', dodge: 'Desvio', reload: 'Recarga', counter: 'Contra-golpe'
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-      <div className="bg-parchment p-8 rounded-2xl border-8 border-brown-dark max-w-md w-full flex flex-col items-center">
-        <h1 className={`font-western text-6xl mb-6 ${color} drop-shadow-lg`}>{title}</h1>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b ${bgGradient} p-4`}
+    >
+      <motion.div 
+        initial={{ scale: 0.8, y: 30 }}
+        animate={{ scale: 1, y: 0 }}
+        transition={{ type: 'spring', damping: 15, stiffness: 200 }}
+        className="card-wood p-6 md:p-8 max-w-md w-full flex flex-col items-center"
+      >
+        {/* Winner image */}
+        <motion.img
+          src={winnerAvatar}
+          alt=""
+          initial={{ scale: 0, rotate: -10 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', delay: 0.2 }}
+          className="w-28 h-32 md:w-36 md:h-40 object-contain -mt-20 drop-shadow-2xl"
+        />
+
+        {/* Title */}
+        <motion.h1
+          initial={{ scale: 0 }}
+          animate={{ scale: [0, 1.2, 1] }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className={`font-western text-5xl md:text-6xl ${titleColor} text-glow-gold mt-2 mb-4`}
+        >
+          {title}
+        </motion.h1>
         
-        <div className="w-full bg-white/50 p-4 rounded-lg mb-8 font-stats text-lg text-brown-dark">
-          <div className="flex justify-between border-b border-brown-dark/30 pb-2">
-            <span>Seu Herói:</span>
-            <span className="font-bold">{player.displayName}</span>
+        {/* Stats */}
+        <div className="w-full bg-black/30 rounded-xl p-4 mb-6 space-y-2 font-stats text-sm text-sand-light">
+          <div className="flex justify-between border-b border-sand/10 pb-1">
+            <span className="text-sand/60">Turnos jogados</span>
+            <span className="font-bold">{turn}</span>
           </div>
-          <div className="flex justify-between pt-2">
-            <span>Vilão:</span>
-            <span className="font-bold">{opponent.displayName}</span>
+          <div className="flex justify-between border-b border-sand/10 pb-1">
+            <span className="text-sand/60">Dano causado</span>
+            <span className="font-bold text-green-400">{totalPlayerDamage}</span>
           </div>
+          <div className="flex justify-between border-b border-sand/10 pb-1">
+            <span className="text-sand/60">Dano recebido</span>
+            <span className="font-bold text-red-400">{totalDamageTaken}</span>
+          </div>
+          {mostUsedCard && (
+            <div className="flex justify-between">
+              <span className="text-sand/60">Carta favorita</span>
+              <span className="font-bold text-gold">{CARD_LABELS[mostUsedCard[0]] || mostUsedCard[0]} ({mostUsedCard[1]}x)</span>
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-col gap-4 w-full">
-          {/* Rematch could go here */}
-          <button 
-            onClick={() => window.location.reload()} // For solo rematch
-            className="w-full py-4 bg-sand text-brown-dark font-western text-2xl rounded border-4 border-brown-dark hover:bg-sand-light transition-colors"
-          >
+        {/* Buttons */}
+        <div className="w-full space-y-3">
+          <button onClick={handleRematch} className="btn-western animate-pulse-glow">
             REVANCHE
           </button>
-          <button 
-            onClick={handleMainMenu}
-            className="w-full py-4 bg-brown-dark text-gold font-western text-2xl rounded border-4 border-black hover:bg-brown-mid transition-colors"
-          >
+          <button onClick={handleMenu} className="btn-western btn-danger">
             MENU PRINCIPAL
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

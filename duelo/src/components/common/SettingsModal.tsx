@@ -11,42 +11,62 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-parchment p-8 rounded-2xl border-8 border-brown-dark max-w-sm w-full font-western text-brown-dark relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="card-wood p-6 md:p-8 max-w-sm w-full relative" onClick={e => e.stopPropagation()}>
+        {/* Close button */}
         <button 
           onClick={onClose}
-          className="absolute top-2 right-4 text-3xl hover:text-red-west transition-colors"
+          className="absolute top-3 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-black/30 hover:bg-red-west/60 text-sand text-xl transition-colors"
         >
           &times;
         </button>
         
-        <h2 className="text-4xl text-center mb-8 border-b-4 border-brown-dark/30 pb-2">CONFIGURAÇÕES</h2>
+        <h2 className="font-western text-3xl text-gold text-center mb-6 text-glow-gold">CONFIGURAÇÕES</h2>
         
-        <div className="flex flex-col gap-6 font-stats text-xl font-bold">
-          <div className="flex justify-between items-center">
-            <span>SOM / MÚSICA</span>
+        <div className="space-y-5">
+          {/* Sound Toggle */}
+          <div className="flex justify-between items-center bg-black/20 px-4 py-3 rounded-xl">
+            <div>
+              <span className="font-western text-sm text-sand-light tracking-wider">SOM / MÚSICA</span>
+              <p className="font-stats text-xs text-sand/50 mt-0.5">{isMuted ? 'Desativado' : 'Ativado'}</p>
+            </div>
             <button 
               onClick={toggleMute}
-              className={`w-16 h-8 rounded-full border-2 border-brown-dark relative transition-colors ${isMuted ? 'bg-gray-400' : 'bg-green-500'}`}
+              className={`w-14 h-7 rounded-full border-2 relative transition-all duration-300 ${
+                isMuted 
+                  ? 'bg-gray-600 border-gray-500' 
+                  : 'bg-green-600 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
+              }`}
             >
-              <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full transition-transform ${isMuted ? 'left-1' : 'right-1'}`} />
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${
+                isMuted ? 'left-1' : 'left-7'
+              }`} />
             </button>
           </div>
           
-          <div className="flex flex-col gap-2 mt-4">
-            <span className="text-sm uppercase text-brown-mid">Idioma</span>
-            <select className="p-2 border-2 border-brown-dark rounded bg-sand-light font-stats" defaultValue="pt-BR">
+          {/* Language */}
+          <div className="bg-black/20 px-4 py-3 rounded-xl">
+            <span className="font-western text-sm text-sand-light tracking-wider">IDIOMA</span>
+            <select className="w-full mt-2 p-2 bg-parchment border-2 border-brown-dark rounded-lg font-stats text-brown-dark focus:outline-none focus:border-gold" defaultValue="pt-BR">
               <option value="pt-BR">Português (Brasil)</option>
               <option value="en-US">English</option>
             </select>
           </div>
+
+          {/* Screen shake toggle (accessibility) */}
+          <div className="flex justify-between items-center bg-black/20 px-4 py-3 rounded-xl">
+            <div>
+              <span className="font-western text-sm text-sand-light tracking-wider">SCREEN SHAKE</span>
+              <p className="font-stats text-xs text-sand/50 mt-0.5">Vibração da tela ao tomar dano</p>
+            </div>
+            <div className="w-14 h-7 rounded-full border-2 bg-green-600 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] relative cursor-pointer">
+              <div className="absolute top-0.5 left-7 w-5 h-5 bg-white rounded-full shadow" />
+            </div>
+          </div>
         </div>
 
-        <button 
-          onClick={onClose}
-          className="w-full mt-8 py-3 bg-red-west text-gold text-2xl rounded border-4 border-brown-dark hover:bg-red-700 transition-colors shadow-md"
-        >
-          CONFIRMAR
+        <button onClick={onClose} className="btn-western btn-danger mt-6">
+          FECHAR
         </button>
       </div>
     </div>

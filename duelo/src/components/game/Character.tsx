@@ -6,43 +6,43 @@ interface CharacterProps {
   isRight?: boolean;
 }
 
+const AVATAR_IMAGES: Record<string, string> = {
+  marshal: '/assets/characters/the_marshal.png',
+  skull: '/assets/characters/the_skull.png',
+  la_dama: '/assets/characters/la_dama.png',
+  // fallbacks
+  player1: '/assets/characters/the_marshal.png',
+  villain: '/assets/characters/the_skull.png',
+  bot: '/assets/characters/the_skull.png',
+};
+
+const charVariants = {
+  idle:    { y: [0, -6, 0], transition: { repeat: Infinity, duration: 2.5, ease: 'easeInOut' as const } },
+  shoot:   { x: [0, 15, 0], scale: [1, 1.05, 1], transition: { duration: 0.3 } },
+  dodge:   { x: [0, -50, 0], y: [0, -20, 0], transition: { duration: 0.4, ease: 'easeOut' as const } },
+  reload:  { rotate: [0, -8, 0], scale: [1, 0.95, 1], transition: { duration: 0.5 } },
+  hit:     { x: [0, -15, 12, -8, 0], transition: { duration: 0.4 } },
+  death:   { y: [0, 80], opacity: [1, 0.3, 0], rotate: [0, 15], transition: { duration: 0.8 } },
+  counter: { scale: [1, 1.2, 0.95, 1.1, 1], transition: { duration: 0.5 } },
+};
+
 export function Character({ player, isRight = false }: CharacterProps) {
-  const charVariants = {
-    idle:    { y: [0, -8, 0], transition: { repeat: Infinity, duration: 2 } },
-    shoot:   { x: [0, 20, 0], transition: { duration: 0.3 } },
-    dodge:   { x: [0, -60, 0], y: [0, -30, 0], transition: { duration: 0.4 } },
-    reload:  { rotate: [0, -10, 0], transition: { duration: 0.5 } },
-    hit:     { x: [0, -20, 20, -10, 0], transition: { duration: 0.4 } },
-    death:   { y: [0, 100], opacity: [1, 0.5, 0], transition: { duration: 0.8 } },
-    counter: { scale: [1, 1.3, 0.9, 1.1, 1], transition: { duration: 0.5 } },
-  };
-
-  // Flip opponent to face player if needed
   const scaleX = isRight ? -1 : 1;
-
-  // Render a placeholder or the actual image
-  // We use Framer Motion variants to animate a static PNG.
-  const getImageForAvatar = (avatar: string) => {
-    if (avatar === 'marshal' || avatar === 'player1') return '/assets/characters/the_marshal.png';
-    if (avatar === 'villain' || avatar === 'bot') return '/assets/characters/the_skull.png';
-    return '/assets/characters/the_marshal.png'; // default fallback
-  };
+  const imgSrc = AVATAR_IMAGES[player.avatar] || AVATAR_IMAGES.marshal;
 
   return (
-    <div className="relative flex flex-col items-center justify-center w-64 h-80">
+    <div className="relative flex flex-col items-center justify-end">
       <motion.img
-        src={getImageForAvatar(player.avatar)}
+        src={imgSrc}
         alt={player.displayName}
         variants={charVariants}
         animate={player.currentAnimation}
         initial="idle"
         style={{ scaleX }}
-        className="w-full h-full object-contain filter drop-shadow-2xl z-10"
+        className="w-32 h-40 sm:w-44 sm:h-56 md:w-56 md:h-72 lg:w-64 lg:h-80 object-contain filter drop-shadow-2xl z-10"
       />
-      {/* Action Text Badge */}
-      <div className="absolute -bottom-8 bg-black/60 text-sand-light px-4 py-1 rounded-full font-western tracking-widest text-sm whitespace-nowrap z-20 border-2 border-brown-dark shadow-md">
-        {player.isAnimating ? player.currentAnimation.toUpperCase() : 'AGUARDANDO...'}
-      </div>
+      {/* Shadow under character */}
+      <div className="w-24 h-3 bg-black/30 rounded-full blur-sm -mt-2" />
     </div>
   );
 }

@@ -8,52 +8,82 @@ import { GameOver } from './GameOver';
 import { useNavigate } from 'react-router-dom';
 
 export function GameArena() {
-  const { player, opponent, phase, lastResult } = useGameStore();
+  const { player, opponent, phase, turn, lastResult } = useGameStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If we land here directly via URL, just send back to menu to enforce flow
     const state = useGameStore.getState();
     if (state.phase === 'idle') {
       navigate('/menu');
     }
   }, [navigate]);
 
-  return (
-    <div className="relative w-full h-full min-h-screen bg-[url('/assets/ui/bg_desert_portrait.png')] md:bg-[url('/assets/ui/bg_desert_landscape.png')] bg-cover bg-center overflow-hidden font-western">
-      {/* Dark overlay for contrast */}
-      <div className="absolute inset-0 bg-black/30 pointer-events-none" />
+  const isShaking = phase === 'animating' && lastResult && (lastResult.playerLifeLost > 0 || lastResult.opponentLifeLost > 0);
 
-      {/* Main UI Container */}
-      <div className="relative z-10 w-full h-full max-w-7xl mx-auto flex flex-col p-4">
+  return (
+    <div className={`relative w-full min-h-[100svh] bg-[url('/assets/ui/bg_desert_portrait.png')] md:bg-[url('/assets/ui/bg_desert_landscape.png')] bg-cover bg-center overflow-hidden ${isShaking ? 'screen-shake' : ''}`}>
+      {/* Atmosphere overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none" />
+
+      {/* Dust particles */}
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="dust-particle absolute rounded-full bg-sand/40 pointer-events-none z-0"
+          style={{
+            width: `${2 + Math.random() * 4}px`,
+            height: `${2 + Math.random() * 4}px`,
+            left: `${10 + Math.random() * 80}%`,
+            bottom: `${Math.random() * 20}%`,
+            animationDelay: `${Math.random() * 5}s`,
+          }}
+        />
+      ))}
+
+      {/* Main Layout */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col min-h-[100svh]">
         
-        {/* Header Area */}
-        <header className="flex justify-between items-center mb-8 bg-black/30 p-2 rounded-lg backdrop-blur text-sand-light">
-          <div className="text-2xl font-bold tracking-widest drop-shadow">BIG BANG DUEL</div>
-          <div className="text-xl">TURNO: {useGameStore.getState().turn}</div>
-          <button className="text-xl px-4 py-1 hover:bg-black/50 rounded transition-colors">⚙️ MENU</button>
+        {/* ===== HEADER ===== */}
+        <header className="flex justify-between items-center p-3 md:p-4">
+          <div className="flex items-center gap-3">
+            <img src="/assets/ui/logo_bbd.png" alt="BBD" className="w-10 h-10 md:w-12 md:h-12 object-contain drop-shadow-lg" />
+            <span className="font-western text-gold text-lg md:text-xl text-glow-gold hidden sm:block">BIG BANG DUEL</span>
+          </div>
+          <div className="bg-black/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-gold/30">
+            <span className="font-western text-gold text-sm md:text-base tracking-wider">TURNO {turn}</span>
+          </div>
+          <button 
+            onClick={() => {
+              useGameStore.getState().quitGame();
+              navigate('/menu');
+            }}
+            className="bg-black/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-sand/30 font-western text-sand text-sm hover:bg-black/70 hover:border-gold/50 transition-all"
+          >
+            MENU
+          </button>
         </header>
 
-        {/* Status Bars */}
-        <div className="flex justify-between items-start mb-12">
+        {/* ===== STATUS BARS ===== */}
+        <div className="flex justify-between items-start px-3 md:px-8 gap-2">
           <StatusBar player={player} />
+          <div className="font-western text-gold text-2xl md:text-4xl text-glow-gold self-center opacity-60">VS</div>
           <StatusBar player={opponent} isRight />
         </div>
 
-        {/* Arena Layer */}
-        <div className="flex-1 flex justify-between items-end pb-48 px-4 md:px-24">
+        {/* ===== ARENA — CHARACTERS ===== */}
+        <div className="flex-1 flex items-end justify-between px-4 md:px-16 pb-4 md:pb-8 relative">
           <Character player={player} />
           <Character player={opponent} isRight />
         </div>
-        
       </div>
 
-      {/* Overlays */}
+      {/* ===== CARD HAND (Fixed Bottom) ===== */}
       <CardHand />
-      {phase === 'resolving' || phase === 'animating' ? (
-        <TurnResultOverlay narrative={lastResult?.narrative || ''} />
-      ) : null}
-      
+
+      {/* ===== OVERLAYS ===== */}
+      {(phase === 'resolving' || phase === 'animating') && lastResult && (
+        <TurnResultOverlay result={lastResult} />
+      )}
       {phase === 'game_over' && <GameOver />}
     </div>
   );
