@@ -1,9 +1,9 @@
 import type { CardType, GameMode, TurnResult, PlayerState } from '../types';
 
 export const CARDS_BY_MODE: Record<GameMode, CardType[]> = {
-  beginner: ['shot', 'dodge', 'reload'],
-  normal:   ['shot', 'double_shot', 'dodge', 'reload'],
-  advanced: ['shot', 'double_shot', 'dodge', 'reload', 'counter'],
+  beginner: ['reload', 'shot', 'dodge'],
+  normal:   ['reload', 'shot', 'dodge', 'double_shot'],
+  advanced: ['reload', 'shot', 'dodge', 'counter', 'double_shot'],
 };
 
 export const LIFE_BY_MODE: Record<GameMode, number> = {
