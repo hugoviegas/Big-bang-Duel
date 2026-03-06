@@ -222,7 +222,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         ...state.player,
         life: roomData[`${myRole}Life`] ?? state.player.life,
         ammo: roomData[`${myRole}Ammo`] ?? state.player.ammo,
-        selectedCard: roomData[`${myRole}Choice`] as CardType || null,
+        // Only overwrite selectedCard from Firebase if we're not in the middle of selecting
+        // Or if Firebase actually has a confirmed choice we don't have yet
+        selectedCard: state.phase === 'selecting' 
+          ? (state.player.selectedCard || (roomData[`${myRole}Choice`] as CardType) || null)
+          : (roomData[`${myRole}Choice`] as CardType || null),
       },
       opponent: {
         ...state.opponent,

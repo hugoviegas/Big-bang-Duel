@@ -83,7 +83,21 @@ export function useFirebaseRoom() {
     });
   };
 
-  return { createRoom, joinRoom, submitChoice, currentRoomId };
+  const getUserRooms = async () => {
+    if (!user) return [];
+    const roomsRef = ref(rtdb, 'rooms');
+    const snapshot = await get(roomsRef);
+    if (!snapshot.exists()) return [];
+
+    const roomsData = snapshot.val();
+    return Object.values(roomsData)
+      .filter((room: any) => 
+        (room.hostId === user.uid || room.guestId === user.uid) && 
+        room.status !== 'finished'
+      ) as Room[];
+  };
+
+  return { createRoom, joinRoom, submitChoice, getUserRooms, currentRoomId };
 }
 
 export function useMatchSync(roomId: string | null) {
