@@ -45,6 +45,7 @@ export interface GameState {
   isOnline: boolean;
   isHost: boolean;
   roomId: string | null;
+  roomStatus?: 'waiting' | 'in_progress' | 'resolving' | 'finished';
   winnerId: string | null;
   history: TurnResult[];
   botDifficulty?: BotDifficulty;

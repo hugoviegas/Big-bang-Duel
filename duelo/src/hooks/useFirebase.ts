@@ -92,11 +92,22 @@ export function useFirebaseRoom() {
     if (!snapshot.exists()) return [];
 
     const roomsData = snapshot.val();
-    return Object.values(roomsData)
-      .filter((room: any) => 
-        (room.hostId === user.uid || room.guestId === user.uid) && 
-        room.status !== 'finished'
-      ) as Room[];
+    const activeRooms: Room[] = [];
+    const now = Date.now();
+    const THIRTY_MINS = 30 * 60 * 1000;
+
+    for (const room of Object.values(roomsData) as any[]) {
+      if ((room.hostId === user.uid || room.guestId === user.uid) && room.status !== 'finished') {
+        // If room is waiting for more than 30 mins, mark it as finished (deleted/expired)
+        if (room.status === 'waiting' && room.createdAt && (now - room.createdAt > THIRTY_MINS)) {
+          update(ref(rtdb, `rooms/${room.id}`), { status: 'finished' }).catch(() => {});
+        } else {
+          activeRooms.push(room);
+        }
+      }
+    }
+
+    return activeRooms;
   };
 
   return { createRoom, joinRoom, submitChoice, getUserRooms, currentRoomId };
@@ -105,27 +116,43 @@ export function useFirebaseRoom() {
 export function useMatchSync(roomId: string | null) {
   const { user } = useAuthStore();
 
+  const joinRoom = async (rId: string) => {
+    if (!user) return false;
+    const roomRef = ref(rtdb, `rooms/${rId}`);
+    const snapshot = await get(roomRef);
+    if (snapshot.exists()) {
+      const room = snapshot.val() as Room;
+      // If already in game or host, allow entry without update
+      if (room.hostId === user.uid || room.guestId === user.uid) return true;
+      // Otherwise try joining as guest
+      if (room.status === 'waiting' && !room.guestId) {
+        await update(roomRef, {
+          guestId: user.uid,
+          guestName: user.displayName || 'Pistoleiro',
+          status: 'in_progress'
+        });
+        return true;
+      }
+    }
+    return false;
+  };
+
   useEffect(() => {
     if (!roomId || !user) return;
-
     const roomRef = ref(rtdb, `rooms/${roomId}`);
-    
-    // Setup disconnect handler
     const presenceRef = ref(rtdb, `rooms/${roomId}/status`);
     onDisconnect(presenceRef).set('finished');
-
     const unsubscribe = onValue(roomRef, (snapshot) => {
       if (!snapshot.exists()) return;
       const roomData = snapshot.val();
       const isHost = user.uid === roomData.hostId;
-      
-      // Use getState() to avoid stale closure and to not add gameStore to deps
       useGameStore.getState().syncFromFirebase(roomData, isHost);
     });
-
     return () => {
       unsubscribe();
       off(roomRef);
     };
-  }, [roomId, user?.uid]); // Only re-subscribe when roomId or user changes
+  }, [roomId, user?.uid]);
+
+  return { joinRoom };
 }

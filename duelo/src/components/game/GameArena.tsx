@@ -9,12 +9,23 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMatchSync } from '../../hooks/useFirebase';
 
 export function GameArena() {
-  const { player, opponent, phase, turn, lastResult } = useGameStore();
+  const { player, opponent, phase, turn, lastResult, isOnline, roomStatus } = useGameStore();
   const navigate = useNavigate();
   const { roomId } = useParams<{ roomId?: string }>();
   
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showJoinMessage, setShowJoinMessage] = useState(false);
+  
+  // Track previous room status to detect entry
+  useEffect(() => {
+    if (roomStatus === 'in_progress' && opponent.displayName !== 'El Diablo') {
+      // Just joined
+      setShowJoinMessage(true);
+      const t = setTimeout(() => setShowJoinMessage(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [roomStatus, opponent.displayName]);
 
   // Sync with Firebase if online
   useMatchSync(roomId || null);
@@ -27,13 +38,50 @@ export function GameArena() {
     }
   };
 
-  useEffect(() => {
-    const state = useGameStore.getState();
-    // Only redirect if NOT in an online room AND phase is idle
-    if (state.phase === 'idle' && !roomId) {
-      navigate('/menu');
+  const shareRoomLink = async () => {
+    if (roomId) {
+      const shareUrl = `${window.location.origin}/#/game/${roomId}`;
+      const shareData = {
+        title: 'Big Bang Duel',
+        text: `Venha me enfrentar no Big Bang Duel! Sala: ${roomId}`,
+        url: shareUrl,
+      };
+
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+        } catch (err) {
+          console.log('Share failed:', err);
+        }
+      } else {
+        // Fallback to copy link
+        navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        alert('Link da sala copiado!');
+      }
     }
-  }, [navigate, roomId]);
+  };
+
+  // Sync and expose joinRoom
+  const { joinRoom } = useMatchSync(roomId || null);
+
+  useEffect(() => {
+    const checkAndJoin = async () => {
+      const state = useGameStore.getState();
+      
+      // If we have a roomId but the game isn't initialized or we're not the host
+      if (roomId && state.phase === 'idle') {
+        // Try to join as guest or verify if we are already in
+        const success = await joinRoom(roomId);
+        if (success) {
+          state.initializeGame('normal', true, false, roomId);
+        }
+      }
+    };
+    
+    checkAndJoin();
+  }, [roomId, joinRoom]);
 
   const isShaking = phase === 'animating' && lastResult && (lastResult.playerLifeLost > 0 || lastResult.opponentLifeLost > 0);
 
@@ -150,13 +198,60 @@ export function GameArena() {
       </div>
 
       {/* ===== CARD HAND (Fixed Bottom) ===== */}
-      <CardHand />
+      {!(isOnline && roomStatus === 'waiting') && <CardHand />}
 
       {/* ===== OVERLAYS ===== */}
+      {showJoinMessage && (
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 z-50 animate-fade-up bg-black/80 backdrop-blur-sm border-2 border-gold px-8 py-3 rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.4)] pointer-events-none">
+          <span className="font-western text-gold text-xl md:text-2xl text-glow-gold">
+            {opponent.displayName.toUpperCase()} ENTROU NA SALA!
+          </span>
+        </div>
+      )}
+
       {(phase === 'resolving' || phase === 'animating') && lastResult && (
         <TurnResultOverlay result={lastResult} />
       )}
       {phase === 'game_over' && <GameOver />}
+
+      {/* WAITING OVERLAY */}
+      {isOnline && roomStatus === 'waiting' && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 text-center">
+          <div className="w-16 h-16 border-4 border-gold/20 border-t-gold rounded-full animate-spin mb-8" />
+          <h2 className="font-western text-2xl md:text-5xl text-gold mb-4 text-glow-gold">AGUARDANDO FORASTEIRO</h2>
+          <p className="font-stats text-sand/70 mb-6 text-sm md:text-lg">Envie o código da sala para seu adversário:</p>
+          
+          <div className="flex flex-col md:flex-row items-center gap-4 bg-black/60 px-6 py-4 md:px-8 md:py-6 rounded-2xl border-2 border-gold/40 shadow-[0_0_30px_rgba(212,175,55,0.15)] mb-8">
+            <span className="font-western text-3xl md:text-5xl text-sand tracking-[0.3em]">{roomId}</span>
+            <div className="flex gap-2">
+              <button 
+                onClick={copyRoomCode}
+                title="Copiar Código"
+                className={`p-3 md:p-4 rounded-xl ${copied ? 'bg-green-600/30 text-green-400 border border-green-500/50' : 'bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20'} transition-all`}
+              >
+                <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+              </button>
+              <button 
+                onClick={shareRoomLink}
+                title="Compartilhar Link"
+                className="p-3 md:p-4 rounded-xl bg-sky-600/20 text-sky-400 border border-sky-500/30 hover:bg-sky-600/30 transition-all"
+              >
+                <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+              </button>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => {
+              useGameStore.getState().quitGame();
+              navigate('/online');
+            }} 
+            className="font-western text-sm md:text-base text-red-west hover:text-red-400 transition-colors uppercase tracking-widest border border-red-west/30 px-6 py-2 rounded-lg hover:bg-red-west/10"
+          >
+            DESISTIR E VOLTAR
+          </button>
+        </div>
+      )}
     </div>
   );
 }

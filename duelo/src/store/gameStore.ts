@@ -51,6 +51,7 @@ const initialState: GameState = {
   isOnline: false,
   isHost: false,
   roomId: null,
+  roomStatus: 'waiting',
   winnerId: null,
   history: [],
   botDifficulty: 'medium'
@@ -269,6 +270,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         isOnline: true,
         mode: roomData.mode || state.mode,
         roomId: roomData.id,
+        roomStatus: roomData.status,
         player: {
           ...state.player,
           life: roomData[`${myRole}Life`] ?? state.player.life,
@@ -298,6 +300,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     set(curr => ({
       mode: roomData.mode || curr.mode,
       roomId: roomData.id,
+      roomStatus: roomData.status,
       isOnline: true,
       isHost: isHost,
       turn: roomData.turn ?? curr.turn,

@@ -118,9 +118,17 @@ export function OnlineLobby() {
 
           {/* New Game Actions */}
           <div className="card-wood p-6 animate-fade-up animate-fade-up-delay-2">
-            <button onClick={handleCreate} className="btn-western mb-4">
-              CRIAR NOVINHA
-            </button>
+            
+            {activeRooms.length > 0 ? (
+              <div className="bg-black/40 border border-red-west/30 p-4 rounded-xl mb-4 text-center">
+                <span className="font-western text-gold block mb-1">LIMITE ATINGIDO</span>
+                <span className="font-stats text-xs text-sand/70 uppercase">Você já possui uma sala ativa. Encerre ou jogue sua sala atual antes de criar outra.</span>
+              </div>
+            ) : (
+              <button onClick={handleCreate} className="btn-western mb-4">
+                CRIAR NOVINHA
+              </button>
+            )}
 
             <div className="flex items-center gap-3 my-4">
               <div className="flex-1 h-px bg-sand/20" />

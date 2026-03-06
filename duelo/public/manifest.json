@@ -9,13 +9,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/assets/ui/logo_bbd.webp",
+      "src": "/assets/ui/icone_app.webp",
       "sizes": "192x192",
       "type": "image/webp",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/ui/logo_bbd.webp",
+      "src": "/assets/ui/icone_app.webp",
       "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any maskable"
