@@ -104,6 +104,51 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-white rounded-full shadow" />
             </div>
           </div>
+
+          {/* Guest Registration */}
+          {user?.isGuest && (
+            <div className="bg-black/40 px-4 py-3 rounded-xl border border-red-west/30 mt-4">
+              <h3 className="font-western text-gold mb-2 tracking-wider">SALVAR CONTA</h3>
+              <p className="text-xs font-stats text-sand/70 mb-3">Sua conta de convidado expira em 7 dias. Cadastre-se para não perder seu progresso!</p>
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const target = e.target as typeof e.target & {
+                    email: { value: string };
+                    password: { value: string };
+                  };
+                  if (target.email.value && target.password.value.length >= 6) {
+                    const { isGuest, expiresAt, ...rest } = user;
+                    setUser({
+                      ...rest,
+                      email: target.email.value,
+                    });
+                    alert('Conta registrada com sucesso!');
+                  }
+                }}
+                className="space-y-2"
+              >
+                <input 
+                  type="email" 
+                  name="email"
+                  required
+                  placeholder="Seu email" 
+                  className="w-full input-parchment py-1.5 px-3 text-sm"
+                />
+                <input 
+                  type="password" 
+                  name="password"
+                  required
+                  minLength={6}
+                  placeholder="Senha (min 6 char)" 
+                  className="w-full input-parchment py-1.5 px-3 text-sm"
+                />
+                <button type="submit" className="w-full btn-western text-xs py-1.5 mt-2 bg-green-800 hover:bg-green-700">
+                  REGISTRAR CONTA
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         <button onClick={onClose} className="btn-western btn-danger mt-6 py-2 text-sm">

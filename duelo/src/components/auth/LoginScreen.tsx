@@ -27,6 +27,28 @@ export function LoginScreen() {
     navigate('/menu', { replace: true });
   };
 
+  const handleGuestLogin = () => {
+    // 7 days from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    setUser({
+      uid: 'guest_' + Date.now(),
+      email: '',
+      displayName: 'Pistoleiro Forasteiro',
+      avatar: 'marshal',
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      totalGames: 0,
+      winRate: 0,
+      createdAt: new Date(),
+      isGuest: true,
+      expiresAt: expiresAt.getTime()
+    });
+    navigate('/menu', { replace: true });
+  };
+
   return (
     <div className="w-full max-w-sm mx-4">
       {/* Logo */}
@@ -108,6 +130,15 @@ export function LoginScreen() {
           <span className="font-western text-xs text-brown-mid tracking-widest">OU</span>
           <div className="flex-1 h-px bg-brown-mid/40" />
         </div>
+
+        {/* Guest Login */}
+        <button 
+          onClick={handleGuestLogin}
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-brown-dark border-2 border-brown-dark rounded-lg hover:bg-brown-900 transition-all font-western text-sand shadow-md hover:shadow-lg mb-3"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          ENTRAR COMO CONVIDADO
+        </button>
 
         {/* Google OAuth */}
         <button className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all font-stats font-bold text-gray-700 shadow-md hover:shadow-lg">

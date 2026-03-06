@@ -74,6 +74,8 @@ export interface User {
   createdAt: Date;
   lastSeen?: Date;
   favoriteMode?: GameMode;
+  isGuest?: boolean;
+  expiresAt?: Date | number;
 }
 
 export interface LeaderboardEntry {

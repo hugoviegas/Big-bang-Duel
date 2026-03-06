@@ -26,6 +26,16 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'bbd-auth-storage',
+      onRehydrateStorage: () => (state) => {
+        // Hydration check for guest expiration
+        if (state?.user?.isGuest && state.user.expiresAt) {
+          const expiresAt = new Date(state.user.expiresAt).getTime();
+          if (Date.now() > expiresAt) {
+            console.log('Guest session expired');
+            state.logout();
+          }
+        }
+      }
     }
   )
 );
