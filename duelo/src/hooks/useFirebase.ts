@@ -104,7 +104,6 @@ export function useFirebaseRoom() {
 
 export function useMatchSync(roomId: string | null) {
   const { user } = useAuthStore();
-  const gameStore = useGameStore();
 
   useEffect(() => {
     if (!roomId || !user) return;
@@ -120,12 +119,13 @@ export function useMatchSync(roomId: string | null) {
       const roomData = snapshot.val();
       const isHost = user.uid === roomData.hostId;
       
-      gameStore.syncFromFirebase(roomData, isHost); 
+      // Use getState() to avoid stale closure and to not add gameStore to deps
+      useGameStore.getState().syncFromFirebase(roomData, isHost);
     });
 
     return () => {
       unsubscribe();
       off(roomRef);
     };
-  }, [roomId, user, gameStore]);
+  }, [roomId, user?.uid]); // Only re-subscribe when roomId or user changes
 }

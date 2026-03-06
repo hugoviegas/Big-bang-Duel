@@ -4,15 +4,14 @@ import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 
 export default function IndexPage() {
-  const { isAuthenticated, setLoading } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    setLoading(false);
     if (isAuthenticated) {
-      navigate('/menu');
+      navigate('/menu', { replace: true });
     }
-  }, [isAuthenticated, navigate, setLoading]);
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center relative overflow-hidden">

@@ -24,7 +24,7 @@ export function LoginScreen() {
       winRate: 0,
       createdAt: new Date()
     });
-    navigate('/menu');
+    navigate('/menu', { replace: true });
   };
 
   return (

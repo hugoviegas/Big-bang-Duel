@@ -5,20 +5,19 @@ import { StatusBar } from './StatusBar';
 import { CardHand } from './CardHand';
 import { TurnResultOverlay } from './TurnResult';
 import { GameOver } from './GameOver';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMatchSync } from '../../hooks/useFirebase';
 
 export function GameArena() {
   const { player, opponent, phase, turn, lastResult } = useGameStore();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const roomId = searchParams.get('room');
+  const { roomId } = useParams<{ roomId?: string }>();
   
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Sync with Firebase if online
-  useMatchSync(roomId);
+  useMatchSync(roomId || null);
 
   const copyRoomCode = () => {
     if (roomId) {
@@ -144,7 +143,7 @@ export function GameArena() {
         </div>
 
         {/* ===== ARENA — CHARACTERS ===== */}
-        <div className="flex-1 flex items-end justify-between px-4 md:px-16 pb-36 sm:pb-44 md:pb-48 relative">
+        <div className="flex-1 flex items-end justify-between px-8 md:px-16 pb-75 sm:pb-56 md:pb-60 relative">
           <Character player={player} />
           <Character player={opponent} isRight />
         </div>

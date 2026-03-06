@@ -41,7 +41,7 @@ export function OnlineLobby() {
     if (roomId) {
       // Initialize locally as host
       useGameStore.getState().initializeGame(selectedMode, true, true, roomId, undefined, selectedChar);
-      navigate(`/game?room=${roomId}`);
+      navigate(`/game/${roomId}`);
     }
   };
 
@@ -53,20 +53,16 @@ export function OnlineLobby() {
     }
     const success = await joinRoom(joinCode.toUpperCase());
     if (success) {
-      // Initialize locally as guest (mode will be updated via sync, but we use selectedMode as initial)
+      // Initialize locally as guest
       useGameStore.getState().initializeGame(selectedMode, true, false, joinCode.toUpperCase(), undefined, selectedChar);
-      navigate(`/game?room=${joinCode.toUpperCase()}`);
+      navigate(`/game/${joinCode.toUpperCase()}`);
     } else {
       setError('Sala não encontrada ou cheia');
     }
   };
 
   const resumeGame = (room: RoomType) => {
-    // Determine my role
-    // For resumption, the sync hook will take care of the rest once we are on the page
-    // We just need to initialize with the correct character we have selected now 
-    // or maybe the store should handle it. For now, let's just navigate.
-    navigate(`/game?room=${room.id}`);
+    navigate(`/game/${room.id}`);
   };
 
   return (
