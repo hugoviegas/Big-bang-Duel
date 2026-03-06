@@ -1,28 +1,44 @@
-import { create } from 'zustand';
-import { ref, update } from 'firebase/database';
-import { rtdb } from '../lib/firebase';
-import type { GameState, GameMode, CardType, BotDifficulty } from '../types';
-import { LIFE_BY_MODE, resolveCards, checkWinner } from '../lib/gameEngine';
-import { botChooseCard } from '../lib/botAI';
+import { create } from "zustand";
+import { ref, update } from "firebase/database";
+import { rtdb } from "../lib/firebase";
+import type {
+  GameState,
+  GameMode,
+  CardType,
+  BotDifficulty,
+  AttackTimer,
+  RoomConfig,
+} from "../types";
+import { LIFE_BY_MODE, resolveCards, checkWinner } from "../lib/gameEngine";
+import { botChooseCard } from "../lib/botAI";
 
 interface GameStore extends GameState {
-  initializeGame: (mode: GameMode, isOnline: boolean, isHost: boolean, roomId?: string, botDifficulty?: BotDifficulty, playerAvatar?: string) => void;
+  initializeGame: (
+    mode: GameMode,
+    isOnline: boolean,
+    isHost: boolean,
+    roomId?: string,
+    botDifficulty?: BotDifficulty,
+    playerAvatar?: string,
+    config?: Partial<RoomConfig>,
+  ) => void;
   selectCard: (card: CardType) => void;
   resolveTurn: () => void;
-  setPhase: (phase: GameState['phase']) => void;
+  setPhase: (phase: GameState["phase"]) => void;
   quitGame: () => void;
   syncFromFirebase: (roomData: any, isHost: boolean) => void;
+  nextRound: () => void;
 }
 
 const initialState: GameState = {
-  id: '',
-  mode: 'beginner',
-  phase: 'idle',
+  id: "",
+  mode: "beginner",
+  phase: "idle",
   turn: 1,
   player: {
-    id: 'player1',
-    displayName: 'Pistoleiro',
-    avatar: 'marshal',
+    id: "player1",
+    displayName: "Pistoleiro",
+    avatar: "marshal",
     life: 3,
     maxLife: 3,
     ammo: 0,
@@ -30,13 +46,13 @@ const initialState: GameState = {
     selectedCard: null,
     choiceRevealed: false,
     isAnimating: false,
-    currentAnimation: 'idle',
-    wins: 0
+    currentAnimation: "idle",
+    wins: 0,
   },
   opponent: {
-    id: 'bot',
-    displayName: 'El Diablo',
-    avatar: 'skull',
+    id: "bot",
+    displayName: "El Diablo",
+    avatar: "skull",
     life: 3,
     maxLife: 3,
     ammo: 0,
@@ -44,17 +60,24 @@ const initialState: GameState = {
     selectedCard: null,
     choiceRevealed: false,
     isAnimating: false,
-    currentAnimation: 'idle',
-    wins: 0
+    currentAnimation: "idle",
+    wins: 0,
   },
   lastResult: null,
   isOnline: false,
   isHost: false,
   roomId: null,
-  roomStatus: 'waiting',
+  roomStatus: "waiting",
   winnerId: null,
   history: [],
-  botDifficulty: 'medium'
+  botDifficulty: "medium",
+  // Room config defaults
+  attackTimer: 10,
+  bestOf3: false,
+  currentRound: 1,
+  playerStars: 0,
+  opponentStars: 0,
+  roundWinnerId: null,
 };
 
 // Flag para prevenir múltiplas resoluções simultâneas
@@ -63,17 +86,26 @@ let _isResolving = false;
 export const useGameStore = create<GameStore>()((set, get) => ({
   ...initialState,
 
-  initializeGame: (mode, isOnline, isHost, roomId, botDifficulty = 'medium', playerAvatar = 'marshal') => {
+  initializeGame: (
+    mode,
+    isOnline,
+    isHost,
+    roomId,
+    botDifficulty = "medium",
+    playerAvatar = "marshal",
+    config = {},
+  ) => {
     _isResolving = false;
     const life = LIFE_BY_MODE[mode];
-    const allAvatars = ['marshal', 'skull', 'la_dama'];
-    const opponentAvatars = allAvatars.filter(a => a !== playerAvatar);
-    const opponentAvatar = opponentAvatars[Math.floor(Math.random() * opponentAvatars.length)];
-    
+    const allAvatars = ["marshal", "skull", "la_dama"];
+    const opponentAvatars = allAvatars.filter((a) => a !== playerAvatar);
+    const opponentAvatar =
+      opponentAvatars[Math.floor(Math.random() * opponentAvatars.length)];
+
     const opponentNames: Record<string, string> = {
-      marshal: 'The Marshal',
-      skull: 'The Skull',
-      la_dama: 'La Dama'
+      marshal: "The Marshal",
+      skull: "The Skull",
+      la_dama: "La Dama",
     };
 
     set({
@@ -83,7 +115,13 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       isHost: isOnline ? isHost : false,
       roomId: roomId || null,
       botDifficulty: isOnline ? undefined : botDifficulty,
-      phase: 'selecting',
+      phase: "selecting",
+      attackTimer: (config.attackTimer ?? 10) as AttackTimer,
+      bestOf3: config.bestOf3 ?? false,
+      currentRound: 1,
+      playerStars: 0,
+      opponentStars: 0,
+      roundWinnerId: null,
       player: {
         ...initialState.player,
         life,
@@ -95,14 +133,14 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         life,
         maxLife: life,
         avatar: opponentAvatar,
-        displayName: opponentNames[opponentAvatar] || 'El Diablo',
-      }
+        displayName: opponentNames[opponentAvatar] || "El Diablo",
+      },
     });
   },
 
   selectCard: (card) => {
     const state = get();
-    if (state.phase !== 'selecting') return;
+    if (state.phase !== "selecting") return;
 
     set({
       player: { ...state.player, selectedCard: card },
@@ -113,16 +151,16 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       const thinkDelay = 1200 + Math.random() * 1200;
       setTimeout(() => {
         const currentState = get();
-        if (currentState.phase !== 'selecting') return;
-        const pHistory = currentState.history.map(h => h.playerCard);
+        if (currentState.phase !== "selecting") return;
+        const pHistory = currentState.history.map((h) => h.playerCard);
         const botCard = botChooseCard(
           currentState.opponent,
           pHistory,
           currentState.mode,
-          currentState.botDifficulty || 'medium'
+          currentState.botDifficulty || "medium",
         );
         set({
-          opponent: { ...currentState.opponent, selectedCard: botCard }
+          opponent: { ...currentState.opponent, selectedCard: botCard },
         });
         get().resolveTurn();
       }, thinkDelay);
@@ -133,7 +171,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     if (_isResolving) return;
     const state = get();
     if (!state.player.selectedCard || !state.opponent.selectedCard) return;
-    if (state.phase !== 'selecting') return;
+    if (state.phase !== "selecting") return;
 
     _isResolving = true;
 
@@ -146,46 +184,61 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const oLife = state.opponent.life;
 
     set({
-      phase: 'revealing',
+      phase: "revealing",
       player: { ...state.player, choiceRevealed: true },
-      opponent: { ...state.opponent, choiceRevealed: true }
+      opponent: { ...state.opponent, choiceRevealed: true },
     });
 
     setTimeout(() => {
-      set({ phase: 'resolving' });
+      set({ phase: "resolving" });
 
-      const cardToAnim = (card: CardType): 'shoot' | 'dodge' | 'reload' | 'counter' | 'idle' => {
-        if (card === 'shot' || card === 'double_shot') return 'shoot';
-        if (card === 'dodge') return 'dodge';
-        if (card === 'reload') return 'reload';
-        if (card === 'counter') return 'counter';
-        return 'idle';
+      const cardToAnim = (
+        card: CardType,
+      ): "shoot" | "dodge" | "reload" | "counter" | "idle" => {
+        if (card === "shot" || card === "double_shot") return "shoot";
+        if (card === "dodge") return "dodge";
+        if (card === "reload") return "reload";
+        if (card === "counter") return "counter";
+        return "idle";
       };
 
       const currentState = get();
-      const result = resolveCards(pCard, oCard, pAmmo, oAmmo, currentState.mode, currentState.turn);
+      const result = resolveCards(
+        pCard,
+        oCard,
+        pAmmo,
+        oAmmo,
+        currentState.mode,
+        currentState.turn,
+      );
 
-      const pAnim = result.playerLifeLost > 0 ? 'hit' : cardToAnim(pCard);
-      const oAnim = result.opponentLifeLost > 0 ? 'hit' : cardToAnim(oCard);
+      const pAnim = result.playerLifeLost > 0 ? "hit" : cardToAnim(pCard);
+      const oAnim = result.opponentLifeLost > 0 ? "hit" : cardToAnim(oCard);
 
       const newPlayerLife = Math.max(0, pLife - result.playerLifeLost);
       const newOpponentLife = Math.max(0, oLife - result.opponentLifeLost);
-      const newPlayerAmmo = Math.min(3, Math.max(0, pAmmo + result.playerAmmoChange));
-      const newOpponentAmmo = Math.min(3, Math.max(0, oAmmo + result.opponentAmmoChange));
+      const newPlayerAmmo = Math.min(
+        3,
+        Math.max(0, pAmmo + result.playerAmmoChange),
+      );
+      const newOpponentAmmo = Math.min(
+        3,
+        Math.max(0, oAmmo + result.opponentAmmoChange),
+      );
 
       const newPlayer = {
         ...currentState.player,
         life: newPlayerLife,
         ammo: newPlayerAmmo,
-        currentAnimation: (newPlayerLife <= 0 ? 'death' : pAnim) as any,
-        isAnimating: true
+        currentAnimation: (newPlayerLife <= 0 ? "death" : pAnim) as any,
+        isAnimating: true,
       };
       const newOpponent = {
         ...currentState.opponent,
         life: newOpponentLife,
         ammo: newOpponentAmmo,
-        currentAnimation: (newOpponentLife <= 0 ? 'death' : oAnim) as any,
-        isAnimating: true
+        currentAnimation: (newOpponentLife <= 0 ? "death" : oAnim) as any,
+        isAnimating: true,
       };
 
       const winner = checkWinner(newPlayer, newOpponent);
@@ -195,16 +248,86 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         opponent: newOpponent,
         lastResult: result,
         history: [...currentState.history, result],
-        phase: 'animating',
-        winnerId: winner
+        phase: "animating",
+        winnerId: winner,
       });
 
       setTimeout(async () => {
         _isResolving = false;
         const afterAnimState = get();
 
+        const roundWinner = afterAnimState.winnerId; // may be player.id, opponent.id, 'draw', or null
+
+        // ====== BEST-OF-3 LOGIC ======
+        if (roundWinner && afterAnimState.bestOf3) {
+          const isDraw = roundWinner === "draw";
+          const isPlayerWin = roundWinner === afterAnimState.player.id;
+
+          const newPlayerStars =
+            afterAnimState.playerStars + (isPlayerWin ? 1 : 0);
+          const newOpponentStars =
+            afterAnimState.opponentStars + (!isPlayerWin && !isDraw ? 1 : 0);
+
+          // HOST: sync stars to Firebase
+          if (
+            afterAnimState.isOnline &&
+            afterAnimState.roomId &&
+            afterAnimState.isHost
+          ) {
+            try {
+              const roomRef = ref(rtdb, `rooms/${afterAnimState.roomId}`);
+              const matchOver = newPlayerStars >= 2 || newOpponentStars >= 2;
+              await update(roomRef, {
+                hostStars: afterAnimState.isHost
+                  ? newPlayerStars
+                  : newOpponentStars,
+                guestStars: afterAnimState.isHost
+                  ? newOpponentStars
+                  : newPlayerStars,
+                hostLife: afterAnimState.player.life,
+                guestLife: afterAnimState.opponent.life,
+                hostAmmo: afterAnimState.player.ammo,
+                guestAmmo: afterAnimState.opponent.ammo,
+                hostChoice: null,
+                guestChoice: null,
+                turn: afterAnimState.turn + 1,
+                status: matchOver ? "finished" : "in_progress",
+              });
+            } catch (e) {
+              console.error("Firebase sync error:", e);
+            }
+          }
+
+          if (newPlayerStars >= 2 || newOpponentStars >= 2) {
+            // Match over
+            set({
+              playerStars: newPlayerStars,
+              opponentStars: newOpponentStars,
+              roundWinnerId: roundWinner,
+              phase: "game_over",
+            });
+          } else {
+            // Round over — show interstitial, then auto-start next round
+            set({
+              playerStars: newPlayerStars,
+              opponentStars: newOpponentStars,
+              roundWinnerId: roundWinner,
+              phase: "round_over",
+            });
+            setTimeout(() => {
+              get().nextRound();
+            }, 3500);
+          }
+          return;
+        }
+
+        // ====== NORMAL (no best-of-3) ======
         // HOST: sincronizar resultado ao Firebase
-        if (afterAnimState.isOnline && afterAnimState.roomId && afterAnimState.isHost) {
+        if (
+          afterAnimState.isOnline &&
+          afterAnimState.roomId &&
+          afterAnimState.isHost
+        ) {
           try {
             const roomRef = ref(rtdb, `rooms/${afterAnimState.roomId}`);
             await update(roomRef, {
@@ -215,37 +338,36 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               hostChoice: null,
               guestChoice: null,
               turn: afterAnimState.turn + 1,
-              status: afterAnimState.winnerId ? 'finished' : 'in_progress'
+              status: afterAnimState.winnerId ? "finished" : "in_progress",
             });
           } catch (e) {
-            console.error('Firebase sync error:', e);
+            console.error("Firebase sync error:", e);
           }
         }
 
         if (afterAnimState.winnerId) {
-          set({ phase: 'game_over' });
+          set({ phase: "game_over" });
         } else {
-          set(curr => ({
-            phase: 'selecting' as const,
+          set((curr) => ({
+            phase: "selecting" as const,
             turn: curr.turn + 1,
             player: {
               ...curr.player,
               selectedCard: null,
               choiceRevealed: false,
               isAnimating: false,
-              currentAnimation: 'idle' as any
+              currentAnimation: "idle" as any,
             },
             opponent: {
               ...curr.opponent,
               selectedCard: null,
               choiceRevealed: false,
               isAnimating: false,
-              currentAnimation: 'idle' as any
-            }
+              currentAnimation: "idle" as any,
+            },
           }));
         }
       }, 3000);
-
     }, 1200);
   },
 
@@ -253,17 +375,17 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     if (!roomData) return;
     if (_isResolving) return; // Não atualizar durante resolução
 
-    const myRole = isHost ? 'host' : 'guest';
-    const otherRole = isHost ? 'guest' : 'host';
+    const myRole = isHost ? "host" : "guest";
+    const otherRole = isHost ? "guest" : "host";
 
     const hostChoice = roomData.hostChoice;
     const guestChoice = roomData.guestChoice;
     const isBothChosen = !!(hostChoice && guestChoice);
 
     const state = get();
-    
+
     // Se ambos escolheram e ainda estamos selecionando -> resolver
-    if (state.phase === 'selecting' && isBothChosen && !_isResolving) {
+    if (state.phase === "selecting" && isBothChosen && !_isResolving) {
       // Primeiro atualizar as cartas, depois resolver
       set({
         isHost: isHost,
@@ -271,24 +393,39 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         mode: roomData.mode || state.mode,
         roomId: roomData.id,
         roomStatus: roomData.status,
+        attackTimer: roomData.config?.attackTimer ?? state.attackTimer,
+        bestOf3: roomData.config?.bestOf3 ?? state.bestOf3,
+        currentRound: roomData.currentRound ?? state.currentRound,
+        playerStars: isHost
+          ? (roomData.hostStars ?? state.playerStars)
+          : (roomData.guestStars ?? state.playerStars),
+        opponentStars: isHost
+          ? (roomData.guestStars ?? state.opponentStars)
+          : (roomData.hostStars ?? state.opponentStars),
         player: {
           ...state.player,
           life: roomData[`${myRole}Life`] ?? state.player.life,
           ammo: roomData[`${myRole}Ammo`] ?? state.player.ammo,
-          displayName: (isHost ? roomData.hostName : roomData.guestName) || state.player.displayName,
-          selectedCard: (roomData[`${myRole}Choice`] as CardType) || state.player.selectedCard,
+          displayName:
+            (isHost ? roomData.hostName : roomData.guestName) ||
+            state.player.displayName,
+          selectedCard:
+            (roomData[`${myRole}Choice`] as CardType) ||
+            state.player.selectedCard,
         },
         opponent: {
           ...state.opponent,
-          displayName: isHost ? (roomData.guestName || 'Inimigo') : (roomData.hostName || 'Host'),
+          displayName: isHost
+            ? roomData.guestName || "Inimigo"
+            : roomData.hostName || "Host",
           life: roomData[`${otherRole}Life`] ?? state.opponent.life,
           ammo: roomData[`${otherRole}Ammo`] ?? state.opponent.ammo,
-          selectedCard: (roomData[`${otherRole}Choice`] as CardType),
+          selectedCard: roomData[`${otherRole}Choice`] as CardType,
           choiceRevealed: true,
           avatar: state.opponent.avatar,
-        }
+        },
       });
-      
+
       // Breve delay para garantir que o state foi aplicado antes de resolver
       setTimeout(() => {
         get().resolveTurn();
@@ -297,37 +434,105 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     }
 
     // Update normal de estado (sem resolução)
-    set(curr => ({
+    set((curr) => ({
       mode: roomData.mode || curr.mode,
       roomId: roomData.id,
       roomStatus: roomData.status,
       isOnline: true,
       isHost: isHost,
       turn: roomData.turn ?? curr.turn,
+      // Sync room config
+      attackTimer: roomData.config?.attackTimer ?? curr.attackTimer,
+      bestOf3: roomData.config?.bestOf3 ?? curr.bestOf3,
+      currentRound: roomData.currentRound ?? curr.currentRound,
+      playerStars: isHost
+        ? (roomData.hostStars ?? curr.playerStars)
+        : (roomData.guestStars ?? curr.playerStars),
+      opponentStars: isHost
+        ? (roomData.guestStars ?? curr.opponentStars)
+        : (roomData.hostStars ?? curr.opponentStars),
       player: {
         ...curr.player,
         life: roomData[`${myRole}Life`] ?? curr.player.life,
         ammo: roomData[`${myRole}Ammo`] ?? curr.player.ammo,
-        displayName: (isHost ? roomData.hostName : roomData.guestName) || curr.player.displayName,
-        // Preservar selectedCard local durante fase de seleção
-        selectedCard: curr.phase === 'selecting'
-          ? (curr.player.selectedCard || (roomData[`${myRole}Choice`] as CardType) || null)
-          : null,
+        displayName:
+          (isHost ? roomData.hostName : roomData.guestName) ||
+          curr.player.displayName,
+        selectedCard:
+          curr.phase === "selecting"
+            ? curr.player.selectedCard ||
+              (roomData[`${myRole}Choice`] as CardType) ||
+              null
+            : null,
       },
       opponent: {
         ...curr.opponent,
-        displayName: isHost ? (roomData.guestName || 'Inimigo') : (roomData.hostName || 'Host'),
+        displayName: isHost
+          ? roomData.guestName || "Inimigo"
+          : roomData.hostName || "Host",
         life: roomData[`${otherRole}Life`] ?? curr.opponent.life,
         ammo: roomData[`${otherRole}Ammo`] ?? curr.opponent.ammo,
         selectedCard: null,
         choiceRevealed: false,
-      }
+      },
     }));
+  },
+
+  nextRound: () => {
+    const state = get();
+    const life = LIFE_BY_MODE[state.mode];
+    _isResolving = false;
+    set((curr) => ({
+      turn: 1,
+      winnerId: null,
+      roundWinnerId: null,
+      lastResult: null,
+      history: [],
+      phase: "selecting" as const,
+      currentRound: curr.currentRound + 1,
+      player: {
+        ...curr.player,
+        life,
+        maxLife: life,
+        ammo: 0,
+        selectedCard: null,
+        choiceRevealed: false,
+        isAnimating: false,
+        currentAnimation: "idle" as any,
+      },
+      opponent: {
+        ...curr.opponent,
+        life,
+        maxLife: life,
+        ammo: 0,
+        selectedCard: null,
+        choiceRevealed: false,
+        isAnimating: false,
+        currentAnimation: "idle" as any,
+      },
+    }));
+
+    // Host syncs the new round to Firebase
+    const after = get();
+    if (after.isOnline && after.isHost && after.roomId) {
+      const roomRef = ref(rtdb, `rooms/${after.roomId}`);
+      update(roomRef, {
+        turn: 1,
+        currentRound: after.currentRound,
+        hostChoice: null,
+        guestChoice: null,
+        hostLife: life,
+        guestLife: life,
+        hostAmmo: 0,
+        guestAmmo: 0,
+        status: "in_progress",
+      }).catch((e) => console.error("nextRound sync error:", e));
+    }
   },
 
   setPhase: (phase) => set({ phase }),
   quitGame: () => {
     _isResolving = false;
     set(initialState);
-  }
+  },
 }));

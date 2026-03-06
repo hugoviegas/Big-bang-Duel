@@ -1,25 +1,38 @@
-import { useEffect, useState } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { Character } from './Character';
-import { StatusBar } from './StatusBar';
-import { CardHand } from './CardHand';
-import { TurnResultOverlay } from './TurnResult';
-import { GameOver } from './GameOver';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useMatchSync } from '../../hooks/useFirebase';
+import { useEffect, useState } from "react";
+import { useGameStore } from "../../store/gameStore";
+import { Character } from "./Character";
+import { StatusBar } from "./StatusBar";
+import { CardHand } from "./CardHand";
+import { TurnResultOverlay } from "./TurnResult";
+import { GameOver } from "./GameOver";
+import { useNavigate, useParams } from "react-router-dom";
+import { useMatchSync } from "../../hooks/useFirebase";
 
 export function GameArena() {
-  const { player, opponent, phase, turn, lastResult, isOnline, roomStatus } = useGameStore();
+  const {
+    player,
+    opponent,
+    phase,
+    turn,
+    lastResult,
+    isOnline,
+    roomStatus,
+    bestOf3,
+    playerStars,
+    opponentStars,
+    currentRound,
+    roundWinnerId,
+  } = useGameStore();
   const navigate = useNavigate();
   const { roomId } = useParams<{ roomId?: string }>();
-  
+
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showJoinMessage, setShowJoinMessage] = useState(false);
-  
+
   // Track previous room status to detect entry
   useEffect(() => {
-    if (roomStatus === 'in_progress' && opponent.displayName !== 'El Diablo') {
+    if (roomStatus === "in_progress" && opponent.displayName !== "El Diablo") {
       // Just joined
       setShowJoinMessage(true);
       const t = setTimeout(() => setShowJoinMessage(false), 3000);
@@ -42,7 +55,7 @@ export function GameArena() {
     if (roomId) {
       const shareUrl = `${window.location.origin}/#/game/${roomId}`;
       const shareData = {
-        title: 'Big Bang Duel',
+        title: "Big Bang Duel",
         text: `Venha me enfrentar no Big Bang Duel! Sala: ${roomId}`,
         url: shareUrl,
       };
@@ -51,14 +64,14 @@ export function GameArena() {
         try {
           await navigator.share(shareData);
         } catch (err) {
-          console.log('Share failed:', err);
+          console.log("Share failed:", err);
         }
       } else {
         // Fallback to copy link
         navigator.clipboard.writeText(shareUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-        alert('Link da sala copiado!');
+        alert("Link da sala copiado!");
       }
     }
   };
@@ -69,24 +82,29 @@ export function GameArena() {
   useEffect(() => {
     const checkAndJoin = async () => {
       const state = useGameStore.getState();
-      
+
       // If we have a roomId but the game isn't initialized or we're not the host
-      if (roomId && state.phase === 'idle') {
+      if (roomId && state.phase === "idle") {
         // Try to join as guest or verify if we are already in
         const success = await joinRoom(roomId);
         if (success) {
-          state.initializeGame('normal', true, false, roomId);
+          state.initializeGame("normal", true, false, roomId);
         }
       }
     };
-    
+
     checkAndJoin();
   }, [roomId, joinRoom]);
 
-  const isShaking = phase === 'animating' && lastResult && (lastResult.playerLifeLost > 0 || lastResult.opponentLifeLost > 0);
+  const isShaking =
+    phase === "animating" &&
+    lastResult &&
+    (lastResult.playerLifeLost > 0 || lastResult.opponentLifeLost > 0);
 
   return (
-    <div className={`relative w-full min-h-[100svh] bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center overflow-hidden ${isShaking ? 'screen-shake' : ''}`}>
+    <div
+      className={`relative w-full min-h-[100svh] bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center overflow-hidden ${isShaking ? "screen-shake" : ""}`}
+    >
       {/* Atmosphere overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none" />
 
@@ -107,18 +125,62 @@ export function GameArena() {
 
       {/* Main Layout */}
       <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col min-h-[100svh]">
-        
         {/* ===== HEADER ===== */}
         <header className="relative p-3 md:p-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/assets/ui/logo_bbd.webp" alt="BBD" className="w-8 h-8 md:w-12 md:h-12 object-contain drop-shadow-lg" />
-            <span className="font-western text-gold text-sm md:text-xl text-glow-gold hidden xs:block">BIG BANG DUEL</span>
+            <img
+              src="/assets/ui/logo_bbd.webp"
+              alt="BBD"
+              className="w-8 h-8 md:w-12 md:h-12 object-contain drop-shadow-lg"
+            />
+            <span className="font-western text-gold text-sm md:text-xl text-glow-gold hidden xs:block">
+              BIG BANG DUEL
+            </span>
           </div>
-          
-          {/* Turn indicator - Absolute center */}
-          <div className="absolute left-1/2 -translate-x-1/2">
+
+          {/* Turn indicator + optional round/stars — Absolute center */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
+            {bestOf3 && (
+              <div className="flex items-center gap-3">
+                {/* Player stars (left) */}
+                <div className="flex gap-0.5">
+                  {[0, 1].map((i) => (
+                    <svg
+                      key={i}
+                      viewBox="0 0 24 24"
+                      className={`w-4 h-4 transition-all ${i < playerStars ? "text-gold drop-shadow-[0_0_4px_rgba(212,175,55,0.8)]" : "text-sand/20"}`}
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                      />
+                    </svg>
+                  ))}
+                </div>
+                <span className="font-stats text-[9px] text-sand/50 uppercase tracking-widest">
+                  R{currentRound}
+                </span>
+                {/* Opponent stars (right) */}
+                <div className="flex gap-0.5">
+                  {[0, 1].map((i) => (
+                    <svg
+                      key={i}
+                      viewBox="0 0 24 24"
+                      className={`w-4 h-4 transition-all ${i < opponentStars ? "text-red-400 drop-shadow-[0_0_4px_rgba(239,68,68,0.8)]" : "text-sand/20"}`}
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                      />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="bg-black/60 backdrop-blur-sm px-4 md:px-8 py-1.5 rounded-full border border-gold/40 shadow-lg">
-              <span className="font-western text-gold text-xs md:text-lg tracking-[0.2em]">TURNO {turn}</span>
+              <span className="font-western text-gold text-xs md:text-lg tracking-[0.2em]">
+                TURNO {turn}
+              </span>
             </div>
           </div>
 
@@ -126,33 +188,77 @@ export function GameArena() {
             {/* Room Code Info */}
             {roomId && (
               <div className="hidden sm:flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg border border-gold/30 mr-2">
-                <span className="font-western text-[10px] text-sand/60">SALA:</span>
-                <span className="font-western text-gold text-xs tracking-widest min-w-[50px] text-center">
-                  {showCode ? roomId : '••••••'}
+                <span className="font-western text-[10px] text-sand/60">
+                  SALA:
                 </span>
-                <button 
+                <span className="font-western text-gold text-xs tracking-widest min-w-[50px] text-center">
+                  {showCode ? roomId : "••••••"}
+                </span>
+                <button
                   onClick={() => setShowCode(!showCode)}
                   className="p-1 hover:text-gold text-sand/50"
                 >
                   {showCode ? (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>
                   ) : (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.06m2.72-2.31a9.96 9.96 0 015.26-1.63c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21f-7-7m11.375-1.125a9.982 9.982 0 00-6.25-6.25m-2.5-2.5a3 3 0 00-3.5 3.5m-3.5 3.5a3 3 0 003.5 3.5"/></svg>
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.06m2.72-2.31a9.96 9.96 0 015.26-1.63c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21f-7-7m11.375-1.125a9.982 9.982 0 00-6.25-6.25m-2.5-2.5a3 3 0 00-3.5 3.5m-3.5 3.5a3 3 0 003.5 3.5"
+                      />
+                    </svg>
                   )}
                 </button>
-                <button 
+                <button
                   onClick={copyRoomCode}
-                  className={`p-1 ${copied ? 'text-green-400' : 'hover:text-gold text-sand/50'}`}
+                  className={`p-1 ${copied ? "text-green-400" : "hover:text-gold text-sand/50"}`}
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                    />
+                  </svg>
                 </button>
               </div>
             )}
 
-            <button 
+            <button
               onClick={() => {
                 useGameStore.getState().quitGame();
-                navigate('/menu');
+                navigate("/menu");
               }}
               className="bg-black/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-gold/30 font-western text-sand text-[10px] md:text-sm hover:bg-black/70 hover:border-gold/50 transition-all tracking-widest whitespace-nowrap"
             >
@@ -164,29 +270,81 @@ export function GameArena() {
         {/* Mobile Room Code (visible below header only on mobile if available) */}
         {roomId && (
           <div className="flex sm:hidden justify-center mt-[-8px] mb-4">
-             <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg border border-gold/30">
-                <span className="font-western text-[10px] text-sand/60">SALA:</span>
-                <span className="font-western text-gold text-xs tracking-widest min-w-[50px] text-center">
-                  {showCode ? roomId : '••••••'}
-                </span>
-                <button onClick={() => setShowCode(!showCode)} className="p-1 hover:text-gold text-sand/50">
-                  {showCode ? (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                  ) : (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.06m2.72-2.31a9.96 9.96 0 015.26-1.63c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21f-7-7m11.375-1.125a9.982 9.982 0 00-6.25-6.25m-2.5-2.5a3 3 0 00-3.5 3.5m-3.5 3.5a3 3 0 003.5 3.5"/></svg>
-                  )}
-                </button>
-                <button onClick={copyRoomCode} className={`p-1 ${copied ? 'text-green-400' : 'hover:text-gold text-sand/50'}`}>
-                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
-                </button>
-              </div>
+            <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg border border-gold/30">
+              <span className="font-western text-[10px] text-sand/60">
+                SALA:
+              </span>
+              <span className="font-western text-gold text-xs tracking-widest min-w-[50px] text-center">
+                {showCode ? roomId : "••••••"}
+              </span>
+              <button
+                onClick={() => setShowCode(!showCode)}
+                className="p-1 hover:text-gold text-sand/50"
+              >
+                {showCode ? (
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.06m2.72-2.31a9.96 9.96 0 015.26-1.63c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21f-7-7m11.375-1.125a9.982 9.982 0 00-6.25-6.25m-2.5-2.5a3 3 0 00-3.5 3.5m-3.5 3.5a3 3 0 003.5 3.5"
+                    />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={copyRoomCode}
+                className={`p-1 ${copied ? "text-green-400" : "hover:text-gold text-sand/50"}`}
+              >
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         )}
 
         {/* ===== STATUS BARS ===== */}
         <div className="flex justify-between items-start px-3 md:px-8 gap-2 mt-2">
           <StatusBar player={player} />
-          <div className="font-western text-gold text-2xl md:text-4xl text-glow-gold self-center opacity-60">VS</div>
+          <div className="font-western text-gold text-2xl md:text-4xl text-glow-gold self-center opacity-60">
+            VS
+          </div>
           <StatusBar player={opponent} isRight />
         </div>
 
@@ -198,7 +356,7 @@ export function GameArena() {
       </div>
 
       {/* ===== CARD HAND (Fixed Bottom) ===== */}
-      {!(isOnline && roomStatus === 'waiting') && <CardHand />}
+      {!(isOnline && roomStatus === "waiting") && <CardHand />}
 
       {/* ===== OVERLAYS ===== */}
       {showJoinMessage && (
@@ -209,43 +367,149 @@ export function GameArena() {
         </div>
       )}
 
-      {(phase === 'resolving' || phase === 'animating') && lastResult && (
+      {(phase === "resolving" || phase === "animating") && lastResult && (
         <TurnResultOverlay result={lastResult} />
       )}
-      {phase === 'game_over' && <GameOver />}
+      {phase === "game_over" && <GameOver />}
+
+      {/* ROUND OVER interstitial (best-of-3) */}
+      {phase === "round_over" && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md pointer-events-none">
+          <div className="flex flex-col items-center gap-4 animate-fade-up">
+            {roundWinnerId === player.id ? (
+              <>
+                <span className="font-western text-5xl text-green-400 text-glow-gold">
+                  ROUND VENCIDO!
+                </span>
+                <span className="font-stats text-sand/70 uppercase tracking-widest text-sm">
+                  Próximo round em breve...
+                </span>
+              </>
+            ) : roundWinnerId === opponent.id ? (
+              <>
+                <span className="font-western text-5xl text-red-400">
+                  ROUND PERDIDO!
+                </span>
+                <span className="font-stats text-sand/70 uppercase tracking-widest text-sm">
+                  Próximo round em breve...
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-western text-5xl text-gold">EMPATE!</span>
+                <span className="font-stats text-sand/70 uppercase tracking-widest text-sm">
+                  Próximo round em breve...
+                </span>
+              </>
+            )}
+            {/* Stars recap */}
+            <div className="flex items-center gap-6 mt-2">
+              <div className="flex flex-col items-center gap-1">
+                <span className="font-stats text-[10px] text-sand/50 uppercase">
+                  {player.displayName}
+                </span>
+                <div className="flex gap-1">
+                  {[0, 1].map((i) => (
+                    <svg
+                      key={i}
+                      viewBox="0 0 24 24"
+                      className={`w-6 h-6 ${i < playerStars ? "text-gold" : "text-sand/20"}`}
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                      />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+              <span className="font-western text-gold/50 text-xl">VS</span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="font-stats text-[10px] text-sand/50 uppercase">
+                  {opponent.displayName}
+                </span>
+                <div className="flex gap-1">
+                  {[0, 1].map((i) => (
+                    <svg
+                      key={i}
+                      viewBox="0 0 24 24"
+                      className={`w-6 h-6 ${i < opponentStars ? "text-red-400" : "text-sand/20"}`}
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                      />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* WAITING OVERLAY */}
-      {isOnline && roomStatus === 'waiting' && (
+      {isOnline && roomStatus === "waiting" && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 text-center">
           <div className="w-16 h-16 border-4 border-gold/20 border-t-gold rounded-full animate-spin mb-8" />
-          <h2 className="font-western text-2xl md:text-5xl text-gold mb-4 text-glow-gold">AGUARDANDO FORASTEIRO</h2>
-          <p className="font-stats text-sand/70 mb-6 text-sm md:text-lg">Envie o código da sala para seu adversário:</p>
-          
+          <h2 className="font-western text-2xl md:text-5xl text-gold mb-4 text-glow-gold">
+            AGUARDANDO FORASTEIRO
+          </h2>
+          <p className="font-stats text-sand/70 mb-6 text-sm md:text-lg">
+            Envie o código da sala para seu adversário:
+          </p>
+
           <div className="flex flex-col md:flex-row items-center gap-4 bg-black/60 px-6 py-4 md:px-8 md:py-6 rounded-2xl border-2 border-gold/40 shadow-[0_0_30px_rgba(212,175,55,0.15)] mb-8">
-            <span className="font-western text-3xl md:text-5xl text-sand tracking-[0.3em]">{roomId}</span>
+            <span className="font-western text-3xl md:text-5xl text-sand tracking-[0.3em]">
+              {roomId}
+            </span>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={copyRoomCode}
                 title="Copiar Código"
-                className={`p-3 md:p-4 rounded-xl ${copied ? 'bg-green-600/30 text-green-400 border border-green-500/50' : 'bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20'} transition-all`}
+                className={`p-3 md:p-4 rounded-xl ${copied ? "bg-green-600/30 text-green-400 border border-green-500/50" : "bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20"} transition-all`}
               >
-                <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                <svg
+                  className="w-6 h-6 md:w-8 md:h-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                  />
+                </svg>
               </button>
-              <button 
+              <button
                 onClick={shareRoomLink}
                 title="Compartilhar Link"
                 className="p-3 md:p-4 rounded-xl bg-sky-600/20 text-sky-400 border border-sky-500/30 hover:bg-sky-600/30 transition-all"
               >
-                <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                <svg
+                  className="w-6 h-6 md:w-8 md:h-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
               </button>
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={() => {
               useGameStore.getState().quitGame();
-              navigate('/online');
-            }} 
+              navigate("/online");
+            }}
             className="font-western text-sm md:text-base text-red-west hover:text-red-400 transition-colors uppercase tracking-widest border border-red-west/30 px-6 py-2 rounded-lg hover:bg-red-west/10"
           >
             DESISTIR E VOLTAR
