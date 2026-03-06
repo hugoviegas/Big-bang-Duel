@@ -108,6 +108,18 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       la_dama: "La Dama",
     };
 
+    // Set attack timer based on difficulty (if not online or not provided in config)
+    let attackTimer: AttackTimer = 10;
+    if (!config.attackTimer) {
+      if (botDifficulty === "easy") {
+        attackTimer = 30 as AttackTimer;
+      } else if (botDifficulty === "medium") {
+        attackTimer = 10 as AttackTimer;
+      } else if (botDifficulty === "hard") {
+        attackTimer = 5 as AttackTimer;
+      }
+    }
+
     set({
       ...initialState,
       mode,
@@ -116,7 +128,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       roomId: roomId || null,
       botDifficulty: isOnline ? undefined : botDifficulty,
       phase: "selecting",
-      attackTimer: (config.attackTimer ?? 10) as AttackTimer,
+      attackTimer: (config.attackTimer ?? attackTimer) as AttackTimer,
       bestOf3: config.bestOf3 ?? false,
       currentRound: 1,
       playerStars: 0,
@@ -146,7 +158,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       player: { ...state.player, selectedCard: card },
     });
 
-    // Solo mode: bot responde e resolve automaticamente
+    // Solo mode: bot escolhe a carta mas NÃO resolve até confirmar ou timer
     if (!state.isOnline) {
       const thinkDelay = 1200 + Math.random() * 1200;
       setTimeout(() => {
@@ -162,7 +174,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         set({
           opponent: { ...currentState.opponent, selectedCard: botCard },
         });
-        get().resolveTurn();
+        // NÃO chama resolveTurn() aqui - aguarda botão confirmar ou timer
       }, thinkDelay);
     }
   },

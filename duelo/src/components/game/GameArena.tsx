@@ -5,6 +5,7 @@ import { StatusBar } from "./StatusBar";
 import { CardHand } from "./CardHand";
 import { TurnResultOverlay } from "./TurnResult";
 import { GameOver } from "./GameOver";
+import { GamePauseMenu } from "./GamePauseMenu";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMatchSync } from "../../hooks/useFirebase";
 
@@ -29,6 +30,7 @@ export function GameArena() {
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showJoinMessage, setShowJoinMessage] = useState(false);
+  const [showPauseMenu, setShowPauseMenu] = useState(false);
 
   // Track previous room status to detect entry
   useEffect(() => {
@@ -257,8 +259,13 @@ export function GameArena() {
 
             <button
               onClick={() => {
-                useGameStore.getState().quitGame();
-                navigate("/menu");
+                // Only show pause menu in solo mode
+                if (!isOnline) {
+                  setShowPauseMenu(true);
+                } else {
+                  useGameStore.getState().quitGame();
+                  navigate("/menu");
+                }
               }}
               className="bg-black/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-gold/30 font-western text-sand text-[10px] md:text-sm hover:bg-black/70 hover:border-gold/50 transition-all tracking-widest whitespace-nowrap"
             >
@@ -516,6 +523,16 @@ export function GameArena() {
           </button>
         </div>
       )}
+
+      {/* Pause Menu (Solo mode only) */}
+      <GamePauseMenu
+        isOpen={showPauseMenu}
+        onClose={() => setShowPauseMenu(false)}
+        onQuit={() => {
+          useGameStore.getState().quitGame();
+          navigate("/menu");
+        }}
+      />
     </div>
   );
 }

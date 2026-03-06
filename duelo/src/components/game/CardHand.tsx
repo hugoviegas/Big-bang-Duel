@@ -81,7 +81,7 @@ export function CardHand() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase === "selecting", turn, attackTimer]);
 
-  // When time hits 0 → auto-select
+  // When time hits 0 → auto-select if needed, then resolve
   useEffect(() => {
     if (timeLeft !== 0 || phase !== "selecting" || autoFiredRef.current) return;
     autoFiredRef.current = true;
@@ -96,11 +96,22 @@ export function CardHand() {
       store.selectCard(chosen);
     }
 
-    // confirm
-    if (store.isOnline && store.roomId) {
-      submitChoice(store.roomId, chosen);
-    }
-    // offline: selectCard already triggers bot + resolveTurn
+    // Auto-confirm: aguarda um pouco para o bot escolher sua carta em modo solo
+    setTimeout(() => {
+      const finalState = useGameStore.getState();
+      if (
+        finalState.phase === "selecting" &&
+        finalState.player.selectedCard &&
+        finalState.opponent.selectedCard
+      ) {
+        if (finalState.isOnline && finalState.roomId) {
+          submitChoice(finalState.roomId, finalState.player.selectedCard);
+        } else {
+          // modo solo: resolve o turno
+          finalState.resolveTurn();
+        }
+      }
+    }, 300);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);
 
@@ -113,7 +124,26 @@ export function CardHand() {
   const handleConfirm = () => {
     if (!player.selectedCard || phase !== "selecting") return;
     if (!isOnline) {
-      resolveTurn();
+      // Modo solo: aguarda o bot escolher (se ainda estiver pensando)
+      const store = useGameStore.getState();
+      if (store.opponent.selectedCard) {
+        // Bot já escolheu, pode resolver
+        resolveTurn();
+      } else {
+        // Bot ainda está pensando, aguarda
+        const maxWaitTime = 3000; // máximo 3 segundos
+        let waited = 0;
+        const checkInterval = setInterval(() => {
+          const currentState = useGameStore.getState();
+          if (currentState.opponent.selectedCard || waited >= maxWaitTime) {
+            clearInterval(checkInterval);
+            if (currentState.opponent.selectedCard) {
+              currentState.resolveTurn();
+            }
+          }
+          waited += 100;
+        }, 100);
+      }
     } else if (roomId) {
       submitChoice(roomId, player.selectedCard);
     }

@@ -1,0 +1,70 @@
+/* =====================================================
+   9-SLICE: wood-top  —  1600 x 879 px original
+   Slice points:  X = 144px | 1456px
+                  Y = 105px | 685px
+   ===================================================== */
+
+/* --------------------------------------------------
+   OPÇÃO 1 — CSS border-image (mais simples, web/React)
+   -------------------------------------------------- */
+.wooden-header {
+  width: 100%;           /* Estica na largura da tela */
+  height: 120px;         /* Altura fixa ou use clamp() */
+
+  /* 
+   * Ordem dos valores: top right bottom left
+   * 105  = slice do topo (onde acabam os rebites)
+   * 144  = slice da direita  
+   * 194  = slice do fundo (onde acaba a corda)
+   * 144  = slice da esquerda
+   * fill = mantém o centro preenchido
+   */
+  border-image-source: url('./assets/wood-top.png');
+  border-image-slice:  105 144 194 144 fill;
+  border-image-width:  105px 144px 194px 144px;
+  border-image-repeat: stretch;
+
+  /* Altura mínima para não cortar os cantos */
+  min-height: 299px;  /* top(105) + bottom(194) */
+}
+
+/* Altura responsiva com clamp */
+.wooden-header-responsive {
+  width: 100%;
+  height: clamp(80px, 15vw, 200px);
+  border-image-source: url('./assets/wood-top.png');
+  border-image-slice:  105 144 194 144 fill;
+  border-image-width:  auto;   /* Mantém proporção dos cantos */
+  border-image-outset: 0;
+  border-image-repeat: stretch;
+}
+
+
+/* --------------------------------------------------
+   OPÇÃO 2 — background-image com background-size
+   (para quando quiser mais controle no React Native)
+   -------------------------------------------------- */
+.wooden-header-bg {
+  width: 100%;
+  aspect-ratio: 16 / 2.5;
+  background-image: url('./assets/wood-top.png');
+  background-size: 100% 100%;   /* Estica TUDO — cantos distorcem */
+  /* NÃO USE ESTE MÉTODO — use border-image acima */
+}
+
+
+/* --------------------------------------------------
+   OPÇÃO 3 — Montagem manual com as 9 peças (máx controle)
+   Use em React Native com StyleSheet
+   -------------------------------------------------- */
+/*
+  Layout Grid:
+
+  [corner_TL.png]  [edge_top.png ← flex:1]   [corner_TR.png]
+  [edge_left.png]  [center.png   ← flex:1]   [edge_right.png]
+  [corner_BL.png]  [edge_bottom.png ← flex:1] [corner_BR.png]
+
+  Largura dos cantos: 144px  (ou proporcional à tela)
+  Altura do topo:     105px
+  Altura do fundo:    194px
+*/

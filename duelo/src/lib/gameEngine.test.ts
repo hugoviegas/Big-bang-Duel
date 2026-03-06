@@ -40,9 +40,10 @@ describe('gameEngine - resolveCards 25 combinations in advanced mode', () => {
   });
 
   it('should resolve reload ammo changes correctly considering interruptions', () => {
-    // Reload vs shot -> player +0 ammo, oAmmo -1
+    // NOVA REGRA: Reload vs shot -> player +1 ammo (reload contabilizado mesmo interrompido), oAmmo -1
+    // REGRA ANTIGA era: playerAmmoChange = 0 (reload ignorado ao ser atingido)
     const res1 = resolveCards('reload', 'shot', 0, 1, 'advanced', 1);
-    expect(res1.playerAmmoChange).toBe(0);
+    expect(res1.playerAmmoChange).toBe(1);
     expect(res1.opponentAmmoChange).toBe(-1);
 
     // Reload vs dodge -> player +1 ammo, oAmmo 0

@@ -58,7 +58,10 @@ export function resolveCards(
   } else if (pCard === 'shot' && oCard === 'dodge') {
     narrative = 'Oponente desviou do seu tiro!';
   } else if (pCard === 'shot' && oCard === 'reload') {
-    oLifeLost = 1; narrative = 'Você atirou em plena recarga! Oponente atingido!';
+    // REGRA ANTIGA: oponent toma dano mas NÃO ganha ammo (recarga ignorada)
+    // oLifeLost = 1; narrative = 'Você atirou em plena recarga! Oponente atingido!';
+    // NOVA REGRA: oponente toma dano MAS ainda ganha +1 ammo (recarga contabilizada)
+    oLifeLost = 1; narrative = 'Você atirou durante a recarga! Oponente atingido, mas ainda recarregou!';
   } else if (pCard === 'shot' && oCard === 'counter') {
     pLifeLost = 1; narrative = 'CONTRA GOLPE! Oponente desviou e atirou de volta!';
 
@@ -69,7 +72,10 @@ export function resolveCards(
   } else if (pCard === 'double_shot' && oCard === 'dodge') {
     narrative = 'Inacreditável! Oponente desviou de ambos os tiros!';
   } else if (pCard === 'double_shot' && oCard === 'reload') {
-    oLifeLost = 2; narrative = 'Tiro Duplo crítico durante a recarga do oponente!';
+    // REGRA ANTIGA: oponent toma 2 de dano mas NÃO ganha ammo (recarga ignorada)
+    // oLifeLost = 2; narrative = 'Tiro Duplo crítico durante a recarga do oponente!';
+    // NOVA REGRA: oponente toma 2 de dano MAS ainda ganha +1 ammo (recarga contabilizada)
+    oLifeLost = 2; narrative = 'Tiro Duplo na recarga! Oponente destruído, mas ainda recarregou!';
   } else if (pCard === 'double_shot' && oCard === 'counter') {
     pLifeLost = 1; narrative = 'Oponente defletiu e contra-atacou o Tiro Duplo!';
 
@@ -85,9 +91,15 @@ export function resolveCards(
     narrative = 'Oponente preparou um contra-golpe contra... nada.';
 
   } else if (pCard === 'reload' && oCard === 'shot') {
-    pLifeLost = 1; narrative = 'Interrompido! Oponente atirou enquanto você recarregava!';
+    // REGRA ANTIGA: jogador toma dano mas NÃO ganha ammo (recarga ignorada)
+    // pLifeLost = 1; narrative = 'Interrompido! Oponente atirou enquanto você recarregava!';
+    // NOVA REGRA: jogador toma dano MAS ainda ganha +1 ammo (recarga contabilizada)
+    pLifeLost = 1; narrative = 'Atingido na recarga! Mas você ainda conseguiu recarregar!';
   } else if (pCard === 'reload' && oCard === 'double_shot') {
-    pLifeLost = 2; narrative = 'Massacre! Tiro Duplo recebido na recarga!';
+    // REGRA ANTIGA: jogador toma 2 de dano mas NÃO ganha ammo (recarga ignorada)
+    // pLifeLost = 2; narrative = 'Massacre! Tiro Duplo recebido na recarga!';
+    // NOVA REGRA: jogador toma 2 de dano MAS ainda ganha +1 ammo (recarga contabilizada)
+    pLifeLost = 2; narrative = 'Massacre! Tiro Duplo na recarga... mas você ainda recarregou!';
   } else if (pCard === 'reload' && oCard === 'dodge') {
     pAmmoChange += 1; narrative = 'Você recarregou tranquilamente enquanto ele pulava.';
   } else if (pCard === 'reload' && oCard === 'reload') {
@@ -107,14 +119,16 @@ export function resolveCards(
     narrative = 'Duelo mental. Ambos seguraram as armas esperando o outro atirar.';
   }
 
-  // Reload action cap logic handled safely
-  const actualPAmmoChange = pCard === 'reload' && oCard !== 'shot' && oCard !== 'double_shot' ? 
-      (pAmmo < MAX_AMMO ? 1 : 0) : pAmmoChange;
+  // Reload action cap logic
+  // REGRA ANTIGA: reload NÃO concede ammo se interrompido por shot ou double_shot
+  // const actualPAmmoChange = pCard === 'reload' && oCard !== 'shot' && oCard !== 'double_shot' ?
+  //     (pAmmo < MAX_AMMO ? 1 : 0) : pAmmoChange;
+  // const actualOAmmoChange = oCard === 'reload' && pCard !== 'shot' && pCard !== 'double_shot' ?
+  //     (oAmmo < MAX_AMMO ? 1 : 0) : oAmmoChange;
 
-  const actualOAmmoChange = oCard === 'reload' && pCard !== 'shot' && pCard !== 'double_shot' ? 
-      (oAmmo < MAX_AMMO ? 1 : 0) : oAmmoChange;
-
-  // Wait, if P reloads while being shot, pAmmoChange was 0, but if oCard = shot, the above evaluates to pAmmoChange (which is 0). It's correct.
+  // NOVA REGRA: reload SEMPRE concede +1 ammo, mesmo quando interrompido por tiro
+  const actualPAmmoChange = pCard === 'reload' ? (pAmmo < MAX_AMMO ? 1 : 0) : pAmmoChange;
+  const actualOAmmoChange = oCard === 'reload' ? (oAmmo < MAX_AMMO ? 1 : 0) : oAmmoChange;
 
   return {
     turn,

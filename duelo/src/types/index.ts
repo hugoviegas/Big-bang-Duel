@@ -3,6 +3,15 @@ export type CardType = "shot" | "double_shot" | "dodge" | "reload" | "counter";
 export type BotDifficulty = "easy" | "medium" | "hard";
 export type AttackTimer = 2 | 3 | 5 | 10 | 30;
 
+/** User preferences that are persisted in Firestore and loaded on every device. */
+export interface UserPreferences {
+  selectedCharacter: string; // character id, e.g. 'marshal'
+  defaultMode: GameMode; // default game mode for quick-play
+  defaultAttackTimer: AttackTimer; // default attack timer
+  defaultBestOf3: boolean; // default best-of-3 toggle
+  defaultIsPublic: boolean; // default room visibility
+}
+
 export type GamePhase =
   | "idle"
   | "selecting"
@@ -88,6 +97,7 @@ export interface User {
   uid: string;
   email: string;
   displayName: string;
+  /** ID of the selected character — mirrors preferences.selectedCharacter for fast access. */
   avatar: string;
   wins: number;
   losses: number;
@@ -99,6 +109,8 @@ export interface User {
   favoriteMode?: GameMode;
   isGuest?: boolean;
   expiresAt?: Date | number;
+  /** Full preferences object, synced from Firestore. */
+  preferences?: UserPreferences;
 }
 
 export interface LeaderboardEntry {
