@@ -15,7 +15,7 @@ export default function IndexPage() {
   }, [isAuthenticated, navigate, setLoading]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[url('/assets/ui/bg_desert_portrait.png')] md:bg-[url('/assets/ui/bg_desert_landscape.png')] bg-cover bg-center relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center relative overflow-hidden">
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 pointer-events-none" />
       

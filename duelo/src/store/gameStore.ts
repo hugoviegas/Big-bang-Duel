@@ -1,10 +1,12 @@
 import { create } from 'zustand';
+import { ref, update } from 'firebase/database';
+import { rtdb } from '../lib/firebase';
 import type { GameState, GameMode, CardType, BotDifficulty } from '../types';
 import { LIFE_BY_MODE, resolveCards, checkWinner } from '../lib/gameEngine';
 import { botChooseCard } from '../lib/botAI';
 
 interface GameStore extends GameState {
-  initializeGame: (mode: GameMode, isOnline: boolean, roomId?: string, botDifficulty?: BotDifficulty, playerAvatar?: string) => void;
+  initializeGame: (mode: GameMode, isOnline: boolean, isHost: boolean, roomId?: string, botDifficulty?: BotDifficulty, playerAvatar?: string) => void;
   selectCard: (card: CardType) => void;
   resolveTurn: () => void;
   setPhase: (phase: GameState['phase']) => void;
@@ -47,6 +49,7 @@ const initialState: GameState = {
   },
   lastResult: null,
   isOnline: false,
+  isHost: false,
   roomId: null,
   winnerId: null,
   history: [],
@@ -56,9 +59,8 @@ const initialState: GameState = {
 export const useGameStore = create<GameStore>()((set, get) => ({
   ...initialState,
 
-  initializeGame: (mode, isOnline, roomId, botDifficulty = 'medium', playerAvatar = 'marshal') => {
+  initializeGame: (mode, isOnline, isHost, roomId, botDifficulty = 'medium', playerAvatar = 'marshal') => {
     const life = LIFE_BY_MODE[mode];
-    // Pick a random opponent avatar that's different from the player
     const allAvatars = ['marshal', 'skull', 'la_dama'];
     const opponentAvatars = allAvatars.filter(a => a !== playerAvatar);
     const opponentAvatar = opponentAvatars[Math.floor(Math.random() * opponentAvatars.length)];
@@ -73,6 +75,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       ...initialState,
       mode,
       isOnline,
+      isHost: isOnline ? isHost : false,
       roomId: roomId || null,
       botDifficulty: isOnline ? undefined : botDifficulty,
       phase: 'selecting',
@@ -100,9 +103,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       player: { ...state.player, selectedCard: card },
     });
 
-    // In solo mode, bot chooses after a delay
     if (!state.isOnline) {
-      const thinkDelay = 1200 + Math.random() * 1200; // 1.2-2.4s random for realism
+      const thinkDelay = 1200 + Math.random() * 1200;
       setTimeout(() => {
         const currentState = get();
         const pHistory = currentState.history.map(h => h.playerCard);
@@ -126,7 +128,6 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const state = get();
     if (!state.player.selectedCard || !state.opponent.selectedCard) return;
 
-    // Phase: Revealing cards
     set({
       phase: 'revealing',
       player: { ...state.player, choiceRevealed: true },
@@ -140,7 +141,6 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       const pCard = currentState.player.selectedCard!;
       const oCard = currentState.opponent.selectedCard!;
 
-      // Map card to character animation
       const cardToAnim = (card: CardType): 'shoot' | 'dodge' | 'reload' | 'counter' | 'idle' => {
         if (card === 'shot' || card === 'double_shot') return 'shoot';
         if (card === 'dodge') return 'dodge';
@@ -151,7 +151,6 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
       const result = resolveCards(pCard, oCard, currentState.player.ammo, currentState.opponent.ammo, currentState.mode, currentState.turn);
 
-      // Determine character animations based on outcome
       const pAnim = result.playerLifeLost > 0 ? 'hit' : cardToAnim(pCard);
       const oAnim = result.opponentLifeLost > 0 ? 'hit' : cardToAnim(oCard);
 
@@ -188,9 +187,24 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         };
       });
 
-      // After animation period
-      setTimeout(() => {
+      setTimeout(async () => {
         const afterAnimState = get();
+        
+        // SYNC TO FIREBASE IF HOST
+        if (afterAnimState.isOnline && afterAnimState.roomId && afterAnimState.isHost) {
+          const roomRef = ref(rtdb, `rooms/${afterAnimState.roomId}`);
+          await update(roomRef, {
+            hostLife: afterAnimState.player.life,
+            guestLife: afterAnimState.opponent.life,
+            hostAmmo: afterAnimState.player.ammo,
+            guestAmmo: afterAnimState.opponent.ammo,
+            hostChoice: null,
+            guestChoice: null,
+            turn: afterAnimState.turn + 1,
+            status: afterAnimState.winnerId ? 'finished' : 'in_progress'
+          });
+        }
+
         if (afterAnimState.winnerId) {
           set({ phase: 'game_over' });
         } else {
@@ -212,34 +226,44 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const myRole = isHost ? 'host' : 'guest';
     const otherRole = isHost ? 'guest' : 'host';
 
-    // Basic state update
-    set(state => ({
-      mode: roomData.mode || state.mode,
-      roomId: roomData.id,
-      isOnline: true,
-      phase: roomData.status === 'in_progress' ? (state.phase === 'idle' ? 'selecting' : state.phase) : state.phase,
-      player: {
-        ...state.player,
-        life: roomData[`${myRole}Life`] ?? state.player.life,
-        ammo: roomData[`${myRole}Ammo`] ?? state.player.ammo,
-        // Only overwrite selectedCard from Firebase if we're not in the middle of selecting
-        // Or if Firebase actually has a confirmed choice we don't have yet
-        selectedCard: state.phase === 'selecting' 
-          ? (state.player.selectedCard || (roomData[`${myRole}Choice`] as CardType) || null)
-          : (roomData[`${myRole}Choice`] as CardType || null),
-      },
-      opponent: {
-        ...state.opponent,
-        displayName: isHost ? (roomData.guestName || 'Inimigo') : (roomData.hostName || 'Host'),
-        life: roomData[`${otherRole}Life`] ?? state.opponent.life,
-        ammo: roomData[`${otherRole}Ammo`] ?? state.opponent.ammo,
-        selectedCard: roomData.status === 'resolving' ? (roomData[`${otherRole}Choice`] as CardType) : null,
-      }
-    }));
+    const hostChoice = roomData.hostChoice;
+    const guestChoice = roomData.guestChoice;
+    const isBothChosen = hostChoice && guestChoice;
 
-    // If both have chosen, and we are not yet resolving, maybe local state needs to trigger?
-    // Actually, in online mode, we should wait for a designated 'resolving' status from Firebase 
-    // to ensure both see the same result at the same time.
+    set(state => {
+      if (state.phase === 'selecting' && isBothChosen) {
+        setTimeout(() => {
+          const s = get();
+          if (s.phase === 'selecting' && isBothChosen) {
+            s.resolveTurn();
+          }
+        }, 500);
+      }
+
+      return {
+        mode: roomData.mode || state.mode,
+        roomId: roomData.id,
+        isOnline: true,
+        isHost: isHost,
+        player: {
+          ...state.player,
+          life: roomData[`${myRole}Life`] ?? state.player.life,
+          ammo: roomData[`${myRole}Ammo`] ?? state.player.ammo,
+          displayName: isHost ? roomData.hostName : roomData.guestName,
+          selectedCard: state.phase === 'selecting' 
+            ? (state.player.selectedCard || (roomData[`${myRole}Choice`] as CardType) || null)
+            : (roomData[`${myRole}Choice`] as CardType || null),
+        },
+        opponent: {
+          ...state.opponent,
+          displayName: isHost ? (roomData.guestName || 'Inimigo') : (roomData.hostName || 'Host'),
+          life: roomData[`${otherRole}Life`] ?? state.opponent.life,
+          ammo: roomData[`${otherRole}Ammo`] ?? state.opponent.ammo,
+          selectedCard: isBothChosen || state.phase !== 'selecting' ? (roomData[`${otherRole}Choice`] as CardType) : null,
+          choiceRevealed: isBothChosen || state.phase !== 'selecting'
+        }
+      };
+    });
   },
 
   setPhase: (phase) => set({ phase }),

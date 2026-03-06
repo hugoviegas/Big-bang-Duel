@@ -39,7 +39,7 @@ export function GameArena() {
   const isShaking = phase === 'animating' && lastResult && (lastResult.playerLifeLost > 0 || lastResult.opponentLifeLost > 0);
 
   return (
-    <div className={`relative w-full min-h-[100svh] bg-[url('/assets/ui/bg_desert_portrait.png')] md:bg-[url('/assets/ui/bg_desert_landscape.png')] bg-cover bg-center overflow-hidden ${isShaking ? 'screen-shake' : ''}`}>
+    <div className={`relative w-full min-h-[100svh] bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center overflow-hidden ${isShaking ? 'screen-shake' : ''}`}>
       {/* Atmosphere overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none" />
 
@@ -64,7 +64,7 @@ export function GameArena() {
         {/* ===== HEADER ===== */}
         <header className="relative p-3 md:p-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/assets/ui/logo_bbd.png" alt="BBD" className="w-8 h-8 md:w-12 md:h-12 object-contain drop-shadow-lg" />
+            <img src="/assets/ui/logo_bbd.webp" alt="BBD" className="w-8 h-8 md:w-12 md:h-12 object-contain drop-shadow-lg" />
             <span className="font-western text-gold text-sm md:text-xl text-glow-gold hidden xs:block">BIG BANG DUEL</span>
           </div>
           

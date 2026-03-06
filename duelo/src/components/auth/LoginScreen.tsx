@@ -32,7 +32,7 @@ export function LoginScreen() {
       {/* Logo */}
       <div className="text-center mb-8 animate-drop-bounce">
         <img 
-          src="/assets/ui/logo_bbd.png" 
+          src="/assets/ui/logo_bbd.webp" 
           alt="Big Bang Duel" 
           className="w-48 h-auto mx-auto animate-logo-float drop-shadow-2xl"
         />

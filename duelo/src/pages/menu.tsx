@@ -8,9 +8,9 @@ import type { GameMode, BotDifficulty } from '../types';
 type MenuStep = 'main' | 'solo_character' | 'solo_mode' | 'solo_difficulty';
 
 const CHARACTERS = [
-  { id: 'marshal', name: 'The Marshal', img: '/assets/characters/the_marshal.png', desc: 'O Xerife destemido' },
-  { id: 'skull', name: 'The Skull', img: '/assets/characters/the_skull.png', desc: 'O fora-da-lei' },
-  { id: 'la_dama', name: 'La Dama', img: '/assets/characters/la_dama.png', desc: 'A pistoleira lendária' },
+  { id: 'marshal', name: 'The Marshal', img: '/assets/characters/the_marshal.webp', desc: 'O Xerife destemido' },
+  { id: 'skull', name: 'The Skull', img: '/assets/characters/the_skull.webp', desc: 'O fora-da-lei' },
+  { id: 'la_dama', name: 'La Dama', img: '/assets/characters/la_dama.webp', desc: 'A pistoleira lendária' },
 ];
 
 const MODES = [
@@ -41,12 +41,12 @@ export default function MenuPage() {
   };
 
   const handleStartSolo = (diff: BotDifficulty) => {
-    initializeGame(selectedMode, false, undefined, diff, selectedCharacter);
+    initializeGame(selectedMode, false, false, undefined, diff, selectedCharacter);
     navigate('/game');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[url('/assets/ui/bg_desert_portrait.png')] md:bg-[url('/assets/ui/bg_desert_landscape.png')] bg-cover bg-center relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50 pointer-events-none" />
       
       {/* Tumbleweed */}
@@ -59,7 +59,7 @@ export default function MenuPage() {
           <div className="flex flex-col items-center">
             {/* Logo */}
             <img 
-              src="/assets/ui/logo_bbd.png" 
+              src="/assets/ui/logo_bbd.webp" 
               alt="Big Bang Duel" 
               className="w-56 md:w-64 h-auto mb-8 animate-drop-bounce animate-logo-float drop-shadow-2xl"
             />

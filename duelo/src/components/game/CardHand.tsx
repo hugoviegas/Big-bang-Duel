@@ -39,13 +39,13 @@ export function CardHand() {
   if (phase === 'game_over') return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40">
+    <div className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none">
       {/* Glassmorphism container */}
-      <div className="bg-black/60 backdrop-blur-md border-t-2 border-gold/20 px-3 py-3 md:py-4">
-        <div className="max-w-3xl mx-auto">
+      <div className="bg-gradient-to-t from-black via-black/90 to-transparent pt-12 pb-6 px-3 pointer-events-auto">
+        <div className="max-w-5xl mx-auto flex flex-col items-center">
           {/* Phase indicator */}
           {phase !== 'selecting' && (
-            <div className="text-center mb-2">
+            <div className="text-center mb-4">
               <span className="font-western text-sm text-gold/80 tracking-widest animate-pulse">
                 {phase === 'revealing' ? 'REVELANDO CARTAS...' : phase === 'resolving' ? 'RESOLVENDO...' : 'AGUARDE...'}
               </span>
@@ -53,7 +53,7 @@ export function CardHand() {
           )}
           
           {/* Cards row */}
-          <div className="flex justify-center gap-2 sm:gap-3 overflow-x-auto hide-scrollbar pb-1">
+          <div className="flex justify-center items-center gap-2 sm:gap-6 md:gap-8 overflow-visible pb-2 w-full">
             {allCards.map(cId => {
               const details = CARD_DETAILS[cId];
               return (
@@ -73,10 +73,10 @@ export function CardHand() {
 
           {/* Confirm button */}
           {phase === 'selecting' && player.selectedCard && (
-            <div className="flex justify-center mt-3">
+            <div className="flex justify-center mt-6 w-full">
               <button 
                 onClick={handleConfirm}
-                className="px-10 py-2.5 bg-gradient-to-r from-red-700 to-red-900 text-gold font-western text-lg tracking-widest border-2 border-gold/50 rounded-lg shadow-lg animate-pulse-glow hover:scale-105 active:scale-100 transition-transform"
+                className="w-full max-w-xs py-3 bg-gradient-to-r from-red-600 to-red-900 text-gold font-western text-xl tracking-widest border-2 border-gold/40 rounded-xl shadow-2xl animate-pulse-glow hover:scale-105 active:scale-95 transition-all"
               >
                 CONFIRMAR
               </button>

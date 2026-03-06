@@ -7,13 +7,13 @@ interface CharacterProps {
 }
 
 const AVATAR_IMAGES: Record<string, string> = {
-  marshal: '/assets/characters/the_marshal.png',
-  skull: '/assets/characters/the_skull.png',
-  la_dama: '/assets/characters/la_dama.png',
+  marshal: '/assets/characters/the_marshal.webp',
+  skull: '/assets/characters/the_skull.webp',
+  la_dama: '/assets/characters/la_dama.webp',
   // fallbacks
-  player1: '/assets/characters/the_marshal.png',
-  villain: '/assets/characters/the_skull.png',
-  bot: '/assets/characters/the_skull.png',
+  player1: '/assets/characters/the_marshal.webp',
+  villain: '/assets/characters/the_skull.webp',
+  bot: '/assets/characters/the_skull.webp',
 };
 
 const charVariants = {

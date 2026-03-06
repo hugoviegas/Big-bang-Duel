@@ -3,6 +3,7 @@ import { ref, set, get, onValue, update, onDisconnect, off } from 'firebase/data
 import { rtdb } from '../lib/firebase';
 import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
+import { LIFE_BY_MODE } from '../lib/gameEngine';
 import type { Room, GameMode } from '../types';
 
 export function useFirebaseRoom() {
@@ -31,17 +32,18 @@ export function useFirebaseRoom() {
     setCurrentRoomId(roomId);
     
     // Host also needs empty hostChoice/guestChoice etc
+    const initialLife = LIFE_BY_MODE[mode];
+
     await update(roomRef, {
       hostChoice: null,
       guestChoice: null,
       hostReady: false,
       guestReady: false,
-      'gameState/phase': 'selecting',
-      'gameState/turn': 1,
-      'gameState/hostLife': mode === 'beginner' ? 3 : 4,
-      'gameState/guestLife': mode === 'beginner' ? 3 : 4,
-      'gameState/hostAmmo': 0,
-      'gameState/guestAmmo': 0,
+      turn: 1,
+      hostLife: initialLife,
+      guestLife: initialLife,
+      hostAmmo: 0,
+      guestAmmo: 0,
     });
     
     return roomId;

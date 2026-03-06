@@ -5,9 +5,9 @@ import { useGameStore } from '../../store/gameStore';
 import type { GameMode, Room as RoomType } from '../../types';
 
 const CHARACTERS = [
-  { id: 'marshal', name: 'The Marshal', img: '/assets/characters/the_marshal.png' },
-  { id: 'skull', name: 'The Skull', img: '/assets/characters/the_skull.png' },
-  { id: 'la_dama', name: 'La Dama', img: '/assets/characters/la_dama.png' },
+  { id: 'marshal', name: 'The Marshal', img: '/assets/characters/the_marshal.webp' },
+  { id: 'skull', name: 'The Skull', img: '/assets/characters/the_skull.webp' },
+  { id: 'la_dama', name: 'La Dama', img: '/assets/characters/la_dama.webp' },
 ];
 
 const MODES = [
@@ -40,7 +40,7 @@ export function OnlineLobby() {
     const roomId = await createRoom(selectedMode);
     if (roomId) {
       // Initialize locally as host
-      useGameStore.getState().initializeGame(selectedMode, true, roomId, undefined, selectedChar);
+      useGameStore.getState().initializeGame(selectedMode, true, true, roomId, undefined, selectedChar);
       navigate(`/game?room=${roomId}`);
     }
   };
@@ -54,7 +54,7 @@ export function OnlineLobby() {
     const success = await joinRoom(joinCode.toUpperCase());
     if (success) {
       // Initialize locally as guest (mode will be updated via sync, but we use selectedMode as initial)
-      useGameStore.getState().initializeGame(selectedMode, true, joinCode.toUpperCase(), undefined, selectedChar);
+      useGameStore.getState().initializeGame(selectedMode, true, false, joinCode.toUpperCase(), undefined, selectedChar);
       navigate(`/game?room=${joinCode.toUpperCase()}`);
     } else {
       setError('Sala não encontrada ou cheia');
@@ -70,7 +70,7 @@ export function OnlineLobby() {
   };
 
   return (
-    <div className="min-h-screen bg-[url('/assets/ui/bg_desert_portrait.png')] md:bg-[url('/assets/ui/bg_desert_landscape.png')] bg-cover bg-center flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50 pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">

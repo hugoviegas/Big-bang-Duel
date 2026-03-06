@@ -43,6 +43,7 @@ export interface GameState {
   opponent: PlayerState;
   lastResult: TurnResult | null;
   isOnline: boolean;
+  isHost: boolean;
   roomId: string | null;
   winnerId: string | null;
   history: TurnResult[];

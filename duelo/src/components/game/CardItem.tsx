@@ -11,11 +11,11 @@ interface CardItemProps {
 }
 
 const CARD_IMAGES: Record<CardType, string> = {
-  shot: '/assets/cards/card_shoot.png',
-  double_shot: '/assets/cards/card_double_shoot.png',
-  dodge: '/assets/cards/card_dodge.png',
-  reload: '/assets/cards/card_reload.png',
-  counter: '/assets/cards/card_counter.png'
+  shot: '/assets/cards/card_shoot.webp',
+  double_shot: '/assets/cards/card_double_shoot.webp',
+  dodge: '/assets/cards/card_dodge.webp',
+  reload: '/assets/cards/card_reload.webp',
+  counter: '/assets/cards/card_counter.webp'
 };
 
 export function CardItem({ id, label, description, ammoCost, isSelected, isSelectable = true, onClick }: CardItemProps) {
@@ -25,7 +25,7 @@ export function CardItem({ id, label, description, ammoCost, isSelected, isSelec
       disabled={!isSelectable}
       className={`
         card-item relative shrink-0 w-[80px] h-[110px] sm:w-[90px] sm:h-[125px] md:w-[100px] md:h-[140px]
-        flex flex-col items-center justify-end overflow-hidden group
+        flex flex-col items-center justify-end group
         ${isSelected ? 'selected scale-105 -translate-y-3 z-10' : 'hover:-translate-y-2'}
         ${!isSelectable ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer'}
       `}
