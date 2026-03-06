@@ -32,6 +32,8 @@
     color: var(--color-black-ink);
     font-family: var(--font-stats);
     overflow-x: hidden;
+    overscroll-behavior-y: none;
+    touch-action: manipulation;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

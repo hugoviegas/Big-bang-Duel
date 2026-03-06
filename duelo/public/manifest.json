@@ -1,0 +1,24 @@
+{
+  "name": "Big Bang Duel",
+  "short_name": "BBD",
+  "description": "O duelo mais rápido do oeste!",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#D4AF37",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/ui/logo_bbd.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/ui/logo_bbd.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}
