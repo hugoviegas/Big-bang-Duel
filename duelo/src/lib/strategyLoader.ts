@@ -2,10 +2,10 @@
  * Strategy Loader — Carrega e usa estratégias treinadas por Q-Learning.
  *
  * Os arquivos JSON são gerados pelo sistema de treinamento Python
- * (training/run_training.py) e devem ser copiados para public/data/.
+ * (training/trainer_ultra.py) e devem ser copiados para public/data/.
  *
- * Formato do state key: "{myLife}_{myAmmo}_{oppLife}_{oppAmmo}_{lastOppCard}"
- * Exemplo: "3_1_2_0_reload"
+ * Formato do state key: "{myLife}_{myAmmo}_{oppLife}_{lastOppCard}_{myDodgeStreak}_{myDoubleShotsLeft}"
+ * Exemplo: "3_1_2_reload_0_3"
  */
 
 import type { CardType, GameMode, BotDifficulty } from "../types";
@@ -90,15 +90,17 @@ export function hasStrategy(mode: GameMode): boolean {
 
 /**
  * Gera o state key para lookup na tabela de estratégia.
+ * Novo formato (sem munição do oponente, com dodge streak e double_shot usos).
  */
 export function getStateKey(
   myLife: number,
   myAmmo: number,
   oppLife: number,
-  oppAmmo: number,
   lastOppCard: string | null,
+  myDodgeStreak: number,
+  myDoubleShotsLeft: number,
 ): string {
-  return `${myLife}_${myAmmo}_${oppLife}_${oppAmmo}_${lastOppCard || "none"}`;
+  return `${myLife}_${myAmmo}_${oppLife}_${lastOppCard || "none"}_${myDodgeStreak}_${myDoubleShotsLeft}`;
 }
 
 /**
@@ -111,7 +113,8 @@ export function getSmartBotCard(
   botLife: number,
   botAmmo: number,
   playerLife: number,
-  playerAmmo: number,
+  botDodgeStreak: number,
+  botDoubleShotsLeft: number,
   lastPlayerCard: string | null,
   availableCards: CardType[],
 ): CardType | null {
@@ -123,8 +126,9 @@ export function getSmartBotCard(
     botLife,
     botAmmo,
     playerLife,
-    playerAmmo,
     lastPlayerCard,
+    botDodgeStreak,
+    botDoubleShotsLeft,
   );
   const probs = strategy.strategies[diffKey]?.[stateKey];
 

@@ -1,5 +1,5 @@
 import type { PlayerState, CardType, GameMode, BotDifficulty } from "../types";
-import { getAvailableCards } from "./gameEngine";
+import { getAvailableCards, MAX_DOUBLE_SHOT_USES } from "./gameEngine";
 import { getSmartBotCard, hasStrategy } from "./strategyLoader";
 
 export function botChooseCard(
@@ -9,7 +9,7 @@ export function botChooseCard(
   difficulty: BotDifficulty,
   playerState?: PlayerState,
 ): CardType {
-  const available = getAvailableCards(mode, botState.ammo);
+  const available = getAvailableCards(mode, botState.ammo, botState.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES, botState.dodgeStreak ?? 0);
 
   // ─── Estratégia treinada (Q-Learning) ────────────────────────────────
   // Se os arquivos de estratégia estão carregados, usá-los para todos os níveis
@@ -23,7 +23,8 @@ export function botChooseCard(
       botState.life,
       botState.ammo,
       playerState.life,
-      playerState.ammo,
+      botState.dodgeStreak ?? 0,
+      botState.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES,
       lastPlayerCard,
       available,
     );

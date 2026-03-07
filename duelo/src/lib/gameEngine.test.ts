@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveCards } from './gameEngine';
+import { resolveCards, getAvailableCards, MAX_DODGE_STREAK } from './gameEngine';
 import type { CardType } from '../types';
 
 describe('gameEngine - resolveCards 25 combinations in advanced mode', () => {
@@ -10,14 +10,14 @@ describe('gameEngine - resolveCards 25 combinations in advanced mode', () => {
   const expectedPlayerLifeLost: Record<CardType, Record<CardType, number>> = {
     shot: { shot: 1, double_shot: 2, dodge: 0, reload: 0, counter: 1 },
     double_shot: { shot: 1, double_shot: 2, dodge: 0, reload: 0, counter: 1 },
-    dodge: { shot: 0, double_shot: 0, dodge: 0, reload: 0, counter: 0 },
+    dodge: { shot: 0, double_shot: 1, dodge: 0, reload: 0, counter: 0 },
     reload: { shot: 1, double_shot: 2, dodge: 0, reload: 0, counter: 0 },
     counter: { shot: 0, double_shot: 0, dodge: 0, reload: 0, counter: 0 }
   };
 
   const expectedOpponentLifeLost: Record<CardType, Record<CardType, number>> = {
     shot: { shot: 1, double_shot: 1, dodge: 0, reload: 1, counter: 0 },
-    double_shot: { shot: 2, double_shot: 2, dodge: 0, reload: 2, counter: 0 },
+    double_shot: { shot: 2, double_shot: 2, dodge: 1, reload: 2, counter: 0 },
     dodge: { shot: 0, double_shot: 0, dodge: 0, reload: 0, counter: 0 },
     reload: { shot: 0, double_shot: 0, dodge: 0, reload: 0, counter: 0 },
     counter: { shot: 1, double_shot: 1, dodge: 0, reload: 0, counter: 0 }
@@ -60,5 +60,34 @@ describe('gameEngine - resolveCards 25 combinations in advanced mode', () => {
   it('should not allow ammo to exceed MAX_AMMO (3) when reloading', () => {
     const res = resolveCards('reload', 'dodge', 3, 3, 'advanced', 1);
     expect(res.playerAmmoChange).toBe(0); // already maxed!
+  });
+});
+
+describe('gameEngine - dodge streak blocking', () => {
+  it('should allow dodge when streak < 3', () => {
+    const available0 = getAvailableCards('advanced', 2, 3, 0);
+    expect(available0).toContain('dodge');
+
+    const available1 = getAvailableCards('advanced', 2, 3, 1);
+    expect(available1).toContain('dodge');
+
+    const available2 = getAvailableCards('advanced', 2, 3, 2);
+    expect(available2).toContain('dodge');
+  });
+
+  it('should block dodge when streak >= MAX_DODGE_STREAK (3)', () => {
+    const available3 = getAvailableCards('advanced', 2, 3, 3);
+    expect(available3).not.toContain('dodge');
+
+    const available4 = getAvailableCards('advanced', 2, 3, 4);
+    expect(available4).not.toContain('dodge');
+  });
+
+  it('should always allow reload regardless of dodge streak', () => {
+    const available0 = getAvailableCards('advanced', 2, 3, 0);
+    expect(available0).toContain('reload');
+
+    const available3 = getAvailableCards('advanced', 2, 3, 3);
+    expect(available3).toContain('reload');
   });
 });

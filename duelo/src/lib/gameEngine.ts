@@ -13,13 +13,21 @@ export const LIFE_BY_MODE: Record<GameMode, number> = {
 };
 
 export const MAX_AMMO = 3;
+export const MAX_DODGE_STREAK = 3;  // Maximum consecutive dodges before forced to pick another card
+export const MAX_DOUBLE_SHOT_USES = 3;
 
-export function getAvailableCards(mode: GameMode, ammo: number): CardType[] {
+export function getAvailableCards(
+  mode: GameMode,
+  ammo: number,
+  doubleShotsLeft: number = MAX_DOUBLE_SHOT_USES,
+  dodgeStreak: number = 0,
+): CardType[] {
   return CARDS_BY_MODE[mode].filter(card => {
     if (card === 'shot') return ammo >= 1;
-    if (card === 'double_shot') return ammo >= 2;
+    if (card === 'double_shot') return ammo >= 2 && doubleShotsLeft > 0;
     if (card === 'counter') return ammo >= 1;
-    return true; // dodge and reload always available
+    if (card === 'dodge') return dodgeStreak < MAX_DODGE_STREAK; // block after 3 consecutive dodges
+    return true; // reload always available
   });
 }
 
@@ -70,7 +78,8 @@ export function resolveCards(
   } else if (pCard === 'double_shot' && oCard === 'double_shot') {
     pLifeLost = 2; oLifeLost = 2; narrative = 'Banho de Sangue! Ambos usaram tiro duplo!';
   } else if (pCard === 'double_shot' && oCard === 'dodge') {
-    narrative = 'Inacreditável! Oponente desviou de ambos os tiros!';
+    // NOVA REGRA: dodge não evita double_shot completamente — ainda perde 1 de vida
+    oLifeLost = 1; narrative = 'Incrível! Desviou de um tiro, mas o segundo te acertou!';
   } else if (pCard === 'double_shot' && oCard === 'reload') {
     // REGRA ANTIGA: oponent toma 2 de dano mas NÃO ganha ammo (recarga ignorada)
     // oLifeLost = 2; narrative = 'Tiro Duplo crítico durante a recarga do oponente!';
@@ -82,7 +91,8 @@ export function resolveCards(
   } else if (pCard === 'dodge' && oCard === 'shot') {
     narrative = 'Belo desvio! A bala passou raspando!';
   } else if (pCard === 'dodge' && oCard === 'double_shot') {
-    narrative = 'Matriz! Desviou do Tiro Duplo perfeitamente!';
+    // NOVA REGRA: dodge não evita double_shot completamente — ainda perde 1 de vida
+    pLifeLost = 1; narrative = 'Quase! Você desviou de um tiro, mas o segundo te acertou!';
   } else if (pCard === 'dodge' && oCard === 'dodge') {
     narrative = 'Ambos pularam pro mesmo lado. Que estranho...';
   } else if (pCard === 'dodge' && oCard === 'reload') {
