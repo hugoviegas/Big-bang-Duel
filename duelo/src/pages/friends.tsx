@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useFriendsStore } from "../store/friendsStore";
-import { getCharacter, getAvatarCrop } from "../lib/characters";
+import { resolveAvatarPicture } from "../lib/characters";
 import type { Friend, OnlineStatus } from "../types";
 
 const STATUS_COLORS: Record<OnlineStatus, string> = {
@@ -173,7 +173,6 @@ export default function FriendsPage() {
               </div>
             ) : (
               sortedFriends.map((friend) => {
-                const char = getCharacter(friend.avatar);
                 return (
                   <div
                     key={friend.uid}
@@ -183,12 +182,12 @@ export default function FriendsPage() {
                     <div className="relative flex-shrink-0">
                       <div className="w-10 h-10 rounded-full border-2 border-sand/30 overflow-hidden">
                         <img
-                          src={char.image}
+                          src={resolveAvatarPicture(
+                            friend.avatar,
+                            friend.avatarPicture,
+                          )}
                           alt=""
                           className="w-full h-full object-cover"
-                          style={{
-                            objectPosition: getAvatarCrop(friend.avatar),
-                          }}
                         />
                       </div>
                       <div
@@ -306,7 +305,6 @@ export default function FriendsPage() {
               </div>
             ) : (
               pendingRequests.map((req) => {
-                const char = getCharacter(req.fromAvatar);
                 return (
                   <div
                     key={req.id}
@@ -314,12 +312,12 @@ export default function FriendsPage() {
                   >
                     <div className="w-10 h-10 rounded-full border-2 border-gold/40 overflow-hidden flex-shrink-0">
                       <img
-                        src={char.image}
+                        src={resolveAvatarPicture(
+                          req.fromAvatar,
+                          req.fromAvatarPicture,
+                        )}
                         alt=""
                         className="w-full h-full object-cover"
-                        style={{
-                          objectPosition: getAvatarCrop(req.fromAvatar),
-                        }}
                       />
                     </div>
                     <div className="flex-1 min-w-0">

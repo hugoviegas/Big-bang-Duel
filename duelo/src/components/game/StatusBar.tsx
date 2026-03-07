@@ -1,4 +1,4 @@
-import { getCharacter } from "../../lib/characters";
+import { resolveAvatarPicture } from "../../lib/characters";
 import type { PlayerState } from "../../types";
 
 interface StatusBarProps {
@@ -7,28 +7,20 @@ interface StatusBarProps {
   hideAmmo?: boolean; // hide ammo display for this player
 }
 
-export function StatusBar({ player, isRight = false, hideAmmo = false }: StatusBarProps) {
+export function StatusBar({
+  player,
+  isRight = false,
+  hideAmmo = false,
+}: StatusBarProps) {
   const alignClass = isRight ? "items-end text-right" : "items-start text-left";
   const flexDir = isRight ? "flex-row-reverse" : "flex-row";
-  const charDef = getCharacter(player.avatar);
-  const thumbSrc = charDef.image;
-  // Crop to face: use object-cover + object-position to focus on the head area
-  const cropPosition = `center ${charDef.avatarCropY}`;
+  const thumbSrc = resolveAvatarPicture(player.avatar);
 
   return (
     <div className={`flex ${flexDir} items-center gap-2 md:gap-3`}>
-      {/* Avatar thumbnail — cropped to face area */}
+      {/* Avatar thumbnail */}
       <div className="w-12 h-12 md:w-14 md:h-14 rounded-full border-3 border-gold bg-black/50 overflow-hidden flex-shrink-0 shadow-lg">
-        <img
-          src={thumbSrc}
-          alt=""
-          className="w-full h-full object-cover"
-          style={{
-            objectPosition: cropPosition,
-            // Não espelhar imagem mesmo quando está na direita
-            // antes: transform: isRight ? "scaleX(-1)" : undefined,
-          }}
-        />
+        <img src={thumbSrc} alt="" className="w-full h-full object-cover" />
       </div>
 
       <div
@@ -60,46 +52,48 @@ export function StatusBar({ player, isRight = false, hideAmmo = false }: StatusB
         {!hideAmmo && (
           <div className={`flex gap-1 ${isRight ? "flex-row-reverse" : ""}`}>
             {Array.from({ length: player.maxAmmo }).map((_, i) => (
-            <svg
-              key={`ammo-${i}`}
-              viewBox="0 0 10 24"
-              className={`w-3 h-6 md:w-3.5 md:h-7 transition-all duration-300 ${i < player.ammo ? "drop-shadow-[0_0_3px_rgba(234,179,8,0.5)]" : "opacity-30"}`}
-            >
-              {/* Bullet shape */}
-              <rect
-                x="1"
-                y="10"
-                width="8"
-                height="14"
-                rx="1"
-                fill={i < player.ammo ? "#B45309" : "#374151"}
-                stroke={i < player.ammo ? "#78350F" : "#1F2937"}
-                strokeWidth="0.5"
-              />
-              <ellipse
-                cx="5"
-                cy="10"
-                rx="4"
-                ry="3"
-                fill={i < player.ammo ? "#FBBF24" : "#4B5563"}
-                stroke={i < player.ammo ? "#D97706" : "#374151"}
-                strokeWidth="0.5"
-              />
-              <ellipse
-                cx="5"
-                cy="8"
-                rx="3"
-                ry="4"
-                fill={i < player.ammo ? "#FDE68A" : "#6B7280"}
-              />
-            </svg>
-          ))}
-        </div>
+              <svg
+                key={`ammo-${i}`}
+                viewBox="0 0 10 24"
+                className={`w-3 h-6 md:w-3.5 md:h-7 transition-all duration-300 ${i < player.ammo ? "drop-shadow-[0_0_3px_rgba(234,179,8,0.5)]" : "opacity-30"}`}
+              >
+                {/* Bullet shape */}
+                <rect
+                  x="1"
+                  y="10"
+                  width="8"
+                  height="14"
+                  rx="1"
+                  fill={i < player.ammo ? "#B45309" : "#374151"}
+                  stroke={i < player.ammo ? "#78350F" : "#1F2937"}
+                  strokeWidth="0.5"
+                />
+                <ellipse
+                  cx="5"
+                  cy="10"
+                  rx="4"
+                  ry="3"
+                  fill={i < player.ammo ? "#FBBF24" : "#4B5563"}
+                  stroke={i < player.ammo ? "#D97706" : "#374151"}
+                  strokeWidth="0.5"
+                />
+                <ellipse
+                  cx="5"
+                  cy="8"
+                  rx="3"
+                  ry="4"
+                  fill={i < player.ammo ? "#FDE68A" : "#6B7280"}
+                />
+              </svg>
+            ))}
+          </div>
         )}
-        
+
         {/* Hidden ammo indicator */}
         {hideAmmo && (
-          <div className="text-xs text-sand/60 font-stats tracking-wide">🔒 Munição Oculta</div>
+          <div className="text-xs text-sand/60 font-stats tracking-wide">
+            🔒 Munição Oculta
+          </div>
         )}
       </div>
     </div>

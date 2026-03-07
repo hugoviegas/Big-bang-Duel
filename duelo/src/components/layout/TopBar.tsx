@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Settings } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
-import { getCharacter, getAvatarCrop } from "../../lib/characters";
+import { getCharacter, resolveAvatarPicture } from "../../lib/characters";
 import { SettingsModal } from "../common/SettingsModal";
 import { ProfileDropdown } from "./ProfileDropdown";
 
@@ -13,6 +13,10 @@ export function TopBar() {
   if (!user) return null;
 
   const activeChar = getCharacter(user.avatar ?? "marshal");
+  const avatarPic = resolveAvatarPicture(
+    user.avatar ?? "marshal",
+    user.avatarPicture,
+  );
   const level = 1; // TODO: derive from actual XP/level system
   const xpCurrent = 0;
   const xpMax = 100;
@@ -28,10 +32,9 @@ export function TopBar() {
         {/* Avatar */}
         <button className="avatar-ring" onClick={toggleDropdown}>
           <img
-            src={activeChar.image}
+            src={avatarPic}
             alt={activeChar.name}
             className="w-full h-full object-cover"
-            style={{ objectPosition: getAvatarCrop(user.avatar ?? "marshal") }}
           />
         </button>
 

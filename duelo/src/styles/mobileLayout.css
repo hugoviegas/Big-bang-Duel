@@ -7,7 +7,8 @@
 /* ── Mobile Shell ─────────────────────────────────────────── */
 .mobile-shell {
   width: 100%;
-  height: 100svh;
+  /* dvh = dynamic viewport height — adapts as browser UI chrome hides/shows */
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background:
@@ -24,15 +25,15 @@
 @media (min-width: 768px) {
   .mobile-shell {
     max-width: 430px;
-    margin: 0 auto;
-    margin-top: env(safe-area-inset-top, 0);
-    margin-bottom: env(safe-area-inset-bottom, 0);
+    /* Centre the shell vertically on large screens */
+    margin: auto;
     border-radius: 24px;
     box-shadow:
       0 30px 80px rgba(0, 0, 0, 0.9),
       0 0 0 2px #333;
-    height: 100vh;
-    max-height: 932px;
+    /* Fill the viewport fully, then constrain with a sensible max */
+    height: 100dvh;
+    max-height: 960px;
     background: var(--color-dark, #0e0604);
   }
 }
@@ -197,7 +198,8 @@
 
 /* ── Bottom Navigation ────────────────────────────────────── */
 .bottom-nav {
-  height: 68px;
+  height: calc(68px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: linear-gradient(180deg, #3b2010 0%, #0e0604 100%);
   border-top: 2px solid #8b6914;
   display: flex;
@@ -399,23 +401,18 @@
 
 /* ── Main Content Area with Overlay ───────────────────────── */
 main {
+  /* Takes remaining space between top-bar and bottom-nav */
   flex: 1;
+  min-height: 0;
+  /* flex column so child pages can use flex: 1 to fill height */
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
   z-index: 5;
-}
-
-main::before {
-  content: '';
-  position: fixed;
-  top: 72px;
-  left: 0;
-  right: 0;
-  bottom: 68px;
-  background: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, 0.15) 100%);
-  pointer-events: none;
-  z-index: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200,168,75,0.3) transparent;
 }
 
 /* ── Hero Section (Menu Page) ─────────────────────────────── */
@@ -426,9 +423,10 @@ main::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
-  padding: 30px 20px;
+  /* Buttons stay at the bottom; remaining space above is the bg */
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 20px 20px 28px;
 }
 
 /* ── Play Buttons (Clash Royale style) ────────────────────── */

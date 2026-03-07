@@ -3,7 +3,8 @@ import { useAuthStore } from "../store/authStore";
 import {
   CHARACTERS,
   getCharacter,
-  getAvatarCrop,
+  getAllAvatarOptions,
+  resolveAvatarPicture,
   RARITY_STYLES,
   RARITY_LABELS,
 } from "../lib/characters";
@@ -18,11 +19,19 @@ export default function ProfilePage() {
   const [selectedAvatar, setSelectedAvatar] = useState(
     user?.avatar ?? "marshal",
   );
+  const [selectedAvatarPicture, setSelectedAvatarPicture] = useState(
+    user?.avatarPicture ?? null,
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
   const activeChar = getCharacter(selectedAvatar);
+  const currentAvatarPic = resolveAvatarPicture(
+    selectedAvatar,
+    selectedAvatarPicture,
+  );
+  const allAvatarOptions = getAllAvatarOptions();
   const playerCode = user?.playerCode ?? "";
   const statsByMode = user?.statsByMode ?? {
     solo: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
@@ -36,6 +45,10 @@ export default function ProfilePage() {
     },
   };
 
+  const handleSelectAvatarPicture = (image: string) => {
+    setSelectedAvatarPicture(image);
+  };
+
   const handleSave = async () => {
     if (!user || !displayName.trim()) return;
     setSaving(true);
@@ -43,13 +56,17 @@ export default function ProfilePage() {
     const trimmedName = displayName.trim().slice(0, 20);
 
     // Update local state
-    updateUser({ displayName: trimmedName });
+    updateUser({
+      displayName: trimmedName,
+      avatarPicture: selectedAvatarPicture ?? undefined,
+    });
     updateCharacter(selectedAvatar);
 
     // Sync to Firestore
     await updatePlayerProfile(user.uid, {
       displayName: trimmedName,
       avatar: selectedAvatar,
+      avatarPicture: selectedAvatarPicture ?? undefined,
     }).catch(() => {});
 
     setSaving(false);
@@ -84,10 +101,9 @@ export default function ProfilePage() {
           <div className="relative">
             <div className="w-24 h-24 rounded-full border-4 border-gold/60 overflow-hidden shadow-lg">
               <img
-                src={activeChar.image}
+                src={currentAvatarPic}
                 alt={activeChar.name}
                 className="w-full h-full object-cover"
-                style={{ objectPosition: getAvatarCrop(selectedAvatar) }}
               />
             </div>
             <span
@@ -145,16 +161,63 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        {/* Avatar Selection */}
+        {/* Avatar Picture Selection */}
         <div>
           <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest block mb-3">
-            Escolha seu Avatar
+            Escolha sua Foto de Perfil
           </label>
           <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
+            {allAvatarOptions.map((opt) => (
+              <button
+                key={opt.image}
+                onClick={() => handleSelectAvatarPicture(opt.image)}
+                className={`relative group rounded-full overflow-hidden border-2 transition-all aspect-square ${
+                  currentAvatarPic === opt.image
+                    ? "border-gold ring-2 ring-gold/40 scale-105"
+                    : `${RARITY_STYLES[getCharacter(opt.characterId).rarity]} opacity-70 hover:opacity-100 hover:scale-105`
+                }`}
+              >
+                <img
+                  src={opt.image}
+                  alt={opt.characterName}
+                  className="w-full h-full object-cover"
+                />
+                {currentAvatarPic === opt.image && (
+                  <div className="absolute inset-0 bg-gold/10 flex items-center justify-center">
+                    <svg
+                      className="w-5 h-5 text-gold drop-shadow-lg"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Character Selection (for gameplay) */}
+        <div>
+          <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest block mb-3">
+            Personagem Ativo
+          </label>
+          <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
             {CHARACTERS.map((char) => (
               <button
                 key={char.id}
-                onClick={() => setSelectedAvatar(char.id)}
+                onClick={() => {
+                  setSelectedAvatar(char.id);
+                  // If user hasn't explicitly picked a picture yet, auto-follow character
+                  if (!user?.avatarPicture && !selectedAvatarPicture) {
+                    setSelectedAvatarPicture(null);
+                  }
+                }}
                 className={`relative group rounded-xl overflow-hidden border-2 transition-all aspect-square ${
                   selectedAvatar === char.id
                     ? "border-gold ring-2 ring-gold/40 scale-105"
@@ -162,10 +225,9 @@ export default function ProfilePage() {
                 }`}
               >
                 <img
-                  src={char.image}
+                  src={char.profileImage}
                   alt={char.name}
                   className="w-full h-full object-cover"
-                  style={{ objectPosition: getAvatarCrop(char.id) }}
                 />
                 {selectedAvatar === char.id && (
                   <div className="absolute inset-0 bg-gold/10 flex items-center justify-center">

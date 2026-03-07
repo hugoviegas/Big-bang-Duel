@@ -3,6 +3,23 @@ export type CardType = "shot" | "double_shot" | "dodge" | "reload" | "counter";
 export type BotDifficulty = "easy" | "medium" | "hard";
 export type AttackTimer = 2 | 3 | 5 | 10 | 30;
 
+/**
+ * Classes de personagem — cada uma tem uma habilidade passiva com 5% de chance de ativar.
+ *  - atirador:     tiro tem chance de ser crítico (2x dano).
+ *  - estrategista: recarga tem chance de dar +2 munições ao invés de +1.
+ *  - sorrateiro:   qualquer carta tem chance de esquivar de tiros inimigos.
+ *  - ricochete:    contra-golpe tem chance de dobrar o dano de retorno.
+ *  - sanguinario:  tiro duplo tem chance de consumir apenas 1 munição.
+ *  - suporte:      quando leva tiro tem chance de ativar escudo (bloqueia 1 HP, máx 2x por partida).
+ */
+export type CharacterClass =
+  | "atirador"
+  | "estrategista"
+  | "sorrateiro"
+  | "ricochete"
+  | "sanguinario"
+  | "suporte";
+
 /** User preferences that are persisted in Firestore and loaded on every device. */
 export interface UserPreferences {
   selectedCharacter: string; // character id, e.g. 'marshal'
@@ -57,8 +74,10 @@ export interface PlayerState {
     | "death"
     | "counter";
   wins: number;
-  dodgeStreak: number;      // consecutive dodges used this round
-  doubleShotsLeft: number;  // remaining double_shot uses this round (max 3)
+  dodgeStreak: number; // consecutive dodges used this round
+  doubleShotsLeft: number; // remaining double_shot uses this round (max 3)
+  characterClass: CharacterClass; // passive ability class
+  shieldUsesLeft: number; // Suporte class: remaining shield activations this match (max 2)
 }
 
 export interface GameState {
@@ -95,6 +114,14 @@ export interface TurnResult {
   playerAmmoChange: number;
   opponentAmmoChange: number;
   narrative: string;
+  /** Name of the ability that triggered this turn for the player (e.g. 'Tiro Crítico'). */
+  playerAbilityTriggered?: string;
+  /** Name of the ability that triggered this turn for the opponent. */
+  opponentAbilityTriggered?: string;
+  /** True if the player's Suporte shield blocked damage this turn. */
+  playerShieldUsed?: boolean;
+  /** True if the opponent's Suporte shield blocked damage this turn. */
+  opponentShieldUsed?: boolean;
 }
 
 /** Unique player code in format #XXXXXXXX (hex uppercase). */
@@ -126,6 +153,8 @@ export interface User {
   playerCode: PlayerCode;
   /** ID of the selected character — mirrors preferences.selectedCharacter for fast access. */
   avatar: string;
+  /** Custom avatar picture path. When set by the user, overrides the default character profile image. */
+  avatarPicture?: string;
   wins: number;
   losses: number;
   draws: number;
@@ -149,6 +178,8 @@ export interface PlayerProfile {
   displayName: string;
   playerCode: PlayerCode;
   avatar: string;
+  /** Custom avatar picture path chosen by the user. */
+  avatarPicture?: string;
   wins: number;
   losses: number;
   draws: number;
@@ -180,6 +211,7 @@ export interface FriendRequest {
   fromUid: string;
   fromDisplayName: string;
   fromAvatar: string;
+  fromAvatarPicture?: string;
   fromPlayerCode: PlayerCode;
   toUid: string;
   status: FriendRequestStatus;
@@ -191,6 +223,7 @@ export interface Friend {
   displayName: string;
   playerCode: PlayerCode;
   avatar: string;
+  avatarPicture?: string;
   onlineStatus: OnlineStatus;
   lastSeen: number;
   addedAt: number;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../../store/authStore";
 import { fetchLeaderboard } from "../../lib/firebaseService";
-import { getCharacter, getAvatarCrop } from "../../lib/characters";
+import { resolveAvatarPicture } from "../../lib/characters";
 import type { LeaderboardEntry } from "../../types";
 
 type RankingMode = "overall" | "solo" | "online";
@@ -126,7 +126,6 @@ export function Leaderboard() {
       {!isLoading && entries.length > 0 && (
         <div className="space-y-2">
           {entries.map((entry, i) => {
-            const char = getCharacter(entry.avatar);
             const isMe = entry.uid === currentUser?.uid;
             return (
               <div
@@ -152,10 +151,9 @@ export function Leaderboard() {
                 {/* Avatar */}
                 <div className="w-10 h-10 rounded-full border-2 border-sand/30 overflow-hidden shrink-0">
                   <img
-                    src={char.image}
+                    src={resolveAvatarPicture(entry.avatar)}
                     alt=""
                     className="w-full h-full object-cover"
-                    style={{ objectPosition: getAvatarCrop(entry.avatar) }}
                   />
                 </div>
 

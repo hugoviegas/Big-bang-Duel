@@ -100,10 +100,9 @@ export function GamePrep({
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg border-2 border-gold/40 overflow-hidden">
               <img
-                src={activeChar.image}
+                src={activeChar.profileImage}
                 alt={activeChar.name}
-                className="w-full h-full object-cover object-center"
-                style={{ objectPosition: activeChar.avatarCropY }}
+                className="w-full h-full object-cover"
               />
             </div>
             <div className="text-left">

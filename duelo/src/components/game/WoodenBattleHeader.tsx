@@ -1,4 +1,4 @@
-import { getCharacter } from "../../lib/characters";
+import { resolveAvatarPicture } from "../../lib/characters";
 import type { PlayerState } from "../../types";
 
 interface WoodenBattleHeaderProps {
@@ -42,18 +42,12 @@ function PlayerPanel({
   isRight?: boolean;
   hideAmmo?: boolean;
 }) {
-  const charDef = getCharacter(player.avatar);
-  const cropPos = `center ${charDef.avatarCropY}`;
+  const avatarPic = resolveAvatarPicture(player.avatar);
 
   return (
     <div className={`battle-player-panel${isRight ? " is-right" : ""}`}>
       <div className="battle-player-avatar">
-        <img
-          src={charDef.image}
-          alt=""
-          className="w-full h-full object-cover"
-          style={{ objectPosition: cropPos }}
-        />
+        <img src={avatarPic} alt="" className="w-full h-full object-cover" />
       </div>
       <div className="battle-player-info">
         <span className="battle-player-name">{player.displayName}</span>
@@ -112,8 +106,12 @@ function PlayerPanel({
           </div>
         )}
         {hideAmmo && (
-          <div className={`battle-player-bullets${isRight ? " is-right" : ""} opacity-60`}>
-            <span className="text-xs text-sand/50 font-stats tracking-wide">🔒</span>
+          <div
+            className={`battle-player-bullets${isRight ? " is-right" : ""} opacity-60`}
+          >
+            <span className="text-xs text-sand/50 font-stats tracking-wide">
+              🔒
+            </span>
           </div>
         )}
       </div>
@@ -197,7 +195,11 @@ export function WoodenBattleHeader({
                 )}
               </div>
 
-              <PlayerPanel player={opponent} isRight hideAmmo={hideOpponentAmmo} />
+              <PlayerPanel
+                player={opponent}
+                isRight
+                hideAmmo={hideOpponentAmmo}
+              />
             </div>
           </div>
         </div>

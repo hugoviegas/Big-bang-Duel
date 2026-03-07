@@ -9,9 +9,15 @@ import type {
   AttackTimer,
   RoomConfig,
 } from "../types";
-import { LIFE_BY_MODE, resolveCards, checkWinner, MAX_DODGE_STREAK, MAX_DOUBLE_SHOT_USES } from "../lib/gameEngine";
+import {
+  LIFE_BY_MODE,
+  resolveCards,
+  checkWinner,
+  MAX_DODGE_STREAK,
+  MAX_DOUBLE_SHOT_USES,
+} from "../lib/gameEngine";
 import { botChooseCard } from "../lib/botAI";
-import { CHARACTERS, getCharacter } from "../lib/characters";
+import { CHARACTERS, getCharacter, getCharacterClass } from "../lib/characters";
 
 interface GameStore extends GameState {
   initializeGame: (
@@ -52,6 +58,8 @@ const initialState: GameState = {
     wins: 0,
     dodgeStreak: 0,
     doubleShotsLeft: MAX_DOUBLE_SHOT_USES,
+    characterClass: "atirador",
+    shieldUsesLeft: 2,
   },
   opponent: {
     id: "bot",
@@ -68,6 +76,8 @@ const initialState: GameState = {
     wins: 0,
     dodgeStreak: 0,
     doubleShotsLeft: MAX_DOUBLE_SHOT_USES,
+    characterClass: "sorrateiro",
+    shieldUsesLeft: 2,
   },
   lastResult: null,
   isOnline: false,
@@ -152,6 +162,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         maxLife: life,
         avatar: playerAvatar,
         displayName: playerDisplayName,
+        characterClass: getCharacterClass(playerAvatar),
+        shieldUsesLeft: 2,
       },
       opponent: {
         ...initialState.opponent,
@@ -159,6 +171,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         maxLife: life,
         avatar: opponentAvatar,
         displayName: opponentCharDef.name,
+        characterClass: getCharacterClass(opponentAvatar),
+        shieldUsesLeft: 2,
       },
     });
   },
@@ -236,6 +250,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         oAmmo,
         currentState.mode,
         currentState.turn,
+        currentState.player.characterClass,
+        currentState.opponent.characterClass,
+        currentState.player.shieldUsesLeft,
+        currentState.opponent.shieldUsesLeft,
       );
 
       const pAnim = result.playerLifeLost > 0 ? "hit" : cardToAnim(pCard);
@@ -258,12 +276,24 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         ammo: newPlayerAmmo,
         currentAnimation: (newPlayerLife <= 0 ? "death" : pAnim) as any,
         isAnimating: true,
-        dodgeStreak: pCard === "dodge"
-          ? Math.min(MAX_DODGE_STREAK, (currentState.player.dodgeStreak ?? 0) + 1)
-          : 0,
-        doubleShotsLeft: pCard === "double_shot"
-          ? Math.max(0, (currentState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES) - 1)
-          : (currentState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES),
+        dodgeStreak:
+          pCard === "dodge"
+            ? Math.min(
+                MAX_DODGE_STREAK,
+                (currentState.player.dodgeStreak ?? 0) + 1,
+              )
+            : 0,
+        doubleShotsLeft:
+          pCard === "double_shot"
+            ? Math.max(
+                0,
+                (currentState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES) -
+                  1,
+              )
+            : (currentState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES),
+        shieldUsesLeft: result.playerShieldUsed
+          ? Math.max(0, (currentState.player.shieldUsesLeft ?? 2) - 1)
+          : (currentState.player.shieldUsesLeft ?? 2),
       };
       const newOpponent = {
         ...currentState.opponent,
@@ -271,12 +301,24 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         ammo: newOpponentAmmo,
         currentAnimation: (newOpponentLife <= 0 ? "death" : oAnim) as any,
         isAnimating: true,
-        dodgeStreak: oCard === "dodge"
-          ? Math.min(MAX_DODGE_STREAK, (currentState.opponent.dodgeStreak ?? 0) + 1)
-          : 0,
-        doubleShotsLeft: oCard === "double_shot"
-          ? Math.max(0, (currentState.opponent.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES) - 1)
-          : (currentState.opponent.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES),
+        dodgeStreak:
+          oCard === "dodge"
+            ? Math.min(
+                MAX_DODGE_STREAK,
+                (currentState.opponent.dodgeStreak ?? 0) + 1,
+              )
+            : 0,
+        doubleShotsLeft:
+          oCard === "double_shot"
+            ? Math.max(
+                0,
+                (currentState.opponent.doubleShotsLeft ??
+                  MAX_DOUBLE_SHOT_USES) - 1,
+              )
+            : (currentState.opponent.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES),
+        shieldUsesLeft: result.opponentShieldUsed
+          ? Math.max(0, (currentState.opponent.shieldUsesLeft ?? 2) - 1)
+          : (currentState.opponent.shieldUsesLeft ?? 2),
       };
 
       const winner = checkWinner(newPlayer, newOpponent);
@@ -433,7 +475,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         roomStatus: roomData.status,
         attackTimer: roomData.config?.attackTimer ?? state.attackTimer,
         bestOf3: roomData.config?.bestOf3 ?? state.bestOf3,
-        hideOpponentAmmo: roomData.config?.hideOpponentAmmo ?? state.hideOpponentAmmo,
+        hideOpponentAmmo:
+          roomData.config?.hideOpponentAmmo ?? state.hideOpponentAmmo,
         currentRound: roomData.currentRound ?? state.currentRound,
         playerStars: isHost
           ? (roomData.hostStars ?? state.playerStars)
@@ -464,6 +507,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           avatar: isHost
             ? (roomData.guestAvatar ?? state.opponent.avatar)
             : (roomData.hostAvatar ?? state.opponent.avatar),
+          characterClass: getCharacterClass(
+            isHost
+              ? (roomData.guestAvatar ?? state.opponent.avatar)
+              : (roomData.hostAvatar ?? state.opponent.avatar),
+          ),
         },
       });
 
@@ -485,7 +533,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       // Sync room config
       attackTimer: roomData.config?.attackTimer ?? curr.attackTimer,
       bestOf3: roomData.config?.bestOf3 ?? curr.bestOf3,
-      hideOpponentAmmo: roomData.config?.hideOpponentAmmo ?? curr.hideOpponentAmmo,
+      hideOpponentAmmo:
+        roomData.config?.hideOpponentAmmo ?? curr.hideOpponentAmmo,
       currentRound: roomData.currentRound ?? curr.currentRound,
       playerStars: isHost
         ? (roomData.hostStars ?? curr.playerStars)
@@ -515,6 +564,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         avatar: isHost
           ? (roomData.guestAvatar ?? curr.opponent.avatar)
           : (roomData.hostAvatar ?? curr.opponent.avatar),
+        characterClass: getCharacterClass(
+          isHost
+            ? (roomData.guestAvatar ?? curr.opponent.avatar)
+            : (roomData.hostAvatar ?? curr.opponent.avatar),
+        ),
         life: roomData[`${otherRole}Life`] ?? curr.opponent.life,
         ammo: roomData[`${otherRole}Ammo`] ?? curr.opponent.ammo,
         selectedCard: null,

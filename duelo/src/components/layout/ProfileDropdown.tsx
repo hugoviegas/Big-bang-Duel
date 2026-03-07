@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
-import { getCharacter, getAvatarCrop } from "../../lib/characters";
+import { resolveAvatarPicture } from "../../lib/characters";
 import { Edit, Settings, LogOut } from "lucide-react";
 
 interface ProfileDropdownProps {
@@ -20,7 +20,10 @@ export function ProfileDropdown({
 
   if (!user) return null;
 
-  const activeChar = getCharacter(user.avatar ?? "marshal");
+  const avatarPic = resolveAvatarPicture(
+    user.avatar ?? "marshal",
+    user.avatarPicture,
+  );
   const playerCode = user.playerCode ?? "";
 
   const handleNav = (path: string) => {
@@ -38,12 +41,7 @@ export function ProfileDropdown({
     <div className={`profile-dropdown ${isOpen ? "open" : ""}`}>
       <div className="dropdown-header">
         <div className="dropdown-avatar">
-          <img
-            src={activeChar.image}
-            alt=""
-            className="w-full h-full object-cover"
-            style={{ objectPosition: getAvatarCrop(user.avatar ?? "marshal") }}
-          />
+          <img src={avatarPic} alt="" className="w-full h-full object-cover" />
         </div>
         <div>
           <div className="dropdown-name">{user.displayName}</div>
