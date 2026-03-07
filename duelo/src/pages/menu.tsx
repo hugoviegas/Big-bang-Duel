@@ -82,7 +82,7 @@ export default function MenuPage() {
             {/* Player info */}
             {user && (
               <button
-                onClick={() => navigate("/characters")}
+                onClick={() => navigate("/profile")}
                 className="bg-black/50 backdrop-blur-sm px-4 py-2 rounded-full mb-6 flex items-center gap-3 border border-gold/30 hover:border-gold/60 transition-all animate-fade-up group"
               >
                 {/* Face-cropped avatar */}
