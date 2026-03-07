@@ -18,8 +18,6 @@ import {
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
-  const updateUser = useAuthStore((s) => s.updateUser);
-  const updateCharacter = useAuthStore((s) => s.updateCharacter);
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [selectedAvatar, setSelectedAvatar] = useState(
@@ -65,23 +63,21 @@ export default function ProfilePage() {
 
     const trimmedName = displayName.trim().slice(0, 20);
 
-    // Update local state
-    updateUser({
-      displayName: trimmedName,
-      avatarPicture: selectedAvatarPicture ?? undefined,
-    });
-    updateCharacter(selectedAvatar);
-
-    // Sync to Firestore
-    await updatePlayerProfile(user.uid, {
-      displayName: trimmedName,
-      avatar: selectedAvatar,
-      avatarPicture: selectedAvatarPicture ?? undefined,
-    }).catch(() => {});
-
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    // Sync to Firestore - Firebase listener will update local state automatically
+    // This prevents sync conflicts between local and server data
+    try {
+      await updatePlayerProfile(user.uid, {
+        displayName: trimmedName,
+        avatar: selectedAvatar,
+        avatarPicture: selectedAvatarPicture ?? undefined,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error("[Profile] Failed to save:", error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCopyCode = () => {
@@ -357,7 +353,9 @@ export default function ProfilePage() {
 
           <div className="flex items-center justify-between mb-2">
             <span className="font-stats text-xs text-sand/60">Nível atual</span>
-            <span className="font-western text-gold text-lg">Nv {progression.level}</span>
+            <span className="font-western text-gold text-lg">
+              Nv {progression.level}
+            </span>
           </div>
 
           <div className="h-2 rounded-full bg-black/40 border border-sand/20 overflow-hidden mb-2">
@@ -366,9 +364,13 @@ export default function ProfilePage() {
               style={{
                 width: `${Math.min(
                   100,
-                  ((progression.xpCurrentLevel /
-                    Math.max(1, progression.xpForNextLevel - progression.xpForCurrentLevel)) *
-                    100),
+                  (progression.xpCurrentLevel /
+                    Math.max(
+                      1,
+                      progression.xpForNextLevel -
+                        progression.xpForCurrentLevel,
+                    )) *
+                    100,
                 )}%`,
               }}
             />
@@ -388,24 +390,32 @@ export default function ProfilePage() {
               <div className="font-western text-gold text-base">
                 {currencies.gold.toLocaleString("pt-BR")}
               </div>
-              <div className="font-stats text-[9px] text-sand/50 uppercase">Gold</div>
+              <div className="font-stats text-[9px] text-sand/50 uppercase">
+                Gold
+              </div>
             </div>
             <div className="rounded-lg border border-fuchsia-400/30 bg-black/25 p-2">
               <div className="font-western text-fuchsia-300 text-base">
                 {currencies.ruby.toLocaleString("pt-BR")}
               </div>
-              <div className="font-stats text-[9px] text-sand/50 uppercase">Ruby</div>
+              <div className="font-stats text-[9px] text-sand/50 uppercase">
+                Ruby
+              </div>
             </div>
             <div className="rounded-lg border border-orange-300/30 bg-black/25 p-2">
               <div className="font-western text-orange-300 text-base">
                 {ranked.trophies.toLocaleString("pt-BR")}
               </div>
-              <div className="font-stats text-[9px] text-sand/50 uppercase">Troféus</div>
+              <div className="font-stats text-[9px] text-sand/50 uppercase">
+                Troféus
+              </div>
             </div>
           </div>
 
           <div className="mt-3 text-right">
-            <span className="font-stats text-[10px] text-sand/50">Pico de troféus:</span>
+            <span className="font-stats text-[10px] text-sand/50">
+              Pico de troféus:
+            </span>
             <span className="font-western text-orange-200 text-base ml-2">
               {ranked.trophyPeak.toLocaleString("pt-BR")}
             </span>
@@ -414,7 +424,9 @@ export default function ProfilePage() {
           <div className="mt-3 pt-3 border-t border-sand/15">
             <div className="flex items-center justify-between text-xs font-stats text-sand/60">
               <span>Personagens desbloqueados</span>
-              <span className="text-gold">{unlocks.charactersUnlocked.length}</span>
+              <span className="text-gold">
+                {unlocks.charactersUnlocked.length}
+              </span>
             </div>
           </div>
         </div>

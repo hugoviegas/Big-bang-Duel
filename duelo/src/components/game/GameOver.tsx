@@ -10,12 +10,8 @@ import type { MatchMode } from "../../types";
 import {
   calculateMatchRewards,
   calculateProgression,
-  normalizeCurrencies,
-  normalizeRanked,
   normalizeUnlocks,
   getLevelUpRewards,
-  applyLevelRewards,
-  clampTrophies,
   type MatchRewardSummary,
   type LevelReward,
 } from "../../lib/progression";
@@ -65,7 +61,6 @@ export function GameOver() {
   } = useGameStore();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const updateUser = useAuthStore((s) => s.updateUser);
 
   let result: MatchResult;
   if (winnerId === player.id) {
@@ -84,7 +79,9 @@ export function GameOver() {
     levelBefore: number;
     levelAfter: number;
   }>(() => {
-    const currentProgression = calculateProgression(user?.progression?.xpTotal ?? 0);
+    const currentProgression = calculateProgression(
+      user?.progression?.xpTotal ?? 0,
+    );
     const rewardSummary = calculateMatchRewards(matchMode, result);
     const nextProgression = calculateProgression(
       (user?.progression?.xpTotal ?? 0) + rewardSummary.xpGained,
@@ -109,92 +106,13 @@ export function GameOver() {
     statsRecorded.current = true;
 
     const reward = rewardSnapshot.rewardSummary;
-    const currentStats = user.statsByMode ?? {
-      solo: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
-      online: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
-      overall: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
-    };
-    const modeStats = currentStats[matchMode];
-    const nextModeStats = {
-      wins: modeStats.wins + (result === "win" ? 1 : 0),
-      losses: modeStats.losses + (result === "loss" ? 1 : 0),
-      draws: modeStats.draws + (result === "draw" ? 1 : 0),
-      totalGames: modeStats.totalGames + 1,
-      winRate: 0,
-    };
-    nextModeStats.winRate =
-      nextModeStats.totalGames > 0
-        ? Math.round((nextModeStats.wins / nextModeStats.totalGames) * 1000) /
-          10
-        : 0;
 
-    const nextSolo = matchMode === "solo" ? nextModeStats : currentStats.solo;
-    const nextOnline =
-      matchMode === "online" ? nextModeStats : currentStats.online;
-    const nextOverall = {
-      wins: nextSolo.wins + nextOnline.wins,
-      losses: nextSolo.losses + nextOnline.losses,
-      draws: nextSolo.draws + nextOnline.draws,
-      totalGames: nextSolo.totalGames + nextOnline.totalGames,
-      winRate: 0,
-    };
-    nextOverall.winRate =
-      nextOverall.totalGames > 0
-        ? Math.round((nextOverall.wins / nextOverall.totalGames) * 1000) / 10
-        : 0;
-
-    // Update local auth state
-    const nextProgression = calculateProgression(
-      (user.progression?.xpTotal ?? 0) + reward.xpGained,
-    );
-
-    const currencies = normalizeCurrencies(user.currencies);
-    currencies.gold += reward.goldGained;
-    currencies.ruby += reward.rubyGained;
-    const unlocks = normalizeUnlocks(user.unlocks);
-
-    const earnedLevelRewards = rewardSnapshot.levelRewards;
-    const rewardsApplied = applyLevelRewards(unlocks, currencies, earnedLevelRewards);
-
-    const ranked = normalizeRanked(user.ranked);
-    const nextTrophies =
-      matchMode === "online"
-        ? clampTrophies(ranked.trophies + reward.trophyDelta)
-        : ranked.trophies;
-
-    updateUser({
-      wins: nextOverall.wins,
-      losses: nextOverall.losses,
-      draws: nextOverall.draws,
-      totalGames: nextOverall.totalGames,
-      winRate: nextOverall.winRate,
-      progression: nextProgression,
-      currencies: rewardsApplied.currencies,
-      ranked: {
-        trophies: nextTrophies,
-        trophyPeak: Math.max(ranked.trophyPeak, nextTrophies),
-      },
-      unlocks: rewardsApplied.unlocks,
-      statsByMode: {
-        solo: nextSolo,
-        online: nextOnline,
-        overall: nextOverall,
-      },
+    // Persist to Firestore - Firebase is the source of truth
+    // The real-time listener will automatically update local state when saved
+    recordMatchResult(user.uid, result, matchMode, reward).catch((error) => {
+      console.error("[GameOver] Failed to save match result:", error);
     });
-
-    // Persist to Firestore
-    recordMatchResult(user.uid, result, matchMode, reward).catch(() => {});
-  }, [
-    isOnline,
-    matchMode,
-    opponent.id,
-    player.id,
-    result,
-    updateUser,
-    user,
-    winnerId,
-    rewardSnapshot,
-  ]);
+  }, [matchMode, result, user, rewardSnapshot]);
 
   const rewardSummary = rewardSnapshot.rewardSummary;
   const levelRewards = rewardSnapshot.levelRewards;
@@ -371,40 +289,69 @@ export function GameOver() {
                 </span>
                 XP ganho
               </span>
-              <span className="font-bold text-sky">+{rewardSummary.xpGained}</span>
+              <span className="font-bold text-sky">
+                +{rewardSummary.xpGained}
+              </span>
             </div>
             <div className="flex items-center justify-between border-b border-sand/10 pb-1">
               <span className="text-sand/60 flex items-center gap-2">
                 <picture>
-                  <source srcSet="/assets/ui/gold_coin.webp" type="image/webp" />
-                  <img src="/assets/ui/gold_coin.png" alt="gold" className="w-4 h-4" />
+                  <source
+                    srcSet="/assets/ui/gold_coin.webp"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/assets/ui/gold_coin.png"
+                    alt="gold"
+                    className="w-4 h-4"
+                  />
                 </picture>
                 Ouro ganho
               </span>
-              <span className="font-bold text-gold">+{rewardSummary.goldGained}</span>
+              <span className="font-bold text-gold">
+                +{rewardSummary.goldGained}
+              </span>
             </div>
             <div className="flex items-center justify-between border-b border-sand/10 pb-1">
               <span className="text-sand/60 flex items-center gap-2">
                 <picture>
-                  <source srcSet="/assets/ui/ruby_coin.webp" type="image/webp" />
-                  <img src="/assets/ui/ruby_coin.png" alt="ruby" className="w-4 h-4" />
+                  <source
+                    srcSet="/assets/ui/ruby_coin.webp"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/assets/ui/ruby_coin.png"
+                    alt="ruby"
+                    className="w-4 h-4"
+                  />
                 </picture>
                 Ruby ganho
               </span>
-              <span className="font-bold text-fuchsia-300">+{rewardSummary.rubyGained}</span>
+              <span className="font-bold text-fuchsia-300">
+                +{rewardSummary.rubyGained}
+              </span>
             </div>
             {isOnline && (
               <div className="flex items-center justify-between border-b border-sand/10 pb-1">
                 <span className="text-sand/60 flex items-center gap-2">
                   <picture>
-                    <source srcSet="/assets/ui/trophie_icon.webp" type="image/webp" />
-                    <img src="/assets/ui/trophie_icon.png" alt="trophy" className="w-4 h-4" />
+                    <source
+                      srcSet="/assets/ui/trophie_icon.webp"
+                      type="image/webp"
+                    />
+                    <img
+                      src="/assets/ui/trophie_icon.png"
+                      alt="trophy"
+                      className="w-4 h-4"
+                    />
                   </picture>
                   Troféus
                 </span>
                 <span
                   className={`font-bold ${
-                    rewardSummary.trophyDelta >= 0 ? "text-green-400" : "text-red-400"
+                    rewardSummary.trophyDelta >= 0
+                      ? "text-green-400"
+                      : "text-red-400"
                   }`}
                 >
                   {rewardSummary.trophyDelta >= 0 ? "+" : ""}

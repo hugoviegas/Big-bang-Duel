@@ -13,7 +13,6 @@ const CHARACTER_PRICE_GOLD = 1000;
 
 export default function ShopPage() {
   const user = useAuthStore((s) => s.user);
-  const updateUser = useAuthStore((s) => s.updateUser);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
 
@@ -33,15 +32,8 @@ export default function ShopPage() {
     const response = await buyCharacterInShop(user.uid, characterId);
     setLoadingId(null);
 
-    if (!response.ok) {
-      setMessage(response.message);
-      return;
-    }
-
-    updateUser({
-      currencies: response.currencies,
-      unlocks: response.unlocks,
-    });
+    // Firebase listener will automatically update user state
+    // No need to call updateUser() - that can cause sync issues
     setMessage(response.message);
   };
 
