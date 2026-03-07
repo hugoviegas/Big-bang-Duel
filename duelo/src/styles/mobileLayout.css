@@ -12,8 +12,12 @@
   display: flex;
   flex-direction: column;
   background:
-    linear-gradient(180deg, rgba(58, 14, 14, 0.25) 0%, rgba(26, 10, 4, 0.5) 100%),
-    url('/assets/ui/bg_desert_portrait.webp');
+    linear-gradient(
+      180deg,
+      rgba(58, 14, 14, 0.25) 0%,
+      rgba(26, 10, 4, 0.5) 100%
+    ),
+    url("/assets/ui/bg_desert_portrait.webp");
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
@@ -412,7 +416,7 @@ main {
   position: relative;
   z-index: 5;
   scrollbar-width: thin;
-  scrollbar-color: rgba(200,168,75,0.3) transparent;
+  scrollbar-color: rgba(200, 168, 75, 0.3) transparent;
 }
 
 /* ── Hero Section (Menu Page) ─────────────────────────────── */
