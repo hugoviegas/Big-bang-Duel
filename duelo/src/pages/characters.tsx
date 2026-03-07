@@ -11,6 +11,11 @@ import {
   type CharacterDef,
 } from "../lib/characters";
 import type { CharacterClass } from "../types";
+import {
+  normalizeUnlocks,
+  getUnlockLevelForCharacter,
+  calculateProgression,
+} from "../lib/progression";
 
 /* ─── Rarity visual helpers ──────────────────────────────────────────── */
 const RARITY_BORDER: Record<CharacterDef["rarity"], string> = {
@@ -83,10 +88,14 @@ const CLASS_FILTERS: Array<{
 function CharacterCard({
   char,
   isActive,
+  isLocked,
+  unlockLevel,
   onClick,
 }: {
   char: CharacterDef;
   isActive: boolean;
+  isLocked: boolean;
+  unlockLevel: number | null;
   onClick: () => void;
 }) {
   const cls = CLASS_INFO[char.characterClass];
@@ -146,6 +155,15 @@ function CharacterCard({
           className="absolute inset-0 w-full h-[112%] object-contain object-top transition-transform duration-500 hover:scale-[1.04]"
         />
         <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black via-black/65 to-transparent pointer-events-none" />
+
+        {isLocked && (
+          <div className="absolute inset-0 z-30 bg-black/70 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1">
+            <span className="text-xl">🔒</span>
+            <span className="font-stats text-[9px] uppercase tracking-wider text-sand/80">
+              {unlockLevel ? `Nv ${unlockLevel}` : "Bloqueado"}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Name + class chip */}
@@ -174,12 +192,16 @@ function CharacterModal({
   char,
   saving,
   isActive,
+  isLocked,
+  unlockLevel,
   onSelect,
   onClose,
 }: {
   char: CharacterDef;
   saving: boolean;
   isActive: boolean;
+  isLocked: boolean;
+  unlockLevel: number | null;
   onSelect: () => void;
   onClose: () => void;
 }) {
@@ -208,7 +230,10 @@ function CharacterModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── TOP BAR ── */}
-        <div className="flex-none flex items-center justify-between px-4 pt-4 pb-2 z-10">
+        <div
+          className="flex-none flex items-center justify-between px-4 pb-2 z-10"
+          style={{ paddingTop: "max(16px, calc(env(safe-area-inset-top, 0px) + 16px))" }}
+        >
           <button
             onClick={onClose}
             className="flex items-center gap-1.5 bg-white/5 border border-sand/15 rounded-full px-3 py-1.5 text-sand/70 hover:text-sand active:scale-95 transition-colors"
@@ -331,6 +356,12 @@ function CharacterModal({
                 PERSONAGEM ATIVO
               </span>
             </div>
+          ) : isLocked ? (
+            <div className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl border border-sand/30 bg-black/40">
+              <span className="font-western text-sand-light text-sm tracking-[0.08em]">
+                BLOQUEADO {unlockLevel ? `· REQUER NV ${unlockLevel}` : ""}
+              </span>
+            </div>
           ) : (
             <button
               onClick={onSelect}
@@ -359,6 +390,9 @@ function CharacterModal({
 export default function CharactersPage() {
   const user = useAuthStore((s) => s.user);
   const { loadPreferences, saveCharacter } = useUserPreferences();
+  const progression = calculateProgression(user?.progression?.xpTotal ?? 0);
+  const unlocks = normalizeUnlocks(user?.unlocks);
+  const unlockedSet = new Set(unlocks.charactersUnlocked);
 
   const currentCharId = user?.avatar ?? "marshal";
   const [expanded, setExpanded] = useState<CharacterDef | null>(null);
@@ -368,7 +402,7 @@ export default function CharactersPage() {
 
   useEffect(() => {
     loadPreferences();
-  }, []);
+  }, [loadPreferences]);
 
   // Prevent body scroll while modal is open
   useEffect(() => {
@@ -383,6 +417,9 @@ export default function CharactersPage() {
   }, [expanded]);
 
   const handleSelect = async (char: CharacterDef) => {
+    if (!unlockedSet.has(char.id)) {
+      return;
+    }
     setSaving(true);
     await saveCharacter(char.id);
     setSavedId(char.id);
@@ -394,6 +431,21 @@ export default function CharactersPage() {
     filter === "all"
       ? CHARACTERS
       : CHARACTERS.filter((c) => c.characterClass === filter);
+
+  const filteredWithState = filtered.map((char) => {
+    const unlockLevel = getUnlockLevelForCharacter(char.id);
+    const isUnlocked = unlockedSet.has(char.id);
+    return {
+      char,
+      unlockLevel,
+      isLocked: !isUnlocked,
+    };
+  });
+
+  const expandedUnlockLevel = expanded
+    ? getUnlockLevelForCharacter(expanded.id)
+    : null;
+  const expandedLocked = expanded ? !unlockedSet.has(expanded.id) : false;
 
   return (
     <div className="w-full px-3 pt-4 pb-8">
@@ -442,11 +494,13 @@ export default function CharactersPage() {
       {/* Grid */}
       <motion.div layout className="grid grid-cols-2 gap-3">
         <AnimatePresence mode="popLayout">
-          {filtered.map((char) => (
+          {filteredWithState.map(({ char, isLocked, unlockLevel }) => (
             <CharacterCard
               key={char.id}
               char={char}
               isActive={savedId === char.id}
+              isLocked={isLocked}
+              unlockLevel={unlockLevel}
               onClick={() => setExpanded(char)}
             />
           ))}
@@ -460,11 +514,24 @@ export default function CharactersPage() {
             char={expanded}
             saving={saving}
             isActive={savedId === expanded.id}
+            isLocked={expandedLocked}
+            unlockLevel={expandedUnlockLevel}
             onSelect={() => handleSelect(expanded)}
             onClose={() => setExpanded(null)}
           />
         )}
       </AnimatePresence>
+
+      <div className="mt-5 rounded-xl border border-sand/20 bg-black/25 p-3">
+        <p className="font-stats text-[10px] uppercase tracking-widest text-sand/50 mb-1">
+          Progressão de desbloqueio
+        </p>
+        <p className="font-stats text-xs text-sand/70">
+          Nível atual: <span className="text-gold font-bold">Nv {progression.level}</span>
+          {" · "}
+          Personagens liberados: <span className="text-gold font-bold">{unlockedSet.size}</span>
+        </p>
+      </div>
     </div>
   );
 }

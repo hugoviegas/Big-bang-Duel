@@ -4,6 +4,7 @@ import { useFirebaseRoom } from "../../hooks/useFirebase";
 import { useGameStore } from "../../store/gameStore";
 import { useAuthStore } from "../../store/authStore";
 import { CHARACTERS } from "../../lib/characters";
+import { normalizeUnlocks } from "../../lib/progression";
 import type {
   AttackTimer,
   GameMode,
@@ -67,10 +68,18 @@ export function OnlineLobby() {
   const { createRoom, joinRoom, getUserRooms, getPublicRooms } =
     useFirebaseRoom();
   const user = useAuthStore((s) => s.user);
+  const unlocks = normalizeUnlocks(user?.unlocks);
+  const unlockedCharacters = CHARACTERS.filter((c) =>
+    unlocks.charactersUnlocked.includes(c.id),
+  );
+  const fallbackCharacter = unlockedCharacters[0]?.id ?? "marshal";
 
   // Initialise from persisted preference so selection is consistent across screens
   const [selectedChar, setSelectedChar] = useState(
-    () => user?.avatar ?? "marshal",
+    () =>
+      unlocks.charactersUnlocked.includes(user?.avatar ?? "")
+        ? (user?.avatar ?? "marshal")
+        : fallbackCharacter,
   );
   const [selectedMode, setSelectedMode] = useState<GameMode>("normal");
 
@@ -87,6 +96,12 @@ export function OnlineLobby() {
   const [publicRooms, setPublicRooms] = useState<RoomType[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [activeTab, setActiveTab] = useState<"mine" | "public">("mine");
+
+  useEffect(() => {
+    if (!unlocks.charactersUnlocked.includes(selectedChar)) {
+      setSelectedChar(fallbackCharacter);
+    }
+  }, [fallbackCharacter, selectedChar, unlocks.charactersUnlocked]);
 
   useEffect(() => {
     loadAllRooms();
@@ -205,7 +220,7 @@ export function OnlineLobby() {
         </div>
         {/* Scrollable row of face-cropped avatars */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {CHARACTERS.map((char) => (
+          {unlockedCharacters.map((char) => (
             <button
               key={char.id}
               onClick={() => setSelectedChar(char.id)}

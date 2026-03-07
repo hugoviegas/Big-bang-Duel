@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { Settings } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { getCharacter, resolveAvatarPicture } from "../../lib/characters";
 import { SettingsModal } from "../common/SettingsModal";
 import { ProfileDropdown } from "./ProfileDropdown";
+import {
+  calculateProgression,
+  normalizeCurrencies,
+  normalizeRanked,
+} from "../../lib/progression";
 
 export function TopBar() {
   const user = useAuthStore((s) => s.user);
@@ -17,11 +21,12 @@ export function TopBar() {
     user.avatar ?? "marshal",
     user.avatarPicture,
   );
-  const level = 1; // TODO: derive from actual XP/level system
-  const xpCurrent = 0;
-  const xpMax = 100;
-  const xpPercent = xpMax > 0 ? Math.min((xpCurrent / xpMax) * 100, 100) : 0;
-  const coins = 0; // TODO: integrate with actual coin system
+  const progression = calculateProgression(user.progression?.xpTotal ?? 0);
+  const currencies = normalizeCurrencies(user.currencies);
+  const ranked = normalizeRanked(user.ranked);
+  const level = progression.level;
+  const coins = currencies.gold;
+  const rubies = currencies.ruby;
 
   const toggleDropdown = () => setIsDropdownOpen((v) => !v);
   const closeDropdown = () => setIsDropdownOpen(false);
@@ -44,34 +49,35 @@ export function TopBar() {
             <span className="profile-name">{user.displayName}</span>
             <span className="level-badge">Nv {level}</span>
           </div>
-          <div className="xp-row">
-            <div className="xp-bar-bg">
-              <div className="xp-bar-fill" style={{ width: `${xpPercent}%` }} />
-            </div>
-            <span className="xp-text">
-              {xpCurrent} / {xpMax} XP
-            </span>
-          </div>
         </div>
 
-        {/* Coins */}
+        {/* Gold */}
         <div className="coins-pill">
-          <span
-            className="text-lg"
-            style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" }}
-          >
-            🪙
-          </span>
+          <picture className="inline-block align-middle">
+            <source srcSet="/assets/ui/gold_coin.webp" type="image/webp" />
+            <img src="/assets/ui/gold_coin.png" alt="gold" className="w-6 h-6 inline-block" />
+          </picture>
           <span className="coins-amount">{coins.toLocaleString("pt-BR")}</span>
         </div>
 
-        {/* Settings */}
-        <button
-          className="settings-btn"
-          onClick={() => setIsSettingsOpen(true)}
-        >
-          <Settings size={18} className="text-[#f5e6c8]" />
-        </button>
+        {/* Ruby */}
+        <div className="coins-pill">
+          <picture className="inline-block align-middle">
+            <source srcSet="/assets/ui/ruby_coin.webp" type="image/webp" />
+            <img src="/assets/ui/ruby_coin.png" alt="ruby" className="w-6 h-6 inline-block" />
+          </picture>
+          <span className="coins-amount">{rubies.toLocaleString("pt-BR")}</span>
+        </div>
+
+        {/* Trophies */}
+        <div className="coins-pill" title="Troféus online">
+          <picture className="inline-block align-middle">
+            <source srcSet="/assets/ui/trophie_icon.webp" type="image/webp" />
+            <img src="/assets/ui/trophie_icon.png" alt="trophy" className="w-6 h-6 inline-block" />
+          </picture>
+          <span className="coins-amount">{ranked.trophies.toLocaleString("pt-BR")}</span>
+        </div>
+
       </div>
 
       {/* Dropdown */}

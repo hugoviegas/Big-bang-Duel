@@ -11,10 +11,17 @@ import LeaderboardPage from "./pages/leaderboard";
 import CharactersPage from "./pages/characters";
 import ProfilePage from "./pages/profile";
 import FriendsPage from "./pages/friends";
+import ShopPage from "./pages/shop";
 import DesignSystemPage from "./pages/design-system";
 import { AssetPreloader } from "./components/common/AssetPreloader";
 import { MobileLayout } from "./components/layout/MobileLayout";
 import { useAuthStore } from "./store/authStore";
+import {
+  calculateProgression,
+  DEFAULT_CURRENCIES,
+  DEFAULT_RANKED,
+  DEFAULT_UNLOCKS,
+} from "./lib/progression";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -71,6 +78,10 @@ function App() {
               winRate: 0,
             },
           },
+          progression: calculateProgression(0),
+          currencies: { ...DEFAULT_CURRENCIES },
+          ranked: { ...DEFAULT_RANKED },
+          unlocks: { ...DEFAULT_UNLOCKS },
           createdAt: new Date(),
           isGuest: firebaseUser.isAnonymous,
         });
@@ -154,6 +165,14 @@ function App() {
           element={
             <MobilePage>
               <FriendsPage />
+            </MobilePage>
+          }
+        />
+        <Route
+          path="/shop"
+          element={
+            <MobilePage>
+              <ShopPage />
             </MobilePage>
           }
         />

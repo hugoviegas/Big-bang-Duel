@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { resolveAvatarPicture } from "../../lib/characters";
-import { Edit, Settings, LogOut } from "lucide-react";
+import { Edit, Settings, LogOut, Heart } from "lucide-react";
+import { useFriendsStore } from "../../store/friendsStore";
 
 interface ProfileDropdownProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export function ProfileDropdown({
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const pendingRequests = useFriendsStore((s) => s.pendingRequests);
 
   if (!user) return null;
 
@@ -46,7 +48,7 @@ export function ProfileDropdown({
         <div>
           <div className="dropdown-name">{user.displayName}</div>
           <div className="dropdown-id">
-            {playerCode ? `#${playerCode}` : ""}
+            {playerCode || ""}
           </div>
         </div>
       </div>
@@ -57,6 +59,12 @@ export function ProfileDropdown({
       <div className="dropdown-item" onClick={onSettingsClick}>
         <Settings size={20} className="dropdown-item-icon" />
         <span className="dropdown-item-text">Configurações</span>
+      </div>
+      <div className="dropdown-item" onClick={() => handleNav("/friends") }>
+        <Heart size={20} className="dropdown-item-icon" />
+        <span className="dropdown-item-text">
+          Amigos{pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ""}
+        </span>
       </div>
       <div className="dropdown-item danger" onClick={handleLogout}>
         <LogOut size={20} className="dropdown-item-icon" />

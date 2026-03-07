@@ -6,6 +6,7 @@ import { useGameStore } from "../store/gameStore";
 import { useUserPreferences } from "../hooks/useUserPreferences";
 import { GamePrep } from "../components/game/GamePrep";
 import type { GameMode, BotDifficulty } from "../types";
+import { normalizeUnlocks } from "../lib/progression";
 
 type MenuStep = "main" | "solo_setup";
 
@@ -52,13 +53,17 @@ export default function MenuPage() {
   const { loadPreferences } = useUserPreferences();
   const ripple = useRipple();
 
-  const selectedCharacter = user?.avatar ?? "marshal";
+  const unlocks = normalizeUnlocks(user?.unlocks);
+  const unlockedCharacters = unlocks.charactersUnlocked;
+  const selectedCharacter = unlockedCharacters.includes(user?.avatar ?? "")
+    ? (user?.avatar ?? "marshal")
+    : (unlockedCharacters[0] ?? "marshal");
   const savedMode = loadSavedGameMode();
   const savedDifficulty = loadSavedBotDifficulty();
 
   useEffect(() => {
     loadPreferences();
-  }, []);
+  }, [loadPreferences]);
 
   const handleStartSolo = (
     character: string,
@@ -150,6 +155,7 @@ export default function MenuPage() {
           <GamePrep
             onStart={handleStartSolo}
             selectedCharacter={selectedCharacter}
+            availableCharacterIds={unlockedCharacters}
             selectedMode={savedMode}
             selectedDifficulty={savedDifficulty}
           />

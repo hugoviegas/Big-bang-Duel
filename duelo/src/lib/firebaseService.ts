@@ -30,7 +30,23 @@ import type {
   StatsByMode,
   ModeStats,
   MatchMode,
+  ProgressionState,
+  Currencies,
+  RankedStats,
+  Unlocks,
 } from "../types";
+import {
+  calculateProgression,
+  calculateMatchRewards,
+  normalizeCurrencies,
+  normalizeRanked,
+  normalizeUnlocks,
+  getLevelUpRewards,
+  applyLevelRewards,
+  clampTrophies,
+  getCharacterShopRequirement,
+  type MatchRewardSummary,
+} from "./progression";
 
 // ─── In-Memory TTL Cache ────────────────────────────────────────────────────
 // Prevents redundant Firestore reads within a single session.
@@ -149,6 +165,17 @@ export async function findPlayerByCode(
 
 export type MatchResult = "win" | "loss" | "draw";
 
+export interface MatchResultUpdate {
+  result: MatchResult;
+  mode: MatchMode;
+  rewards: MatchRewardSummary;
+  progression: ProgressionState;
+  currencies: Currencies;
+  ranked: RankedStats;
+  unlocks: Unlocks;
+  levelRewards: Array<{ level: number; gold: number; unlockedCharacterId?: string }>;
+}
+
 function createEmptyModeStats(): ModeStats {
   return {
     wins: 0,
@@ -203,9 +230,18 @@ function normalizeStatsByMode(profile: PlayerProfile): StatsByMode {
 
 function profileWithNormalizedStats(profile: PlayerProfile): PlayerProfile {
   const statsByMode = normalizeStatsByMode(profile);
+  const progression = calculateProgression(profile.progression?.xpTotal ?? 0);
+  const currencies = normalizeCurrencies(profile.currencies);
+  const ranked = normalizeRanked(profile.ranked);
+  const unlocks = normalizeUnlocks(profile.unlocks);
+
   return {
     ...profile,
     statsByMode,
+    progression,
+    currencies,
+    ranked,
+    unlocks,
     wins: statsByMode.overall.wins,
     losses: statsByMode.overall.losses,
     draws: statsByMode.overall.draws,
@@ -229,6 +265,7 @@ async function upsertLeaderboardEntry(profile: PlayerProfile): Promise<void> {
       draws: p.draws,
       totalGames: p.totalGames,
       winRate: p.winRate,
+      trophies: p.ranked?.trophies ?? 0,
       lastSeen: Date.now(),
     },
     { merge: true },
@@ -240,10 +277,11 @@ export async function recordMatchResult(
   uid: string,
   result: MatchResult,
   mode: MatchMode = "solo",
-): Promise<void> {
+  rewardOverride?: MatchRewardSummary,
+): Promise<MatchResultUpdate | null> {
   const playerRef = doc(db, "players", uid);
   const snap = await getDoc(playerRef);
-  if (!snap.exists()) return;
+  if (!snap.exists()) return null;
 
   const data = profileWithNormalizedStats(snap.data() as PlayerProfile);
   const modeStats = data.statsByMode![mode];
@@ -272,6 +310,44 @@ export async function recordMatchResult(
     overall: nextOverall,
   };
 
+  const currentProgression = calculateProgression(data.progression?.xpTotal ?? 0);
+  const rewards =
+    rewardOverride ??
+    calculateMatchRewards(
+      mode,
+      result,
+    );
+
+  const nextProgression = calculateProgression(
+    (data.progression?.xpTotal ?? 0) + rewards.xpGained,
+  );
+
+  const baseCurrencies = normalizeCurrencies(data.currencies);
+  baseCurrencies.gold += rewards.goldGained;
+  baseCurrencies.ruby += rewards.rubyGained;
+
+  const baseUnlocks = normalizeUnlocks(data.unlocks);
+  const levelRewards = getLevelUpRewards(
+    currentProgression.level,
+    nextProgression.level,
+    baseUnlocks,
+  );
+  const afterLevelRewards = applyLevelRewards(
+    baseUnlocks,
+    baseCurrencies,
+    levelRewards,
+  );
+
+  const baseRanked = normalizeRanked(data.ranked);
+  const nextTrophies =
+    mode === "online"
+      ? clampTrophies(baseRanked.trophies + rewards.trophyDelta)
+      : baseRanked.trophies;
+  const ranked: RankedStats = {
+    trophies: nextTrophies,
+    trophyPeak: Math.max(baseRanked.trophyPeak, nextTrophies),
+  };
+
   await updateDoc(playerRef, {
     wins: nextOverall.wins,
     losses: nextOverall.losses,
@@ -279,6 +355,10 @@ export async function recordMatchResult(
     totalGames: nextOverall.totalGames,
     winRate: nextOverall.winRate,
     statsByMode,
+    progression: nextProgression,
+    currencies: afterLevelRewards.currencies,
+    ranked,
+    unlocks: afterLevelRewards.unlocks,
     lastSeen: Date.now(),
   });
 
@@ -290,6 +370,10 @@ export async function recordMatchResult(
     draws: nextOverall.draws,
     totalGames: nextOverall.totalGames,
     winRate: nextOverall.winRate,
+    progression: nextProgression,
+    currencies: afterLevelRewards.currencies,
+    ranked,
+    unlocks: afterLevelRewards.unlocks,
   });
 
   // Invalidate so the next leaderboard/profile read picks up fresh stats
@@ -297,6 +381,105 @@ export async function recordMatchResult(
   invalidateCache(`leaderboard:overall:50`);
   invalidateCache(`leaderboard:solo:50`);
   invalidateCache(`leaderboard:online:50`);
+
+  return {
+    result,
+    mode,
+    rewards,
+    progression: nextProgression,
+    currencies: afterLevelRewards.currencies,
+    ranked,
+    unlocks: afterLevelRewards.unlocks,
+    levelRewards,
+  };
+}
+
+export interface ShopPurchaseResult {
+  ok: boolean;
+  message: string;
+  currencies: Currencies;
+  unlocks: Unlocks;
+}
+
+const CHARACTER_PRICE_GOLD = 1000;
+
+export async function buyCharacterInShop(
+  uid: string,
+  characterId: string,
+): Promise<ShopPurchaseResult> {
+  const playerRef = doc(db, "players", uid);
+  const snap = await getDoc(playerRef);
+  if (!snap.exists()) {
+    return {
+      ok: false,
+      message: "Perfil não encontrado.",
+      currencies: normalizeCurrencies(undefined),
+      unlocks: normalizeUnlocks(undefined),
+    };
+  }
+
+  const profile = profileWithNormalizedStats(snap.data() as PlayerProfile);
+  const progression = calculateProgression(profile.progression?.xpTotal ?? 0);
+  const currencies = normalizeCurrencies(profile.currencies);
+  const unlocks = normalizeUnlocks(profile.unlocks);
+
+  if (unlocks.charactersUnlocked.includes(characterId)) {
+    return {
+      ok: false,
+      message: "Você já possui esse personagem.",
+      currencies,
+      unlocks,
+    };
+  }
+
+  const requiredLevel = getCharacterShopRequirement(characterId);
+  if (progression.level < requiredLevel) {
+    return {
+      ok: false,
+      message: `Esse personagem requer nível ${requiredLevel}.`,
+      currencies,
+      unlocks,
+    };
+  }
+
+  if (currencies.gold < CHARACTER_PRICE_GOLD) {
+    return {
+      ok: false,
+      message: "Gold insuficiente para comprar.",
+      currencies,
+      unlocks,
+    };
+  }
+
+  const nextCurrencies = {
+    ...currencies,
+    gold: currencies.gold - CHARACTER_PRICE_GOLD,
+  };
+  const nextUnlocks = normalizeUnlocks({
+    ...unlocks,
+    charactersUnlocked: [...unlocks.charactersUnlocked, characterId],
+  });
+
+  await updateDoc(playerRef, {
+    currencies: nextCurrencies,
+    unlocks: nextUnlocks,
+    lastSeen: Date.now(),
+  });
+
+  await upsertLeaderboardEntry({
+    ...profile,
+    currencies: nextCurrencies,
+    unlocks: nextUnlocks,
+  });
+
+  invalidateCache(`profile:${uid}`);
+
+  return {
+    ok: true,
+    message: "Compra realizada com sucesso.",
+    currencies: nextCurrencies,
+    unlocks: nextUnlocks,
+  };
 }
 
 // ─── Leaderboard ─────────────────────────────────────────────────────────────
@@ -305,8 +488,9 @@ export async function recordMatchResult(
 export async function fetchLeaderboard(
   topN = 50,
   mode: "overall" | MatchMode = "overall",
+  sortBy: "wins" | "trophies" = "wins",
 ): Promise<LeaderboardEntry[]> {
-  const key = `leaderboard:${mode}:${topN}`;
+  const key = `leaderboard:${mode}:${topN}:${sortBy}`;
   const cached = cacheGet<LeaderboardEntry[]>(key);
   if (cached) return cached;
 
@@ -314,11 +498,12 @@ export async function fetchLeaderboard(
     mode === "overall"
       ? "statsByMode.overall.wins"
       : `statsByMode.${mode}.wins`;
+  const orderPath = sortBy === "trophies" ? "trophies" : winsPath;
 
   // Preferred source: dedicated leaderboard collection.
   const leaderboardQuery = query(
     collection(db, "leaderboard"),
-    orderBy(winsPath, "desc"),
+    orderBy(orderPath, "desc"),
     limit(topN),
   );
   const leaderboardSnap = await getDocs(leaderboardQuery);
@@ -342,10 +527,14 @@ export async function fetchLeaderboard(
         losses: stats.losses,
         winRate: stats.winRate,
         totalGames: stats.totalGames,
+        trophies: p.ranked?.trophies ?? 0,
         rank: 0,
       } satisfies LeaderboardEntry;
     })
-    .sort((a, b) => b.wins - a.wins)
+    .sort((a, b) => {
+      if (sortBy === "trophies") return (b.trophies ?? 0) - (a.trophies ?? 0);
+      return b.wins - a.wins;
+    })
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
   if (fromLeaderboard.length > 0) {
@@ -356,7 +545,7 @@ export async function fetchLeaderboard(
   // Fallback source: players collection (legacy data).
   const playersQuery = query(
     collection(db, "players"),
-    orderBy("wins", "desc"),
+    orderBy(sortBy === "trophies" ? "ranked.trophies" : "wins", "desc"),
     limit(topN),
   );
   const playersSnap = await getDocs(playersQuery);
@@ -379,10 +568,14 @@ export async function fetchLeaderboard(
         losses: stats.losses,
         winRate: stats.winRate,
         totalGames: stats.totalGames,
+        trophies: p.ranked?.trophies ?? 0,
         rank: 0,
       } satisfies LeaderboardEntry;
     })
-    .sort((a, b) => b.wins - a.wins)
+    .sort((a, b) => {
+      if (sortBy === "trophies") return (b.trophies ?? 0) - (a.trophies ?? 0);
+      return b.wins - a.wins;
+    })
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
   cacheSet(key, fromPlayers, 2 * 60_000);

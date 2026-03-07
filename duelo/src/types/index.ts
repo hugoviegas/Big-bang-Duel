@@ -145,6 +145,32 @@ export interface StatsByMode {
   overall: ModeStats;
 }
 
+export interface ProgressionState {
+  level: number;
+  levelCap: number;
+  xpTotal: number;
+  xpCurrentLevel: number;
+  xpForCurrentLevel: number;
+  xpForNextLevel: number;
+  xpToNextLevel: number;
+}
+
+export interface Currencies {
+  gold: number;
+  ruby: number;
+}
+
+export interface RankedStats {
+  trophies: number;
+  trophyPeak: number;
+}
+
+export interface Unlocks {
+  charactersUnlocked: string[];
+  cosmeticsUnlocked: string[];
+  claimedLevelRewards: number[];
+}
+
 export interface User {
   uid: string;
   email: string;
@@ -171,6 +197,10 @@ export interface User {
   onlineStatus?: OnlineStatus;
   /** Split stats to avoid mixing solo and online ranking. */
   statsByMode?: StatsByMode;
+  progression?: ProgressionState;
+  currencies?: Currencies;
+  ranked?: RankedStats;
+  unlocks?: Unlocks;
 }
 
 export interface PlayerProfile {
@@ -190,6 +220,10 @@ export interface PlayerProfile {
   onlineStatus: OnlineStatus;
   /** Split stats to avoid mixing solo and online ranking. */
   statsByMode?: StatsByMode;
+  progression?: ProgressionState;
+  currencies?: Currencies;
+  ranked?: RankedStats;
+  unlocks?: Unlocks;
 }
 
 export interface LeaderboardEntry {
@@ -201,6 +235,7 @@ export interface LeaderboardEntry {
   losses: number;
   winRate: number;
   totalGames: number;
+  trophies?: number;
   rank: number;
 }
 

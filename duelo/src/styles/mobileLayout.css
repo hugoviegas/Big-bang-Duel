@@ -65,8 +65,8 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  padding: max(0px, env(safe-area-inset-top, 0px)) 14px 0 14px;
-  gap: 10px;
+  padding: max(0px, env(safe-area-inset-top, 0px)) 12px 0 12px;
+  gap: 8px;
   position: relative;
   z-index: 10;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
@@ -124,59 +124,28 @@
   letter-spacing: 0.3px;
 }
 
-.xp-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.xp-bar-bg {
-  flex: 1;
-  height: 8px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 4px;
-  border: 1px solid #8b6914;
-  overflow: hidden;
-}
-
-.xp-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #8b6914, #f0d070);
-  border-radius: 4px;
-  box-shadow: 0 0 6px rgba(200, 168, 75, 0.6);
-  animation: xpGlow 2s ease-in-out infinite alternate;
-}
-
-.xp-text {
-  font-size: 10px;
-  color: #c8a84b;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 /* ── Coins Pill ───────────────────────────────────────────── */
 .coins-pill {
   display: flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1.5px solid #8b6914;
+  gap: 8px;
   border-radius: 20px;
-  padding: 5px 10px;
+  padding: 6px 6px;
   cursor: pointer;
   transition: background 0.2s;
   flex-shrink: 0;
 }
 
 .coins-pill:hover {
-  background: rgba(200, 168, 75, 0.15);
+  background: rgba(200, 168, 75, 0.2);
 }
 
 .coins-amount {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: #f0d070;
+  font-family: "Oswald", sans-serif;
+  letter-spacing: 0.5px;
 }
 
 /* ── Settings Button ──────────────────────────────────────── */
@@ -236,11 +205,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 2px;
   cursor: pointer;
   position: relative;
   transition: background 0.15s;
-  padding-bottom: 4px;
+  padding-bottom: 0;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -364,6 +333,7 @@
   gap: 12px;
   padding: 11px 14px;
   cursor: pointer;
+  color: #f5e6c8;
   transition: background 0.15s;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }

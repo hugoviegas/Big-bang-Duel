@@ -5,6 +5,7 @@ import { resolveAvatarPicture } from "../../lib/characters";
 import type { LeaderboardEntry } from "../../types";
 
 type RankingMode = "overall" | "solo" | "online";
+type RankingSort = "wins" | "trophies";
 
 const RANK_STYLES: Record<number, string> = {
   1: "border-yellow-400 bg-yellow-400/10",
@@ -23,16 +24,23 @@ export function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mode, setMode] = useState<RankingMode>("overall");
+  const [sortBy, setSortBy] = useState<RankingSort>("wins");
+
+  useEffect(() => {
+    if (mode !== "online" && sortBy === "trophies") {
+      setSortBy("wins");
+    }
+  }, [mode, sortBy]);
 
   useEffect(() => {
     setIsLoading(true);
-    fetchLeaderboard(50, mode)
+    fetchLeaderboard(50, mode, sortBy)
       .then((data) => {
         setEntries(data);
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
-  }, [mode]);
+  }, [mode, sortBy]);
 
   const rankingTitle =
     mode === "online"
@@ -43,7 +51,9 @@ export function Leaderboard() {
 
   const rankingSubtitle =
     mode === "online"
-      ? "Somente partidas online"
+      ? sortBy === "trophies"
+        ? "Ranking por troféus online"
+        : "Somente partidas online"
       : mode === "solo"
         ? "Somente partidas solo"
         : "Todos os modos combinados";
@@ -89,6 +99,31 @@ export function Leaderboard() {
           Online
         </button>
       </div>
+
+      {mode === "online" && (
+        <div className="mb-4 rounded-xl border border-sand/20 bg-black/25 p-1.5 flex gap-1.5">
+          <button
+            onClick={() => setSortBy("wins")}
+            className={`flex-1 py-2 rounded-lg font-stats text-xs uppercase tracking-widest transition-all ${
+              sortBy === "wins"
+                ? "bg-gold/20 border border-gold/40 text-gold"
+                : "text-sand/60 hover:text-sand-light hover:bg-black/30"
+            }`}
+          >
+            Vitórias
+          </button>
+          <button
+            onClick={() => setSortBy("trophies")}
+            className={`flex-1 py-2 rounded-lg font-stats text-xs uppercase tracking-widest transition-all ${
+              sortBy === "trophies"
+                ? "bg-orange-500/15 border border-orange-300/40 text-orange-200"
+                : "text-sand/60 hover:text-sand-light hover:bg-black/30"
+            }`}
+          >
+            Troféus
+          </button>
+        </div>
+      )}
 
       {/* Loading */}
       {isLoading && (
@@ -192,7 +227,9 @@ export function Leaderboard() {
                 {/* Stats */}
                 <div className="text-right shrink-0">
                   <div className="font-stats text-sm font-bold text-gold">
-                    {entry.wins}V / {entry.losses}D
+                    {sortBy === "trophies" && mode === "online"
+                      ? `${entry.trophies ?? 0} troféus`
+                      : `${entry.wins}V / ${entry.losses}D`}
                   </div>
                   <div className="flex items-center gap-1.5 justify-end">
                     <span className="font-stats text-[10px] text-sand/50">

@@ -10,6 +10,7 @@ interface GamePrepProps {
     difficulty: BotDifficulty,
   ) => void;
   selectedCharacter: string;
+  availableCharacterIds?: string[];
   selectedMode: GameMode;
   selectedDifficulty: BotDifficulty;
 }
@@ -68,15 +69,26 @@ function saveBotDifficulty(difficulty: BotDifficulty) {
 export function GamePrep({
   onStart,
   selectedCharacter: initialChar,
+  availableCharacterIds,
   selectedMode: initialMode,
   selectedDifficulty: initialDiff,
 }: GamePrepProps) {
+  const availableSet = new Set(availableCharacterIds ?? CHARACTERS.map((c) => c.id));
+  const availableCharacters = CHARACTERS.filter((c) => availableSet.has(c.id));
+  const initialResolved = availableSet.has(initialChar)
+    ? initialChar
+    : (availableCharacters[0]?.id ?? "marshal");
+
   const [expanded, setExpanded] = useState<AccordionSection>("character");
-  const [selectedCharacter, setSelectedCharacter] = useState(initialChar);
+  const [selectedCharacter, setSelectedCharacter] = useState(initialResolved);
   const [selectedMode, setSelectedMode] = useState(initialMode);
   const [selectedDifficulty, setSelectedDifficulty] = useState(initialDiff);
 
-  const activeChar = getCharacter(selectedCharacter);
+  const activeChar = getCharacter(
+    availableSet.has(selectedCharacter)
+      ? selectedCharacter
+      : (availableCharacters[0]?.id ?? "marshal"),
+  );
 
   // Save to localStorage whenever mode or difficulty changes
   useEffect(() => {
@@ -142,7 +154,7 @@ export function GamePrep({
             >
               <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {CHARACTERS.map((char) => (
+                  {availableCharacters.map((char) => (
                     <button
                       key={char.id}
                       onClick={() => setSelectedCharacter(char.id)}
@@ -306,7 +318,7 @@ export function GamePrep({
       {/* Start Button */}
       <button
         onClick={() =>
-          onStart(selectedCharacter, selectedMode, selectedDifficulty)
+          onStart(activeChar.id, selectedMode, selectedDifficulty)
         }
         className="w-full py-4 rounded-xl btn-western text-lg mt-6 bg-gradient-to-r from-gold/20 to-gold/10 hover:from-gold/30 hover:to-gold/20 border border-gold/40 text-gold font-western tracking-widest"
       >

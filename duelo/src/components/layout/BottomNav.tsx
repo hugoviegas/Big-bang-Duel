@@ -1,12 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Wand2, Users, Heart, Trophy } from "lucide-react";
-import { useFriendsStore } from "../../store/friendsStore";
+import { Home, Wand2, Users, Store, Trophy } from "lucide-react";
 
 const NAV_ITEMS = [
   { path: "/menu", icon: "home", label: "Home" },
   { path: "/characters", icon: "cards", label: "Cards" },
   { path: "/online", icon: "users", label: "Online" },
-  { path: "/friends", icon: "heart", label: "Amigos" },
+  { path: "/shop", icon: "shop", label: "Loja" },
   { path: "/leaderboard", icon: "trophy", label: "Ranking" },
 ];
 
@@ -15,7 +14,7 @@ const getIconComponent = (iconName: string) => {
     home: Home,
     cards: Wand2,
     users: Users,
-    heart: Heart,
+    shop: Store,
     trophy: Trophy,
   };
   return iconMap[iconName as keyof typeof iconMap] || Home;
@@ -24,15 +23,12 @@ const getIconComponent = (iconName: string) => {
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const pendingRequests = useFriendsStore((s) => s.pendingRequests);
 
   return (
     <>
       <div className="bottom-nav">
         {NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.path;
-          const hasBadge =
-            item.path === "/friends" && pendingRequests.length > 0;
           const IconComponent = getIconComponent(item.icon);
 
           return (
@@ -41,11 +37,6 @@ export function BottomNav() {
               className={`nav-item ${isActive ? "active" : ""}`}
               onClick={() => navigate(item.path)}
             >
-              {hasBadge && (
-                <span className="nav-badge">
-                  <span className="badge-content">{pendingRequests.length}</span>
-                </span>
-              )}
               <span className="nav-icon">
                 <IconComponent size={24} strokeWidth={1.5} />
               </span>

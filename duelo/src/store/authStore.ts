@@ -15,6 +15,16 @@ import {
   setOnlinePresence,
   subscribeToPlayerProfile,
 } from "../lib/firebaseService";
+import {
+  calculateProgression,
+  normalizeCurrencies,
+  normalizeRanked,
+  normalizeUnlocks,
+} from "../lib/progression";
+
+type GlobalWithProfileUnsub = typeof globalThis & {
+  __bbd_profile_unsub?: (() => void) | null;
+};
 
 function emptyStatsByMode(): StatsByMode {
   return {
@@ -77,12 +87,13 @@ export const useAuthStore = create<AuthState>()(
       // so we can start/stop listeners when the logged user changes.
       setUser: (user) => {
         // Module-scoped unsubscribe handle (shared across store instance)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyWindow = globalThis as any;
+        const anyWindow = globalThis as GlobalWithProfileUnsub;
         if (anyWindow.__bbd_profile_unsub) {
           try {
             anyWindow.__bbd_profile_unsub();
-          } catch {}
+          } catch (error) {
+            void error;
+          }
           anyWindow.__bbd_profile_unsub = null;
         }
 
@@ -118,6 +129,13 @@ export const useAuthStore = create<AuthState>()(
                   winRate: profile.winRate ?? user.winRate,
                   statsByMode:
                     profile.statsByMode ?? normalizeStatsByModeFromUser(user),
+                  progression:
+                    profile.progression ??
+                    calculateProgression(user.progression?.xpTotal ?? 0),
+                  currencies:
+                    profile.currencies ?? normalizeCurrencies(user.currencies),
+                  ranked: profile.ranked ?? normalizeRanked(user.ranked),
+                  unlocks: profile.unlocks ?? normalizeUnlocks(user.unlocks),
                   displayName: profile.displayName || user.displayName,
                   lastSeen: profile.lastSeen
                     ? new Date(profile.lastSeen)
@@ -130,6 +148,7 @@ export const useAuthStore = create<AuthState>()(
             },
           );
         } catch (err) {
+          void err;
           // fall back to setting user directly if subscription fails
           set({ user, isAuthenticated: !!user, isLoading: false });
         }
@@ -187,12 +206,14 @@ export const useAuthStore = create<AuthState>()(
         }
         // Cleanup profile listener if present
         try {
-          const anyWindow = globalThis as any;
+          const anyWindow = globalThis as GlobalWithProfileUnsub;
           if (anyWindow.__bbd_profile_unsub) {
             anyWindow.__bbd_profile_unsub();
             anyWindow.__bbd_profile_unsub = null;
           }
-        } catch {}
+        } catch (error) {
+          void error;
+        }
         signOut(auth).catch(() => {});
         set({
           user: null,
@@ -228,6 +249,13 @@ export const useAuthStore = create<AuthState>()(
               winRate: existing.winRate ?? current.winRate,
               statsByMode:
                 existing.statsByMode ?? normalizeStatsByModeFromUser(current),
+                progression:
+                  existing.progression ??
+                  calculateProgression(current.progression?.xpTotal ?? 0),
+                currencies:
+                  existing.currencies ?? normalizeCurrencies(current.currencies),
+                ranked: existing.ranked ?? normalizeRanked(current.ranked),
+                unlocks: existing.unlocks ?? normalizeUnlocks(current.unlocks),
               displayName: existing.displayName || current.displayName,
             });
             set({ _profileEnsuredAt: Date.now() });
@@ -249,6 +277,10 @@ export const useAuthStore = create<AuthState>()(
             totalGames: current.totalGames ?? 0,
             winRate: current.winRate ?? 0,
             statsByMode: normalizeStatsByModeFromUser(current),
+            progression: calculateProgression(current.progression?.xpTotal ?? 0),
+            currencies: normalizeCurrencies(current.currencies),
+            ranked: normalizeRanked(current.ranked),
+            unlocks: normalizeUnlocks(current.unlocks),
             createdAt: Date.now(),
             lastSeen: Date.now(),
             onlineStatus: "online",
@@ -279,6 +311,10 @@ export const useAuthStore = create<AuthState>()(
           totalGames: user.totalGames ?? 0,
           winRate: user.winRate ?? 0,
           statsByMode: normalizeStatsByModeFromUser(user),
+          progression: calculateProgression(user.progression?.xpTotal ?? 0),
+          currencies: normalizeCurrencies(user.currencies),
+          ranked: normalizeRanked(user.ranked),
+          unlocks: normalizeUnlocks(user.unlocks),
           createdAt:
             user.createdAt instanceof Date
               ? user.createdAt.getTime()
