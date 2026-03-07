@@ -23,6 +23,7 @@ export function GameArena() {
     opponentStars,
     currentRound,
     roundWinnerId,
+    hideOpponentAmmo,
   } = useGameStore();
   const navigate = useNavigate();
   const { roomId } = useParams<{ roomId?: string }>();
@@ -145,6 +146,7 @@ export function GameArena() {
           opponentStars={opponentStars}
           currentRound={currentRound}
           turn={turn}
+          hideOpponentAmmo={hideOpponentAmmo}
           onPause={() => {
             if (!isOnline) {
               setShowPauseMenu(true);

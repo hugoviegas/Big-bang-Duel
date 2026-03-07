@@ -25,6 +25,7 @@ export interface RoomConfig {
   isPublic: boolean;
   attackTimer: AttackTimer; // seconds, 0 = unlimited
   bestOf3: boolean;
+  hideOpponentAmmo?: boolean; // hide opponent ammo in online matches
 }
 
 export interface Card {
@@ -56,6 +57,8 @@ export interface PlayerState {
     | "death"
     | "counter";
   wins: number;
+  dodgeStreak: number;      // consecutive dodges used this round
+  doubleShotsLeft: number;  // remaining double_shot uses this round (max 3)
 }
 
 export interface GameState {
@@ -76,6 +79,7 @@ export interface GameState {
   // New config fields
   attackTimer: AttackTimer;
   bestOf3: boolean;
+  hideOpponentAmmo: boolean; // hide opponent ammo (online: configurable, solo: based on difficulty)
   currentRound: number; // 1, 2 or 3
   playerStars: number; // rounds won by player
   opponentStars: number; // rounds won by opponent

@@ -9,7 +9,7 @@ import type {
   AttackTimer,
   RoomConfig,
 } from "../types";
-import { LIFE_BY_MODE, resolveCards, checkWinner } from "../lib/gameEngine";
+import { LIFE_BY_MODE, resolveCards, checkWinner, MAX_DODGE_STREAK, MAX_DOUBLE_SHOT_USES } from "../lib/gameEngine";
 import { botChooseCard } from "../lib/botAI";
 import { CHARACTERS, getCharacter } from "../lib/characters";
 
@@ -50,6 +50,8 @@ const initialState: GameState = {
     isAnimating: false,
     currentAnimation: "idle",
     wins: 0,
+    dodgeStreak: 0,
+    doubleShotsLeft: MAX_DOUBLE_SHOT_USES,
   },
   opponent: {
     id: "bot",
@@ -64,6 +66,8 @@ const initialState: GameState = {
     isAnimating: false,
     currentAnimation: "idle",
     wins: 0,
+    dodgeStreak: 0,
+    doubleShotsLeft: MAX_DOUBLE_SHOT_USES,
   },
   lastResult: null,
   isOnline: false,
@@ -76,6 +80,7 @@ const initialState: GameState = {
   // Room config defaults
   attackTimer: 10,
   bestOf3: false,
+  hideOpponentAmmo: false,
   currentRound: 1,
   playerStars: 0,
   opponentStars: 0,
@@ -120,6 +125,12 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
     const opponentCharDef = getCharacter(opponentAvatar);
 
+    // Determinar se deve ocultar munições do oponente
+    // Online: usa config (padrão false), Solo: médio/difícil ocultam, fácil mostra
+    const shouldHideAmmo = isOnline
+      ? (config.hideOpponentAmmo ?? false)
+      : botDifficulty !== "easy";
+
     set({
       ...initialState,
       mode,
@@ -130,6 +141,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       phase: "selecting",
       attackTimer: (config.attackTimer ?? attackTimer) as AttackTimer,
       bestOf3: config.bestOf3 ?? false,
+      hideOpponentAmmo: shouldHideAmmo,
       currentRound: 1,
       playerStars: 0,
       opponentStars: 0,
@@ -246,6 +258,12 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         ammo: newPlayerAmmo,
         currentAnimation: (newPlayerLife <= 0 ? "death" : pAnim) as any,
         isAnimating: true,
+        dodgeStreak: pCard === "dodge"
+          ? Math.min(MAX_DODGE_STREAK, (currentState.player.dodgeStreak ?? 0) + 1)
+          : 0,
+        doubleShotsLeft: pCard === "double_shot"
+          ? Math.max(0, (currentState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES) - 1)
+          : (currentState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES),
       };
       const newOpponent = {
         ...currentState.opponent,
@@ -253,6 +271,12 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         ammo: newOpponentAmmo,
         currentAnimation: (newOpponentLife <= 0 ? "death" : oAnim) as any,
         isAnimating: true,
+        dodgeStreak: oCard === "dodge"
+          ? Math.min(MAX_DODGE_STREAK, (currentState.opponent.dodgeStreak ?? 0) + 1)
+          : 0,
+        doubleShotsLeft: oCard === "double_shot"
+          ? Math.max(0, (currentState.opponent.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES) - 1)
+          : (currentState.opponent.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES),
       };
 
       const winner = checkWinner(newPlayer, newOpponent);
@@ -409,6 +433,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         roomStatus: roomData.status,
         attackTimer: roomData.config?.attackTimer ?? state.attackTimer,
         bestOf3: roomData.config?.bestOf3 ?? state.bestOf3,
+        hideOpponentAmmo: roomData.config?.hideOpponentAmmo ?? state.hideOpponentAmmo,
         currentRound: roomData.currentRound ?? state.currentRound,
         playerStars: isHost
           ? (roomData.hostStars ?? state.playerStars)
@@ -460,6 +485,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       // Sync room config
       attackTimer: roomData.config?.attackTimer ?? curr.attackTimer,
       bestOf3: roomData.config?.bestOf3 ?? curr.bestOf3,
+      hideOpponentAmmo: roomData.config?.hideOpponentAmmo ?? curr.hideOpponentAmmo,
       currentRound: roomData.currentRound ?? curr.currentRound,
       playerStars: isHost
         ? (roomData.hostStars ?? curr.playerStars)
@@ -518,6 +544,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         choiceRevealed: false,
         isAnimating: false,
         currentAnimation: "idle" as any,
+        dodgeStreak: 0,
+        doubleShotsLeft: MAX_DOUBLE_SHOT_USES,
       },
       opponent: {
         ...curr.opponent,
@@ -528,6 +556,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         choiceRevealed: false,
         isAnimating: false,
         currentAnimation: "idle" as any,
+        dodgeStreak: 0,
+        doubleShotsLeft: MAX_DOUBLE_SHOT_USES,
       },
     }));
 

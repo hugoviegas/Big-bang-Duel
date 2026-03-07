@@ -4,9 +4,10 @@ import type { PlayerState } from "../../types";
 interface StatusBarProps {
   player: PlayerState;
   isRight?: boolean;
+  hideAmmo?: boolean; // hide ammo display for this player
 }
 
-export function StatusBar({ player, isRight = false }: StatusBarProps) {
+export function StatusBar({ player, isRight = false, hideAmmo = false }: StatusBarProps) {
   const alignClass = isRight ? "items-end text-right" : "items-start text-left";
   const flexDir = isRight ? "flex-row-reverse" : "flex-row";
   const charDef = getCharacter(player.avatar);
@@ -55,9 +56,10 @@ export function StatusBar({ player, isRight = false }: StatusBarProps) {
           ))}
         </div>
 
-        {/* Ammo bullets */}
-        <div className={`flex gap-1 ${isRight ? "flex-row-reverse" : ""}`}>
-          {Array.from({ length: player.maxAmmo }).map((_, i) => (
+        {/* Ammo bullets - hidden if hideAmmo is true */}
+        {!hideAmmo && (
+          <div className={`flex gap-1 ${isRight ? "flex-row-reverse" : ""}`}>
+            {Array.from({ length: player.maxAmmo }).map((_, i) => (
             <svg
               key={`ammo-${i}`}
               viewBox="0 0 10 24"
@@ -93,6 +95,12 @@ export function StatusBar({ player, isRight = false }: StatusBarProps) {
             </svg>
           ))}
         </div>
+        )}
+        
+        {/* Hidden ammo indicator */}
+        {hideAmmo && (
+          <div className="text-xs text-sand/60 font-stats tracking-wide">🔒 Munição Oculta</div>
+        )}
       </div>
     </div>
   );

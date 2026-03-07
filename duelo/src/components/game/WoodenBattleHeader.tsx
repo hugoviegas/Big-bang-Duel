@@ -9,6 +9,7 @@ interface WoodenBattleHeaderProps {
   opponentStars: number;
   currentRound: number;
   turn: number;
+  hideOpponentAmmo: boolean;
   onPause: () => void;
 }
 
@@ -35,9 +36,11 @@ function Star({
 function PlayerPanel({
   player,
   isRight = false,
+  hideAmmo = false,
 }: {
   player: PlayerState;
   isRight?: boolean;
+  hideAmmo?: boolean;
 }) {
   const charDef = getCharacter(player.avatar);
   const cropPos = `center ${charDef.avatarCropY}`;
@@ -70,42 +73,49 @@ function PlayerPanel({
             </svg>
           ))}
         </div>
-        <div className={`battle-player-bullets${isRight ? " is-right" : ""}`}>
-          {Array.from({ length: player.maxAmmo }).map((_, i) => (
-            <svg
-              key={`ammo-${i}`}
-              viewBox="0 0 10 24"
-              className={`battle-bullet${i < player.ammo ? " is-active" : ""}`}
-            >
-              <rect
-                x="1"
-                y="10"
-                width="8"
-                height="14"
-                rx="1"
-                fill={i < player.ammo ? "#B45309" : "#374151"}
-                stroke={i < player.ammo ? "#78350F" : "#1F2937"}
-                strokeWidth="0.5"
-              />
-              <ellipse
-                cx="5"
-                cy="10"
-                rx="4"
-                ry="3"
-                fill={i < player.ammo ? "#FBBF24" : "#4B5563"}
-                stroke={i < player.ammo ? "#D97706" : "#374151"}
-                strokeWidth="0.5"
-              />
-              <ellipse
-                cx="5"
-                cy="8"
-                rx="3"
-                ry="4"
-                fill={i < player.ammo ? "#FDE68A" : "#6B7280"}
-              />
-            </svg>
-          ))}
-        </div>
+        {!hideAmmo && (
+          <div className={`battle-player-bullets${isRight ? " is-right" : ""}`}>
+            {Array.from({ length: player.maxAmmo }).map((_, i) => (
+              <svg
+                key={`ammo-${i}`}
+                viewBox="0 0 10 24"
+                className={`battle-bullet${i < player.ammo ? " is-active" : ""}`}
+              >
+                <rect
+                  x="1"
+                  y="10"
+                  width="8"
+                  height="14"
+                  rx="1"
+                  fill={i < player.ammo ? "#B45309" : "#374151"}
+                  stroke={i < player.ammo ? "#78350F" : "#1F2937"}
+                  strokeWidth="0.5"
+                />
+                <ellipse
+                  cx="5"
+                  cy="10"
+                  rx="4"
+                  ry="3"
+                  fill={i < player.ammo ? "#FBBF24" : "#4B5563"}
+                  stroke={i < player.ammo ? "#D97706" : "#374151"}
+                  strokeWidth="0.5"
+                />
+                <ellipse
+                  cx="5"
+                  cy="8"
+                  rx="3"
+                  ry="4"
+                  fill={i < player.ammo ? "#FDE68A" : "#6B7280"}
+                />
+              </svg>
+            ))}
+          </div>
+        )}
+        {hideAmmo && (
+          <div className={`battle-player-bullets${isRight ? " is-right" : ""} opacity-60`}>
+            <span className="text-xs text-sand/50 font-stats tracking-wide">🔒</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -119,6 +129,7 @@ export function WoodenBattleHeader({
   opponentStars,
   currentRound,
   turn,
+  hideOpponentAmmo,
   onPause,
 }: WoodenBattleHeaderProps) {
   return (
@@ -147,7 +158,7 @@ export function WoodenBattleHeader({
 
             {/* 3-column: player LEFT ── center info ── player RIGHT */}
             <div className="battle-top-row">
-              <PlayerPanel player={player} />
+              <PlayerPanel player={player} hideAmmo={false} />
 
               <div className="battle-top-center-col">
                 <img
@@ -186,7 +197,7 @@ export function WoodenBattleHeader({
                 )}
               </div>
 
-              <PlayerPanel player={opponent} isRight />
+              <PlayerPanel player={opponent} isRight hideAmmo={hideOpponentAmmo} />
             </div>
           </div>
         </div>

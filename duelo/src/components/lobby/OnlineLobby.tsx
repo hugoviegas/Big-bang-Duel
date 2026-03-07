@@ -78,6 +78,7 @@ export function OnlineLobby() {
   const [isPublic, setIsPublic] = useState(false);
   const [attackTimer, setAttackTimer] = useState<AttackTimer>(10);
   const [bestOf3, setBestOf3] = useState(false);
+  const [hideOpponentAmmo, setHideOpponentAmmo] = useState(false);
 
   const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState("");
@@ -100,7 +101,7 @@ export function OnlineLobby() {
   };
 
   const handleCreate = async () => {
-    const config: RoomConfig = { isPublic, attackTimer, bestOf3 };
+    const config: RoomConfig = { isPublic, attackTimer, bestOf3, hideOpponentAmmo };
     const roomId = await createRoom(selectedMode, config, selectedChar);
     if (roomId) {
       useGameStore
@@ -112,7 +113,7 @@ export function OnlineLobby() {
           roomId,
           undefined,
           selectedChar,
-          { attackTimer, bestOf3, isPublic },
+          { attackTimer, bestOf3, isPublic, hideOpponentAmmo },
           user?.displayName,
         );
       navigate(`/game/${roomId}`);
@@ -140,6 +141,7 @@ export function OnlineLobby() {
             attackTimer: room.config?.attackTimer ?? 10,
             bestOf3: room.config?.bestOf3 ?? false,
             isPublic: room.config?.isPublic ?? false,
+            hideOpponentAmmo: room.config?.hideOpponentAmmo ?? false,
           },
           user?.displayName,
         );
@@ -165,6 +167,7 @@ export function OnlineLobby() {
             attackTimer: room.config?.attackTimer ?? 10,
             bestOf3: room.config?.bestOf3 ?? false,
             isPublic: true,
+            hideOpponentAmmo: room.config?.hideOpponentAmmo ?? false,
           },
           user?.displayName,
         );
@@ -275,6 +278,11 @@ export function OnlineLobby() {
                     {timerLabel(attackTimer)}
                   </span>
                 )}
+                {hideOpponentAmmo && (
+                  <span className="text-[8px] font-stats uppercase px-1.5 py-0.5 rounded border border-blue-500/50 text-blue-400">
+                    🔒 Oculto
+                  </span>
+                )}
                 <svg
                   className={`w-4 h-4 text-sand/50 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
                   fill="none"
@@ -353,6 +361,23 @@ export function OnlineLobby() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Hide Opponent Ammo toggle */}
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-western text-[11px] text-sand tracking-wide">
+                      Ocultar Munição do Rival
+                    </p>
+                    <p className="font-stats text-[9px] text-sand/50 uppercase mt-0.5">
+                      Rival não vê sua munição disponível
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={hideOpponentAmmo}
+                    onChange={setHideOpponentAmmo}
+                    label="Ocultar munição do rival"
+                  />
                 </div>
               </div>
             )}
