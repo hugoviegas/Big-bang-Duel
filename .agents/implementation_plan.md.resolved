@@ -1,0 +1,47 @@
+# Overhaul Mobile-First — Big Bang Duel (Baseado no Prototype)
+
+Redesign completo da interface do jogo, adotando uma estrutura "app-like" mobile-first, com navegação inferior (Bottom Nav) e barra de status superior (Top Bar), focando em profissionalismo e padronização visual. A tela de batalha (GameArena) será poupada nesta iteração.
+
+## Variáveis Globais & CSS
+### [MODIFY] [globals.css](file:///c:/Users/hugov/OneDrive/Documentos/Antigravity/Big%20bang%20Duel/duelo/src/styles/globals.css)
+- Importar nova estrutura de cores baseada no protótipo (`--crimson`, `--gold`, etc).
+- Criar abstrações de CSS para `.bottom-nav`, `.top-bar`, `.play-btn`, `.btn-online`, `.btn-solo`.
+- Adicionar animações de ripple, sun pulse, e xp glow.
+
+## Componentes Estruturais
+### [NEW] `TopBar.tsx`
+- Barra superior fixa contendo o avatar (ring dourado interativo), nome do nível, XP bar lustrosa, indicador de ouro (moedas) e botão de configurações.
+- Ancorar o `ProfileDropdown.tsx` aqui.
+
+### [NEW] `ProfileDropdown.tsx`
+- Menu suspenso estilo overlay chamado ao clicar no avatar ou engrenagem.
+- Links para Editar Perfil, Conquistas, Configurações e Sair.
+
+### [NEW] `BottomNav.tsx`
+- Barra de navegação inferior (tab bar) com itens: Home, Personagens (Cards), Loja, Amigos, Ranking.
+- Estado ativo com highlighting dourado visual.
+
+### [NEW] `MobileLayout.tsx`
+- Wrapper principal da aplicação que limita o scope no desktop imitando um shell de celular, mas expande corretamente no mobile.
+- Renderiza a `TopBar` no topo, o `children` no centro scrollable (flex-1) e a `BottomNav` na base.
+
+## Redesign das Telas Baseadas no Prototype
+### [MODIFY] [menu.tsx](file:///c:/Users/hugov/OneDrive/Documentos/Antigravity/Big%20bang%20Duel/duelo/src/pages/menu.tsx) (Home Principal)
+- Construção do `.hero` com o background gradiente e SVG de cactos e sol do protótipo.
+- Trocar os botões estáticos pelos grandes botões interativos `Jogar Online` e `Jogar Solo` idênticos ao protótipo HTML.
+- Quando clicar em "Jogar Solo", ou abre um modal (BottomSheet) ou vai para uma tela de setup configurada no novo tema.
+
+### [MODIFY] Identidade das Telas Secundárias
+Todas as seguintes páginas vão ser envolvidas pelo `MobileLayout.tsx` para padronização:
+- **Leaderboard**: Atualizar o visual da lista para casar com o dark-crimson-gold theme.
+- **CharactersPage**: Ajustar cores dos cards para não quebrar no novo background.
+- **OnlineLobby**: Embutido no mobile shell, ajustar tipografia e borders para `--gold-d` ou variação correta.
+- **Auth (LoginScreen)**: Deixar mais focado no tema dark com `TopBar` e `BottomNav` escondidos.
+
+## Verification Plan
+
+### Manual (Browser)
+- Verificar a transição fluida entre abas via `BottomNav`.
+- Garantir que a barra superior renderiza corretamente e o XP anima.
+- Iniciar uma partida Solo e confirmar que a tela de batalha (não modificada) continua funcionando corretamente.
+- Testar visualização no Device Emulation das ferramentas de desenvolvedor (iPhone 14/Pixel 7) para garantir imersão app-like.
