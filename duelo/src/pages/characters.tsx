@@ -44,14 +44,6 @@ const CLASS_BOX: Record<CharacterClass, string> = {
   sanguinario: "bg-orange-950/70 border-orange-500/45",
   suporte: "bg-green-950/70 border-green-500/45",
 };
-const CLASS_TEXT: Record<CharacterClass, string> = {
-  atirador: "text-red-400",
-  estrategista: "text-blue-400",
-  sorrateiro: "text-purple-400",
-  ricochete: "text-yellow-400",
-  sanguinario: "text-orange-400",
-  suporte: "text-green-400",
-};
 const CLASS_CARD_CHIP: Record<CharacterClass, string> = {
   atirador: "bg-red-950/80 border-red-500/50 text-red-400",
   estrategista: "bg-blue-950/80 border-blue-500/50 text-blue-400",
@@ -193,7 +185,6 @@ function CharacterModal({
 }) {
   const cls = CLASS_INFO[char.characterClass];
   const clsBox = CLASS_BOX[char.characterClass];
-  const clsText = CLASS_TEXT[char.characterClass];
 
   // Portrait height : 55% of viewport height, capped at 360px
   const portraitHeightStyle = "min(55vh, 360px)";
