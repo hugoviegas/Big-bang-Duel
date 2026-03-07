@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "../../store/gameStore";
 import { CardItem } from "./CardItem";
-import { CARDS_BY_MODE, getAvailableCards } from "../../lib/gameEngine";
+import { CARDS_BY_MODE, getAvailableCards, MAX_DOUBLE_SHOT_USES } from "../../lib/gameEngine";
 import type { CardType } from "../../types";
 
 const CARD_DETAILS: Record<
@@ -15,12 +15,12 @@ const CARD_DETAILS: Record<
   },
   double_shot: {
     label: "Tiro Duplo",
-    description: "Dispara 2 balas. Causa 2 de dano, mas gasta 2 balas.",
+    description: "Dispara 2 balas. Causa 2 de dano. Desvio não o bloqueia totalmente (1 de dano passa). Máx 3 usos por round.",
     cost: 2,
   },
   dodge: {
     label: "Desvio",
-    description: "Desvia de qualquer tiro. Não gasta munição.",
+    description: "Desvia de tiros. AVISO: Tiro Duplo ainda causa 1 de dano mesmo ao desviar. Máx 3 esquivas consecutivas.",
     cost: 0,
   },
   reload: {
@@ -87,7 +87,7 @@ export function CardHand() {
     autoFiredRef.current = true;
 
     const store = useGameStore.getState();
-    const available = getAvailableCards(store.mode, store.player.ammo);
+    const available = getAvailableCards(store.mode, store.player.ammo, store.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES, store.player.dodgeStreak ?? 0);
     const chosen =
       store.player.selectedCard ??
       available[Math.floor(Math.random() * available.length)];
@@ -149,7 +149,7 @@ export function CardHand() {
     }
   };
 
-  const availableCards = getAvailableCards(mode, player.ammo);
+  const availableCards = getAvailableCards(mode, player.ammo, player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES, player.dodgeStreak ?? 0);
   const allCards = CARDS_BY_MODE[mode];
 
   if (phase === "game_over" || phase === "round_over") return null;
@@ -259,6 +259,8 @@ export function CardHand() {
                   isSelectable={
                     phase === "selecting" && availableCards.includes(cId)
                   }
+                  usesLeft={cId === "double_shot" ? (player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES) : undefined}
+                  dodgeStreakCount={cId === "dodge" ? (player.dodgeStreak ?? 0) : undefined}
                   onClick={() => handleSelect(cId)}
                 />
               );

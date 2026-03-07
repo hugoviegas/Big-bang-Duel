@@ -7,6 +7,8 @@ interface CardItemProps {
   ammoCost: number;
   isSelected?: boolean;
   isSelectable?: boolean;
+  usesLeft?: number; // for double_shot: remaining uses this round
+  dodgeStreakCount?: number; // for dodge: current streak count (0-3)
   onClick?: () => void;
 }
 
@@ -18,7 +20,7 @@ const CARD_IMAGES: Record<CardType, string> = {
   counter: '/assets/cards/card_counter.webp'
 };
 
-export function CardItem({ id, label, description, ammoCost, isSelected, isSelectable = true, onClick }: CardItemProps) {
+export function CardItem({ id, label, description, ammoCost, isSelected, isSelectable = true, usesLeft, dodgeStreakCount, onClick }: CardItemProps) {
   return (
     <button 
       onClick={isSelectable ? onClick : undefined}
@@ -44,6 +46,30 @@ export function CardItem({ id, label, description, ammoCost, isSelected, isSelec
     >
       {/* Dark gradient overlay at bottom */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent z-0 rounded-[8px]" />
+
+      {/* Dodge streak badge */}
+      {id === 'dodge' && dodgeStreakCount !== undefined && dodgeStreakCount > 0 && (
+        <div className="absolute top-1 left-1 z-20 flex gap-0.5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full border border-black/50 ${i < dodgeStreakCount ? 'bg-blue-400' : 'bg-gray-600 opacity-40'}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Uses remaining badge for double_shot */}
+      {id === 'double_shot' && usesLeft !== undefined && isSelectable && (
+        <div className="absolute top-1 right-1 z-20 flex gap-0.5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full border border-black/50 ${i < usesLeft ? 'bg-yellow-400' : 'bg-gray-600 opacity-40'}`}
+            />
+          ))}
+        </div>
+      )}
       
       {/* Card info */}
       <div className="relative z-10 w-full p-1.5 text-center">
