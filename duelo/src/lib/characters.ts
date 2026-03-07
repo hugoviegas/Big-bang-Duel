@@ -122,7 +122,7 @@ export const CHARACTERS: CharacterDef[] = [
     title: "A Pistoleira Lendária",
     description: "Elegante como uma rosa, mortal como seu revólver.",
     image: "/assets/characters/la_dama.webp",
-    profileImage: "/assets/characters/la_dama.webp",
+    profileImage: "/assets/characters_profile/la_dama_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
     characterClass: "suporte",

@@ -176,11 +176,6 @@ export default function CharactersPage() {
     loadPreferences();
   }, []);
 
-  // Sync saved ID with store
-  useEffect(() => {
-    setSavedId(user?.avatar ?? "marshal");
-  }, [user?.avatar]);
-
   const handleSelect = async (char: CharacterDef) => {
     setSaving(true);
     await saveCharacter(char.id);

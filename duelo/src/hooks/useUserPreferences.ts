@@ -67,7 +67,7 @@ export function useUserPreferences() {
       // Silently ignore Firestore errors (offline / permission issues)
       console.warn("[useUserPreferences] loadPreferences failed:", err);
     }
-  }, [user?.uid]);
+  }, [user, updatePreferences]);
 
   /**
    * Saves the selected character to Firestore and updates local store.
@@ -85,7 +85,7 @@ export function useUserPreferences() {
         console.warn("[useUserPreferences] saveCharacter failed:", err);
       }
     },
-    [user?.uid, updateCharacter],
+    [user, updateCharacter],
   );
 
   /**
@@ -119,7 +119,7 @@ export function useUserPreferences() {
         }
       }
     },
-    [user?.uid, updatePreferences],
+    [user, updatePreferences],
   );
 
   return { loadPreferences, saveCharacter, savePreferences };
