@@ -1,0 +1,60 @@
+{
+  "training_date": "2026-03-07T13:37:46.815585",
+  "total_time_seconds": 600.7,
+  "episodes_per_mode": 2000000,
+  "modes": [
+    "normal"
+  ],
+  "results": {
+    "normal": {
+      "validation": {
+        "hard_vs_random": {
+          "win_rate": 88.35,
+          "loss_rate": 4.48,
+          "draw_rate": 7.17,
+          "avg_game_length": 11.12
+        },
+        "medium_vs_random": {
+          "win_rate": 88.25,
+          "loss_rate": 4.28,
+          "draw_rate": 7.47,
+          "avg_game_length": 11.21
+        },
+        "easy_vs_random": {
+          "win_rate": 28.28,
+          "loss_rate": 61.41,
+          "draw_rate": 10.31,
+          "avg_game_length": 16.12
+        },
+        "hard_vs_medium": {
+          "hard_win_rate": 0.14,
+          "medium_win_rate": 0.16,
+          "draw_rate": 99.7
+        },
+        "hard_vs_easy": {
+          "hard_win_rate": 96.47,
+          "easy_win_rate": 1.08,
+          "draw_rate": 2.45
+        },
+        "medium_vs_easy": {
+          "medium_win_rate": 96.57,
+          "easy_win_rate": 0.97,
+          "draw_rate": 2.46
+        },
+        "win_speed_distribution": {
+          "5-10": 41.34,
+          "10-15": 46.62,
+          "15-20": 9.51,
+          "20-25": 2.1,
+          "25-30": 0.35,
+          "30-35": 0.08
+        }
+      },
+      "strategies_count": {
+        "hard": 6400,
+        "medium": 6400,
+        "easy": 6400
+      }
+    }
+  }
+}

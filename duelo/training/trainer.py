@@ -31,6 +31,7 @@ from game_engine import (
     CARDS_BY_MODE, LIFE_BY_MODE, MAX_AMMO, MAX_TURNS,
     CARD_RELOAD, CARD_SHOT, CARD_DODGE, CARD_DOUBLE_SHOT, CARD_COUNTER,
 )
+from game_engine import MAX_DODGE_STREAK, MAX_DOUBLE_SHOT_USES
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -250,6 +251,11 @@ class Trainer:
         game.o_life = random.randint(1, game.max_life)
         game.p_ammo = random.randint(0, MAX_AMMO)
         game.o_ammo = random.randint(0, MAX_AMMO)
+        # Novos campos: dodge streak e double_shot remaining
+        game.p_dodge_streak = random.randint(0, MAX_DODGE_STREAK)
+        game.o_dodge_streak = random.randint(0, MAX_DODGE_STREAK)
+        game.p_double_shots_left = random.randint(0, MAX_DOUBLE_SHOT_USES)
+        game.o_double_shots_left = random.randint(0, MAX_DOUBLE_SHOT_USES)
         cards = ['none'] + CARDS_BY_MODE[self.mode]
         game.last_p_card = random.choice(cards)
         game.last_o_card = random.choice(cards)
@@ -302,39 +308,40 @@ class Trainer:
         for my_life in range(1, max_life + 1):
             for my_ammo in range(0, MAX_AMMO + 1):
                 for opp_life in range(1, max_life + 1):
-                    for opp_ammo in range(0, MAX_AMMO + 1):
-                        for last_card in last_card_options:
-                            state_key = f"{my_life}_{my_ammo}_{opp_life}_{opp_ammo}_{last_card}"
-                            available = get_available_cards(self.mode, my_ammo)
+                    for my_dodge in range(0, MAX_DODGE_STREAK + 1):
+                        for my_double_left in range(0, MAX_DOUBLE_SHOT_USES + 1):
+                            for last_card in last_card_options:
+                                state_key = f"{my_life}_{my_ammo}_{opp_life}_{last_card}_{my_dodge}_{my_double_left}"
+                                available = get_available_cards(self.mode, my_ammo, my_double_left)
 
-                            if not available:
-                                continue
+                                if not available:
+                                    continue
 
-                            if state_key in merged_q and merged_q[state_key]:
-                                q_vals = dict(merged_q[state_key])
+                                if state_key in merged_q and merged_q[state_key]:
+                                    q_vals = dict(merged_q[state_key])
 
-                                # HARD: temperatura baixa (quase ótimo)
-                                hard_probs = self._softmax_probs(q_vals, available, temperature=0.3)
+                                    # HARD: temperatura baixa (quase ótimo)
+                                    hard_probs = self._softmax_probs(q_vals, available, temperature=0.3)
 
-                                # MEDIUM: temperatura média (misto)
-                                medium_probs = self._softmax_probs(q_vals, available, temperature=1.5)
+                                    # MEDIUM: temperatura média (misto)
+                                    medium_probs = self._softmax_probs(q_vals, available, temperature=1.5)
 
-                                # EASY: inverso (prefere jogadas ruins) + uniforme
-                                easy_probs = self._inverse_softmax_probs(q_vals, available, temperature=0.8)
+                                    # EASY: inverso (prefere jogadas ruins) + uniforme
+                                    easy_probs = self._inverse_softmax_probs(q_vals, available, temperature=0.8)
 
-                                states_with_data += 1
-                            else:
-                                # Sem dados de treino — distribuição uniforme
-                                uniform = {card: round(1.0 / len(available), 4)
-                                           for card in available}
-                                hard_probs = uniform
-                                medium_probs = uniform
-                                easy_probs = uniform
+                                    states_with_data += 1
+                                else:
+                                    # Sem dados de treino — distribuição uniforme
+                                    uniform = {card: round(1.0 / len(available), 4)
+                                               for card in available}
+                                    hard_probs = uniform
+                                    medium_probs = uniform
+                                    easy_probs = uniform
 
-                            strategies['hard'][state_key] = hard_probs
-                            strategies['medium'][state_key] = medium_probs
-                            strategies['easy'][state_key] = easy_probs
-                            states_covered += 1
+                                strategies['hard'][state_key] = hard_probs
+                                strategies['medium'][state_key] = medium_probs
+                                strategies['easy'][state_key] = easy_probs
+                                states_covered += 1
 
         print(f"  Estados cobertos: {states_covered}")
         print(f"  Estados com dados de treino: {states_with_data}")
@@ -566,7 +573,7 @@ def generate_output_file(mode: str, strategies: Dict, validation: Dict,
             'training_episodes': episodes,
             'training_date': datetime.now().isoformat(),
             'version': '1.0',
-            'state_format': '{my_life}_{my_ammo}_{opp_life}_{opp_ammo}_{last_opp_card}',
+            'state_format': '{my_life}_{my_ammo}_{opp_life}_{last_opp_card}_{my_dodge_streak}_{my_double_shots_left}',
             'description': (
                 'Arquivo de estratégia gerado por Q-Learning self-play. '
                 'Cada dificuldade contém probabilidades de ação por estado. '

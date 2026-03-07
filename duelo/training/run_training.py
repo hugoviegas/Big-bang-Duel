@@ -51,14 +51,14 @@ def verify_game_engine():
     expected_p_life_lost = {
         'shot':        {'shot': 1, 'double_shot': 2, 'dodge': 0, 'reload': 0, 'counter': 1},
         'double_shot': {'shot': 1, 'double_shot': 2, 'dodge': 0, 'reload': 0, 'counter': 1},
-        'dodge':       {'shot': 0, 'double_shot': 0, 'dodge': 0, 'reload': 0, 'counter': 0},
+        'dodge':       {'shot': 0, 'double_shot': 1, 'dodge': 0, 'reload': 0, 'counter': 0},
         'reload':      {'shot': 1, 'double_shot': 2, 'dodge': 0, 'reload': 0, 'counter': 0},
         'counter':     {'shot': 0, 'double_shot': 0, 'dodge': 0, 'reload': 0, 'counter': 0},
     }
 
     expected_o_life_lost = {
         'shot':        {'shot': 1, 'double_shot': 1, 'dodge': 0, 'reload': 1, 'counter': 0},
-        'double_shot': {'shot': 2, 'double_shot': 2, 'dodge': 0, 'reload': 2, 'counter': 0},
+        'double_shot': {'shot': 2, 'double_shot': 2, 'dodge': 1, 'reload': 2, 'counter': 0},
         'dodge':       {'shot': 0, 'double_shot': 0, 'dodge': 0, 'reload': 0, 'counter': 0},
         'reload':      {'shot': 0, 'double_shot': 0, 'dodge': 0, 'reload': 0, 'counter': 0},
         'counter':     {'shot': 1, 'double_shot': 1, 'dodge': 0, 'reload': 0, 'counter': 0},

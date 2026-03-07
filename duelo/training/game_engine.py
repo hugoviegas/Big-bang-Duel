@@ -35,17 +35,20 @@ LIFE_BY_MODE: Dict[str, int] = {
 }
 
 MAX_AMMO = 3
-MAX_TURNS = 70
+MAX_TURNS = 50
+MAX_DODGE_STREAK = 4
+MAX_DOUBLE_SHOT_USES = 3
 
 
-def get_available_cards(mode: str, ammo: int) -> List[str]:
-    """Retorna cartas disponíveis baseado no modo e munição atual.
-    Espelha exatamente getAvailableCards() do TypeScript."""
+def get_available_cards(mode: str, ammo: int, double_shots_left: int = MAX_DOUBLE_SHOT_USES) -> List[str]:
+    """Retorna cartas disponíveis baseado no modo, munição atual e usos de double_shot restantes.
+    Espelha exatamente getAvailableCards() do TypeScript, com checagem adicional de `double_shots_left`.
+    """
     cards = []
     for card in CARDS_BY_MODE[mode]:
         if card == CARD_SHOT and ammo < 1:
             continue
-        if card == CARD_DOUBLE_SHOT and ammo < 2:
+        if card == CARD_DOUBLE_SHOT and (ammo < 2 or double_shots_left <= 0):
             continue
         if card == CARD_COUNTER and ammo < 1:
             continue
@@ -98,7 +101,8 @@ def resolve_cards(p_card: str, o_card: str, p_ammo: int, o_ammo: int) -> Dict:
     elif p_card == CARD_DOUBLE_SHOT and o_card == CARD_DOUBLE_SHOT:
         p_life_lost = 2; o_life_lost = 2
     elif p_card == CARD_DOUBLE_SHOT and o_card == CARD_DODGE:
-        pass  # miss
+        # NOVA REGRA: mesmo se o oponente tentar desviar, ele ainda perde 1 vida
+        o_life_lost = 1
     elif p_card == CARD_DOUBLE_SHOT and o_card == CARD_RELOAD:
         o_life_lost = 2
     elif p_card == CARD_DOUBLE_SHOT and o_card == CARD_COUNTER:
@@ -108,7 +112,8 @@ def resolve_cards(p_card: str, o_card: str, p_ammo: int, o_ammo: int) -> Dict:
     elif p_card == CARD_DODGE and o_card == CARD_SHOT:
         pass  # desviou
     elif p_card == CARD_DODGE and o_card == CARD_DOUBLE_SHOT:
-        pass  # desviou
+        # NOVA REGRA: desviar de double_shot causa 1 de dano (não evita ambos)
+        p_life_lost = 1
     elif p_card == CARD_DODGE and o_card == CARD_DODGE:
         pass  # nada
     elif p_card == CARD_DODGE and o_card == CARD_RELOAD:
@@ -159,7 +164,9 @@ class GameState:
 
     __slots__ = ['p_life', 'p_ammo', 'o_life', 'o_ammo',
                  'turn', 'mode', 'max_life',
-                 'last_p_card', 'last_o_card']
+                 'last_p_card', 'last_o_card',
+                 'p_dodge_streak', 'o_dodge_streak',
+                 'p_double_shots_left', 'o_double_shots_left']
 
     def __init__(self, mode: str):
         self.mode = mode
@@ -171,20 +178,33 @@ class GameState:
         self.turn = 1
         self.last_p_card = 'none'
         self.last_o_card = 'none'
+        # Novas variáveis: sequência de esquiva e usos restantes de double_shot
+        self.p_dodge_streak = 0
+        self.o_dodge_streak = 0
+        self.p_double_shots_left = MAX_DOUBLE_SHOT_USES
+        self.o_double_shots_left = MAX_DOUBLE_SHOT_USES
 
     def get_state_key(self, perspective: str = 'player') -> str:
         """Chave de estado para lookup na Q-table.
-        Formato: '{minha_vida}_{minha_ammo}_{opp_vida}_{opp_ammo}_{ultima_carta_opp}'
+        Novo formato (sem munição do oponente):
+        '{minha_vida}_{minha_ammo}_{opp_vida}_{ultima_carta_opp}_{minha_dodge_streak}_{minha_double_shots_left}'
         """
         if perspective == 'player':
-            return f"{self.p_life}_{self.p_ammo}_{self.o_life}_{self.o_ammo}_{self.last_o_card}"
+            return f"{self.p_life}_{self.p_ammo}_{self.o_life}_{self.last_o_card}_{self.p_dodge_streak}_{self.p_double_shots_left}"
         else:
-            return f"{self.o_life}_{self.o_ammo}_{self.p_life}_{self.p_ammo}_{self.last_p_card}"
+            return f"{self.o_life}_{self.o_ammo}_{self.p_life}_{self.last_p_card}_{self.o_dodge_streak}_{self.o_double_shots_left}"
 
     def get_available_cards(self, perspective: str = 'player') -> List[str]:
-        """Cartas disponíveis para a perspectiva dada."""
-        ammo = self.p_ammo if perspective == 'player' else self.o_ammo
-        return get_available_cards(self.mode, ammo)
+        """Cartas disponíveis para a perspectiva dada.
+        Considera também o limite de usos de `double_shot` por jogador.
+        """
+        if perspective == 'player':
+            ammo = self.p_ammo
+            double_left = self.p_double_shots_left
+        else:
+            ammo = self.o_ammo
+            double_left = self.o_double_shots_left
+        return get_available_cards(self.mode, ammo, double_left)
 
     def apply_turn(self, p_card: str, o_card: str) -> dict:
         """Aplica um turno e retorna o resultado. Modifica o estado in-place."""
@@ -194,6 +214,24 @@ class GameState:
         self.o_life = max(0, self.o_life - result['o_life_lost'])
         self.p_ammo = min(MAX_AMMO, max(0, self.p_ammo + result['p_ammo_change']))
         self.o_ammo = min(MAX_AMMO, max(0, self.o_ammo + result['o_ammo_change']))
+
+        # Atualizar dodge streaks
+        if p_card == CARD_DODGE:
+            self.p_dodge_streak = min(MAX_DODGE_STREAK, self.p_dodge_streak + 1)
+        else:
+            self.p_dodge_streak = 0
+
+        if o_card == CARD_DODGE:
+            self.o_dodge_streak = min(MAX_DODGE_STREAK, self.o_dodge_streak + 1)
+        else:
+            self.o_dodge_streak = 0
+
+        # Atualizar usos de double_shot
+        if p_card == CARD_DOUBLE_SHOT:
+            self.p_double_shots_left = max(0, self.p_double_shots_left - 1)
+        if o_card == CARD_DOUBLE_SHOT:
+            self.o_double_shots_left = max(0, self.o_double_shots_left - 1)
+
         self.last_p_card = p_card
         self.last_o_card = o_card
         self.turn += 1
@@ -218,7 +256,14 @@ class GameState:
                 return 'player'
             elif self.o_life > self.p_life:
                 return 'opponent'
-            return 'draw'
+            # Empate: resolver por Roleta Russa (1/6 chance por tentativa, alternando)
+            import random
+            turn = 0
+            while True:
+                shooter = 'player' if turn % 2 == 0 else 'opponent'
+                if random.random() < (1.0 / 6.0):
+                    return shooter
+                turn += 1
         return None
 
     def clone(self) -> 'GameState':
@@ -233,6 +278,11 @@ class GameState:
         new.turn = self.turn
         new.last_p_card = self.last_p_card
         new.last_o_card = self.last_o_card
+        # Copiar novas variáveis de jogo
+        new.p_dodge_streak = getattr(self, 'p_dodge_streak', 0)
+        new.o_dodge_streak = getattr(self, 'o_dodge_streak', 0)
+        new.p_double_shots_left = getattr(self, 'p_double_shots_left', MAX_DOUBLE_SHOT_USES)
+        new.o_double_shots_left = getattr(self, 'o_double_shots_left', MAX_DOUBLE_SHOT_USES)
         return new
 
 
@@ -249,39 +299,45 @@ def build_payoff_matrix(mode: str) -> Dict:
     last_card_options = ['none'] + cards
     payoff_matrix = {}
 
+    # Novo formato de estado (compatível com Trainer):
+    # '{my_life}_{my_ammo}_{opp_life}_{last_card}_{my_dodge}_{my_double_left}'
     for my_life in range(1, max_life + 1):
         for my_ammo in range(0, MAX_AMMO + 1):
             for opp_life in range(1, max_life + 1):
-                for opp_ammo in range(0, MAX_AMMO + 1):
-                    for last_card in last_card_options:
-                        state_key = f"{my_life}_{my_ammo}_{opp_life}_{opp_ammo}_{last_card}"
-                        my_available = get_available_cards(mode, my_ammo)
-                        opp_available = get_available_cards(mode, opp_ammo)
+                for my_dodge in range(0, MAX_DODGE_STREAK + 1):
+                    for my_double_left in range(0, MAX_DOUBLE_SHOT_USES + 1):
+                        for last_card in last_card_options:
+                            state_key = f"{my_life}_{my_ammo}_{opp_life}_{last_card}_{my_dodge}_{my_double_left}"
 
-                        if not my_available:
-                            continue
+                            my_available = get_available_cards(mode, my_ammo, my_double_left)
+                            # Para análise, consideramos o oponente com usos completos (pior-caso)
+                            opp_available = get_available_cards(mode, my_ammo, MAX_DOUBLE_SHOT_USES)
 
-                        matrix = {}
-                        for my_card in my_available:
-                            matrix[my_card] = {}
-                            for opp_card in opp_available:
-                                result = resolve_cards(my_card, opp_card, my_ammo, opp_ammo)
-                                # Score: dano causado - dano recebido
-                                net_damage = result['o_life_lost'] - result['p_life_lost']
-                                net_ammo = result['p_ammo_change'] - result['o_ammo_change']
-                                matrix[my_card][opp_card] = {
-                                    'my_dmg_taken': result['p_life_lost'],
-                                    'opp_dmg_taken': result['o_life_lost'],
-                                    'my_ammo_change': result['p_ammo_change'],
-                                    'opp_ammo_change': result['o_ammo_change'],
-                                    'net_damage': net_damage,
-                                    'net_ammo': net_ammo,
-                                }
+                            if not my_available:
+                                continue
 
-                        payoff_matrix[state_key] = {
-                            'my_cards': my_available,
-                            'opp_cards': opp_available,
-                            'outcomes': matrix,
-                        }
+                            matrix = {}
+                            for my_card in my_available:
+                                matrix[my_card] = {}
+                                for opp_card in opp_available:
+                                    # Como o payoff é do ponto de vista do jogador, usamos
+                                    # opp_ammo = my_ammo como simplificação analítica.
+                                    result = resolve_cards(my_card, opp_card, my_ammo, my_ammo)
+                                    net_damage = result['o_life_lost'] - result['p_life_lost']
+                                    net_ammo = result['p_ammo_change'] - result['o_ammo_change']
+                                    matrix[my_card][opp_card] = {
+                                        'my_dmg_taken': result['p_life_lost'],
+                                        'opp_dmg_taken': result['o_life_lost'],
+                                        'my_ammo_change': result['p_ammo_change'],
+                                        'opp_ammo_change': result['o_ammo_change'],
+                                        'net_damage': net_damage,
+                                        'net_ammo': net_ammo,
+                                    }
+
+                            payoff_matrix[state_key] = {
+                                'my_cards': my_available,
+                                'opp_cards': opp_available,
+                                'outcomes': matrix,
+                            }
 
     return payoff_matrix
