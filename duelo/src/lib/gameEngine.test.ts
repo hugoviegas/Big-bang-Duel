@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveCards, getAvailableCards, MAX_DODGE_STREAK } from './gameEngine';
+import { resolveCards, getAvailableCards } from './gameEngine';
 import type { CardType } from '../types';
 
 describe('gameEngine - resolveCards 25 combinations in advanced mode', () => {
