@@ -33,10 +33,7 @@ const charVariants = {
   counter: { scale: [1, 1.2, 0.95, 1.1, 1], transition: { duration: 0.5 } },
 };
 
-export function Character({
-  player,
-  isRight: _isRight = false,
-}: CharacterProps) {
+export function Character({ player, isRight: _isRight = false }: CharacterProps) {
   // não mais espelhamos o sprite porque pode conter o nome
   // const scaleX = isRight ? -1 : 1;
   const imgSrc = getCharacterImage(player.avatar);

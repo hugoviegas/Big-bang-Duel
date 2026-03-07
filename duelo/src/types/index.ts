@@ -93,10 +93,33 @@ export interface TurnResult {
   narrative: string;
 }
 
+/** Unique player code in format #XXXXXXXX (hex uppercase). */
+export type PlayerCode = string;
+
+export type OnlineStatus = "online" | "offline" | "in_game";
+
+export type MatchMode = "solo" | "online";
+
+export interface ModeStats {
+  wins: number;
+  losses: number;
+  draws: number;
+  totalGames: number;
+  winRate: number;
+}
+
+export interface StatsByMode {
+  solo: ModeStats;
+  online: ModeStats;
+  overall: ModeStats;
+}
+
 export interface User {
   uid: string;
   email: string;
   displayName: string;
+  /** Unique player code e.g. #A0B1C2D4 — immutable after creation. */
+  playerCode: PlayerCode;
   /** ID of the selected character — mirrors preferences.selectedCharacter for fast access. */
   avatar: string;
   wins: number;
@@ -111,24 +134,74 @@ export interface User {
   expiresAt?: Date | number;
   /** Full preferences object, synced from Firestore. */
   preferences?: UserPreferences;
+  /** Current online status. */
+  onlineStatus?: OnlineStatus;
+  /** Split stats to avoid mixing solo and online ranking. */
+  statsByMode?: StatsByMode;
+}
+
+export interface PlayerProfile {
+  uid: string;
+  displayName: string;
+  playerCode: PlayerCode;
+  avatar: string;
+  wins: number;
+  losses: number;
+  draws: number;
+  totalGames: number;
+  winRate: number;
+  createdAt: number; // timestamp
+  lastSeen: number; // timestamp
+  onlineStatus: OnlineStatus;
+  /** Split stats to avoid mixing solo and online ranking. */
+  statsByMode?: StatsByMode;
 }
 
 export interface LeaderboardEntry {
   uid: string;
   displayName: string;
+  playerCode: PlayerCode;
   avatar: string;
   wins: number;
+  losses: number;
   winRate: number;
   totalGames: number;
   rank: number;
+}
+
+export type FriendRequestStatus = "pending" | "accepted" | "rejected";
+
+export interface FriendRequest {
+  id: string;
+  fromUid: string;
+  fromDisplayName: string;
+  fromAvatar: string;
+  fromPlayerCode: PlayerCode;
+  toUid: string;
+  status: FriendRequestStatus;
+  createdAt: number;
+}
+
+export interface Friend {
+  uid: string;
+  displayName: string;
+  playerCode: PlayerCode;
+  avatar: string;
+  onlineStatus: OnlineStatus;
+  lastSeen: number;
+  addedAt: number;
+  /** If this friend relation was created from a friend request, the request id. */
+  friendRequestId?: string;
 }
 
 export interface Room {
   id: string;
   hostId: string;
   hostName: string;
+  hostAvatar?: string;
   guestId: string | null;
   guestName: string | null;
+  guestAvatar?: string;
   hostChoice: string | null;
   guestChoice: string | null;
   mode: GameMode;

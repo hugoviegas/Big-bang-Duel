@@ -101,7 +101,7 @@ export function OnlineLobby() {
 
   const handleCreate = async () => {
     const config: RoomConfig = { isPublic, attackTimer, bestOf3 };
-    const roomId = await createRoom(selectedMode, config);
+    const roomId = await createRoom(selectedMode, config, selectedChar);
     if (roomId) {
       useGameStore
         .getState()
@@ -113,6 +113,7 @@ export function OnlineLobby() {
           undefined,
           selectedChar,
           { attackTimer, bestOf3, isPublic },
+          user?.displayName,
         );
       navigate(`/game/${roomId}`);
     }
@@ -124,7 +125,7 @@ export function OnlineLobby() {
       setError("Código deve ter 6 caracteres");
       return;
     }
-    const room = await joinRoom(joinCode.toUpperCase());
+    const room = await joinRoom(joinCode.toUpperCase(), selectedChar);
     if (room) {
       useGameStore
         .getState()
@@ -140,6 +141,7 @@ export function OnlineLobby() {
             bestOf3: room.config?.bestOf3 ?? false,
             isPublic: room.config?.isPublic ?? false,
           },
+          user?.displayName,
         );
       navigate(`/game/${room.id}`);
     } else {
@@ -148,7 +150,7 @@ export function OnlineLobby() {
   };
 
   const handleJoinPublic = async (room: RoomType) => {
-    const joined = await joinRoom(room.id);
+    const joined = await joinRoom(room.id, selectedChar);
     if (joined) {
       useGameStore
         .getState()
@@ -164,6 +166,7 @@ export function OnlineLobby() {
             bestOf3: room.config?.bestOf3 ?? false,
             isPublic: true,
           },
+          user?.displayName,
         );
       navigate(`/game/${room.id}`);
     } else {

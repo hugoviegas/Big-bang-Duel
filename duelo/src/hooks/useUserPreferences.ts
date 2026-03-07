@@ -13,17 +13,35 @@ import { db } from "../lib/firebase";
 import { useAuthStore } from "../store/authStore";
 import type { UserPreferences } from "../types";
 
+// Track which UIDs have already loaded preferences this session.
+// Avoids a Firestore read every time the menu remounts.
+const _prefsLoadedForUid = new Set<string>();
+
 export function useUserPreferences() {
   const { user, updateCharacter, updatePreferences } = useAuthStore();
 
   /**
    * Loads preferences from Firestore and merges them into local store.
-   * Call this once on first mount of any screen that needs up-to-date prefs.
+   * Skipped if the user already has preferences loaded this session,
+   * OR if they already have preferences saved locally (cross-device sync
+   * is handled by Firestore offline persistence in the background).
    */
   const loadPreferences = useCallback(async () => {
     if (!user?.uid) return;
+
+    // Skip if already loaded this session
+    if (_prefsLoadedForUid.has(user.uid)) return;
+
+    // Skip if user already has preferences and an avatar set locally —
+    // offline persistence will background-sync any remote changes.
+    if (user.preferences && user.avatar) {
+      _prefsLoadedForUid.add(user.uid);
+      return;
+    }
+
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
+      _prefsLoadedForUid.add(user.uid); // mark loaded regardless of result
       if (!userDoc.exists()) return;
 
       const data = userDoc.data();

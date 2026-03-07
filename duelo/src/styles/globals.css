@@ -1,36 +1,42 @@
+/* Google Fonts - MUST be first */
+@import url("https://fonts.googleapis.com/css2?family=Rye&family=Permanent+Marker&family=Oswald:wght@300;400;700&display=swap");
+
+/* Core Tailwind */
 @import "tailwindcss";
 
-/* Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Rye&family=Permanent+Marker&family=Oswald:wght@300;400;700&display=swap');
+/* Custom animations and theme styles */
+@import "./animations.css";
+@import "./western.css";
+@import "./battleHeader.css";
 
-@import './animations.css';
-@import './western.css';
-
+/* Tailwind CSS v4 Theme Configuration */
 @theme {
-  --color-sand: #D4A855;
-  --color-sand-light: #F0D080;
-  --color-brown-dark: #3B1F0A;
-  --color-brown-mid: #7B4A1E;
-  --color-brown-light: #A0522D;
-  --color-red-west: #C0392B;
-  --color-red-700: #8B0000;
-  --color-gold: #FFD700;
-  --color-sky: #87CEEB;
-  --color-sunset-1: #FF6B35;
-  --color-sunset-2: #F7C59F;
-  --color-black-ink: #1A0A00;
-  --color-parchment: #F5E6C8;
+  /* Colors */
+  --color-sand: #d4a855;
+  --color-sand-light: #f0d080;
+  --color-brown-dark: #3b1f0a;
+  --color-brown-mid: #7b4a1e;
+  --color-brown-light: #a0522d;
+  --color-red-west: #c0392b;
+  --color-red-700: #8b0000;
+  --color-gold: #ffd700;
+  --color-sky: #87ceeb;
+  --color-sunset-1: #ff6b35;
+  --color-sunset-2: #f7c59f;
+  --color-black-ink: #1a0a00;
+  --color-parchment: #f5e6c8;
 
-  --font-western: "Rye", serif;
-  --font-marker: "Permanent Marker", cursive;
-  --font-stats: "Oswald", sans-serif;
+  /* Fonts */
+  --font-family-western: "Rye", serif;
+  --font-family-marker: "Permanent Marker", cursive;
+  --font-family-stats: "Oswald", sans-serif;
 }
 
 @layer base {
   body {
     background-color: var(--color-parchment);
     color: var(--color-black-ink);
-    font-family: var(--font-stats);
+    font-family: var(--font-family-stats);
     overflow-x: hidden;
     overscroll-behavior-y: none;
     touch-action: manipulation;
@@ -50,15 +56,18 @@
     display: block;
     width: 100%;
     padding: 14px 24px;
-    font-family: var(--font-western);
+    font-family: var(--font-family-western);
     font-size: 1.35rem;
     text-align: center;
     color: var(--color-sand-light);
-    background: linear-gradient(180deg, #8B4513 0%, #5A2D0C 100%);
+    background: linear-gradient(180deg, #8b4513 0%, #5a2d0c 100%);
     border: 3px solid var(--color-brown-dark);
     border-radius: 8px;
-    box-shadow: 0 4px 0 #2a1005, 0 6px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
-    text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    box-shadow:
+      0 4px 0 #2a1005,
+      0 6px 12px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
     letter-spacing: 0.08em;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -66,37 +75,57 @@
     overflow: hidden;
   }
   .btn-western::before {
-    content: '';
+    content: "";
     position: absolute;
-    top: 0; left: 0; right: 0;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 50%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 100%);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      transparent 100%
+    );
     pointer-events: none;
   }
   .btn-western:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 0 #2a1005, 0 8px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    box-shadow:
+      0 6px 0 #2a1005,
+      0 8px 16px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
     filter: brightness(1.1);
   }
   .btn-western:active {
     transform: translateY(2px);
-    box-shadow: 0 2px 0 #2a1005, 0 3px 6px rgba(0,0,0,0.3);
+    box-shadow:
+      0 2px 0 #2a1005,
+      0 3px 6px rgba(0, 0, 0, 0.3);
   }
 
   /* Variants */
   .btn-danger {
-    background: linear-gradient(180deg, #C0392B 0%, #8B0000 100%);
+    background: linear-gradient(180deg, #c0392b 0%, #8b0000 100%);
     border-color: #5a0000;
-    box-shadow: 0 4px 0 #3a0000, 0 6px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+    box-shadow:
+      0 4px 0 #3a0000,
+      0 6px 12px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
   .btn-danger:hover {
-    box-shadow: 0 6px 0 #3a0000, 0 8px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    box-shadow:
+      0 6px 0 #3a0000,
+      0 8px 16px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
   .btn-sky {
-    background: linear-gradient(180deg, #87CEEB 0%, #5BA3C9 100%);
+    background: linear-gradient(180deg, #87ceeb 0%, #5ba3c9 100%);
     color: var(--color-brown-dark);
     border-color: #3d7a9e;
-    box-shadow: 0 4px 0 #2d5a7a, 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+    box-shadow:
+      0 4px 0 #2d5a7a,
+      0 6px 12px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
     text-shadow: none;
   }
 
@@ -104,7 +133,7 @@
   .input-parchment {
     width: 100%;
     padding: 12px 16px;
-    font-family: var(--font-stats);
+    font-family: var(--font-family-stats);
     font-size: 1rem;
     background: var(--color-parchment);
     border: 3px solid var(--color-brown-mid);
@@ -124,33 +153,62 @@
 
   /* Wood Panel Card */
   .card-wood {
-    background: linear-gradient(145deg, #6B3410 0%, #4A2208 50%, #3B1F0A 100%);
+    background: linear-gradient(145deg, #6b3410 0%, #4a2208 50%, #3b1f0a 100%);
     border: 4px solid #2a1005;
     border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
     position: relative;
     overflow: hidden;
   }
   .card-wood::before {
-    content: '';
+    content: "";
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: repeating-linear-gradient(
       90deg,
       transparent 0px,
       transparent 3px,
-      rgba(0,0,0,0.05) 3px,
-      rgba(0,0,0,0.05) 6px
+      rgba(0, 0, 0, 0.05) 3px,
+      rgba(0, 0, 0, 0.05) 6px
     );
     pointer-events: none;
   }
 
   /* Hide scrollbar */
-  .hide-scrollbar::-webkit-scrollbar { display: none; }
-  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Custom scrollbar for webkit */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-brown-mid);
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-sand);
+  }
 
   /* Text Glow */
   .text-glow-gold {
-    text-shadow: 0 0 10px rgba(255,215,0,0.6), 0 0 20px rgba(255,215,0,0.3), 0 2px 4px rgba(0,0,0,0.5);
+    text-shadow:
+      0 0 10px rgba(255, 215, 0, 0.6),
+      0 0 20px rgba(255, 215, 0, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.5);
   }
 }

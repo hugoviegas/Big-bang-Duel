@@ -1,6 +1,9 @@
 .font-western {
-  font-family: var(--font-western);
+  font-family: var(--font-family-western);
+}
+.font-marker {
+  font-family: var(--font-family-marker);
 }
 .font-stats {
-  font-family: var(--font-stats);
+  font-family: var(--font-family-stats);
 }

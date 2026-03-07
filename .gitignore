@@ -1,1 +1,4 @@
 duelo/.env
+.vercel
+duelo/realtime.rules.json
+duelo/firestore.rules

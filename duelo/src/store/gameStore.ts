@@ -11,6 +11,7 @@ import type {
 } from "../types";
 import { LIFE_BY_MODE, resolveCards, checkWinner } from "../lib/gameEngine";
 import { botChooseCard } from "../lib/botAI";
+import { CHARACTERS, getCharacter } from "../lib/characters";
 
 interface GameStore extends GameState {
   initializeGame: (
@@ -21,6 +22,7 @@ interface GameStore extends GameState {
     botDifficulty?: BotDifficulty,
     playerAvatar?: string,
     config?: Partial<RoomConfig>,
+    playerDisplayName?: string,
   ) => void;
   selectCard: (card: CardType) => void;
   resolveTurn: () => void;
@@ -94,19 +96,15 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     botDifficulty = "medium",
     playerAvatar = "marshal",
     config = {},
+    playerDisplayName = "Pistoleiro",
   ) => {
     _isResolving = false;
     const life = LIFE_BY_MODE[mode];
-    const allAvatars = ["marshal", "skull", "la_dama"];
-    const opponentAvatars = allAvatars.filter((a) => a !== playerAvatar);
+    // Usar TODOS os personagens disponíveis, não apenas 3
+    const allAvatarIds = CHARACTERS.map((c) => c.id);
+    const opponentAvatars = allAvatarIds.filter((a) => a !== playerAvatar);
     const opponentAvatar =
       opponentAvatars[Math.floor(Math.random() * opponentAvatars.length)];
-
-    const opponentNames: Record<string, string> = {
-      marshal: "The Marshal",
-      skull: "The Skull",
-      la_dama: "La Dama",
-    };
 
     // Set attack timer based on difficulty (if not online or not provided in config)
     let attackTimer: AttackTimer = 10;
@@ -119,6 +117,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         attackTimer = 5 as AttackTimer;
       }
     }
+
+    const opponentCharDef = getCharacter(opponentAvatar);
 
     set({
       ...initialState,
@@ -139,13 +139,14 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         life,
         maxLife: life,
         avatar: playerAvatar,
+        displayName: playerDisplayName,
       },
       opponent: {
         ...initialState.opponent,
         life,
         maxLife: life,
         avatar: opponentAvatar,
-        displayName: opponentNames[opponentAvatar] || "El Diablo",
+        displayName: opponentCharDef.name,
       },
     });
   },
@@ -434,7 +435,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           ammo: roomData[`${otherRole}Ammo`] ?? state.opponent.ammo,
           selectedCard: roomData[`${otherRole}Choice`] as CardType,
           choiceRevealed: true,
-          avatar: state.opponent.avatar,
+          avatar: isHost
+            ? (roomData.guestAvatar ?? state.opponent.avatar)
+            : (roomData.hostAvatar ?? state.opponent.avatar),
         },
       });
 
@@ -482,6 +485,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         displayName: isHost
           ? roomData.guestName || "Inimigo"
           : roomData.hostName || "Host",
+        avatar: isHost
+          ? (roomData.guestAvatar ?? curr.opponent.avatar)
+          : (roomData.hostAvatar ?? curr.opponent.avatar),
         life: roomData[`${otherRole}Life`] ?? curr.opponent.life,
         ammo: roomData[`${otherRole}Ammo`] ?? curr.opponent.ammo,
         selectedCard: null,

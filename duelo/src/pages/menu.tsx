@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useGameStore } from "../store/gameStore";
+import { useFriendsStore } from "../store/friendsStore";
 import { useUserPreferences } from "../hooks/useUserPreferences";
 import { SettingsModal } from "../components/common/SettingsModal";
 import { GamePrep } from "../components/game/GamePrep";
@@ -31,7 +32,11 @@ export default function MenuPage() {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
+  const ensureProfile = useAuthStore((state) => state.ensureProfile);
   const initializeGame = useGameStore((state) => state.initializeGame);
+  const pendingRequests = useFriendsStore((s) => s.pendingRequests);
+  const startListening = useFriendsStore((s) => s.startListening);
+  const stopListening = useFriendsStore((s) => s.stopListening);
   const { loadPreferences } = useUserPreferences();
 
   // The selected character for solo play mirrors user.avatar (persisted preference)
@@ -42,9 +47,16 @@ export default function MenuPage() {
   const savedMode = loadSavedGameMode();
   const savedDifficulty = loadSavedBotDifficulty();
 
-  // Load cross-device preferences on mount
+  // On mount: load preferences, ensure Firestore profile, start friends listeners
   useEffect(() => {
+    console.log("📋 Menu mounted - User state:", user);
+    console.log("🎫 Player code:", user?.playerCode || "(empty)");
     loadPreferences();
+    ensureProfile();
+    if (user?.uid) {
+      startListening(user.uid);
+    }
+    return () => stopListening();
   }, []);
 
   const handleLogout = () => {
@@ -57,7 +69,16 @@ export default function MenuPage() {
     mode: GameMode,
     difficulty: BotDifficulty,
   ) => {
-    initializeGame(mode, false, false, undefined, difficulty, character);
+    initializeGame(
+      mode,
+      false,
+      false,
+      undefined,
+      difficulty,
+      character,
+      {},
+      user?.displayName,
+    );
     navigate("/game");
   };
 
@@ -82,7 +103,7 @@ export default function MenuPage() {
             {/* Player info */}
             {user && (
               <button
-                onClick={() => navigate("/characters")}
+                onClick={() => navigate("/profile")}
                 className="bg-black/50 backdrop-blur-sm px-4 py-2 rounded-full mb-6 flex items-center gap-3 border border-gold/30 hover:border-gold/60 transition-all animate-fade-up group"
               >
                 {/* Face-cropped avatar */}
@@ -98,8 +119,8 @@ export default function MenuPage() {
                   <span className="font-western text-gold text-sm tracking-wider leading-none">
                     {user.displayName}
                   </span>
-                  <span className="font-stats text-[9px] text-sand/50 uppercase tracking-widest mt-0.5">
-                    {activeChar.name}
+                  <span className="font-mono text-[9px] text-sand/40 tracking-widest mt-0.5">
+                    {user.playerCode || ""}
                   </span>
                 </div>
                 <svg
@@ -133,14 +154,25 @@ export default function MenuPage() {
                 JOGAR ONLINE
               </button>
               <button
+                onClick={() => navigate("/friends")}
+                className="btn-western animate-fade-up animate-fade-up-delay-3 relative"
+              >
+                AMIGOS
+                {pendingRequests.length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-stats font-bold flex items-center justify-center animate-pulse">
+                    {pendingRequests.length}
+                  </span>
+                )}
+              </button>
+              <button
                 onClick={() => navigate("/leaderboard")}
-                className="btn-western animate-fade-up animate-fade-up-delay-3"
+                className="btn-western animate-fade-up animate-fade-up-delay-4"
               >
                 RANKING
               </button>
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className="btn-western btn-sky animate-fade-up animate-fade-up-delay-4"
+                className="btn-western btn-sky animate-fade-up animate-fade-up-delay-5"
               >
                 CONFIGURAÇÕES
               </button>

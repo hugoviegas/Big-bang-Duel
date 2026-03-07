@@ -1,15 +1,12 @@
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../../store/gameStore";
-
-const AVATAR_IMAGES: Record<string, string> = {
-  marshal: "/assets/characters/the_marshal.webp",
-  skull: "/assets/characters/the_skull.webp",
-  la_dama: "/assets/characters/la_dama.webp",
-  player1: "/assets/characters/the_marshal.webp",
-  villain: "/assets/characters/the_skull.webp",
-  bot: "/assets/characters/the_skull.webp",
-};
+import { useAuthStore } from "../../store/authStore";
+import { recordMatchResult } from "../../lib/firebaseService";
+import { getCharacter } from "../../lib/characters";
+import type { MatchResult } from "../../lib/firebaseService";
+import type { MatchMode } from "../../types";
 
 function Star({
   filled,
@@ -55,6 +52,82 @@ export function GameOver() {
     opponentStars,
   } = useGameStore();
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
+
+  // Record stats only once per game-over render
+  const statsRecorded = useRef(false);
+  useEffect(() => {
+    if (statsRecorded.current || !user) return;
+    statsRecorded.current = true;
+
+    let result: MatchResult;
+    if (winnerId === player.id) {
+      result = "win";
+    } else if (winnerId === opponent.id) {
+      result = "loss";
+    } else {
+      result = "draw";
+    }
+
+    const matchMode: MatchMode = isOnline ? "online" : "solo";
+    const currentStats = user.statsByMode ?? {
+      solo: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
+      online: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
+      overall: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
+    };
+    const modeStats = currentStats[matchMode];
+    const nextModeStats = {
+      wins: modeStats.wins + (result === "win" ? 1 : 0),
+      losses: modeStats.losses + (result === "loss" ? 1 : 0),
+      draws: modeStats.draws + (result === "draw" ? 1 : 0),
+      totalGames: modeStats.totalGames + 1,
+      winRate: 0,
+    };
+    nextModeStats.winRate =
+      nextModeStats.totalGames > 0
+        ? Math.round((nextModeStats.wins / nextModeStats.totalGames) * 1000) /
+          10
+        : 0;
+
+    const nextSolo = matchMode === "solo" ? nextModeStats : currentStats.solo;
+    const nextOnline =
+      matchMode === "online" ? nextModeStats : currentStats.online;
+    const nextOverall = {
+      wins: nextSolo.wins + nextOnline.wins,
+      losses: nextSolo.losses + nextOnline.losses,
+      draws: nextSolo.draws + nextOnline.draws,
+      totalGames: nextSolo.totalGames + nextOnline.totalGames,
+      winRate: 0,
+    };
+    nextOverall.winRate =
+      nextOverall.totalGames > 0
+        ? Math.round((nextOverall.wins / nextOverall.totalGames) * 1000) / 10
+        : 0;
+
+    // Update local auth state
+    updateUser({
+      wins: nextOverall.wins,
+      losses: nextOverall.losses,
+      draws: nextOverall.draws,
+      totalGames: nextOverall.totalGames,
+      winRate: nextOverall.winRate,
+      statsByMode: {
+        solo: nextSolo,
+        online: nextOnline,
+        overall: nextOverall,
+      },
+    });
+
+    // Persist to Firestore
+    recordMatchResult(user.uid, result, matchMode).catch(() => {});
+  }, []);
+
+  // Resolve avatar image using character registry
+  const resolveAvatar = (avatarId: string): string => {
+    const char = getCharacter(avatarId);
+    return char.image;
+  };
 
   let title = "EMPATE!";
   let titleColor = "text-gold";
@@ -65,12 +138,12 @@ export function GameOver() {
     title = "VITÓRIA!";
     titleColor = "text-green-400";
     bgGradient = "from-green-900/80 to-black/90";
-    winnerAvatar = AVATAR_IMAGES[player.avatar] || AVATAR_IMAGES.marshal;
+    winnerAvatar = resolveAvatar(player.avatar);
   } else if (winnerId === opponent.id) {
     title = "DERROTA!";
     titleColor = "text-red-500";
     bgGradient = "from-red-900/80 to-black/90";
-    winnerAvatar = AVATAR_IMAGES[opponent.avatar] || AVATAR_IMAGES.skull;
+    winnerAvatar = resolveAvatar(opponent.avatar);
   } else {
     winnerAvatar = "/assets/ui/logo_bbd.webp";
   }
@@ -103,6 +176,8 @@ export function GameOver() {
       undefined,
       botDifficulty || "medium",
       player.avatar,
+      {},
+      player.displayName,
     );
   };
 

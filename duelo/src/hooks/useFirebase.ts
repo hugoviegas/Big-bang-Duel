@@ -19,7 +19,7 @@ export function useFirebaseRoom() {
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 
   // Creates a room and sets host
-  const createRoom = async (mode: GameMode, config: RoomConfig) => {
+  const createRoom = async (mode: GameMode, config: RoomConfig, playerAvatar: string = "marshal") => {
     if (!user) return null;
 
     // Generate simple 6-char code
@@ -31,6 +31,7 @@ export function useFirebaseRoom() {
       id: roomId,
       hostId: user.uid,
       hostName: user.displayName || "Pistoleiro",
+      hostAvatar: playerAvatar,
       guestId: null,
       mode,
       status: "waiting",
@@ -60,7 +61,7 @@ export function useFirebaseRoom() {
   };
 
   // Joins an existing room — returns the Room on success or null on failure
-  const joinRoom = async (roomId: string): Promise<Room | null> => {
+  const joinRoom = async (roomId: string, playerAvatar: string = "marshal"): Promise<Room | null> => {
     if (!user) return null;
 
     const roomRef = ref(rtdb, `rooms/${roomId}`);
@@ -72,6 +73,7 @@ export function useFirebaseRoom() {
         await update(roomRef, {
           guestId: user.uid,
           guestName: user.displayName || "Pistoleiro",
+          guestAvatar: playerAvatar,
           status: "in_progress",
         });
         setCurrentRoomId(roomId);
