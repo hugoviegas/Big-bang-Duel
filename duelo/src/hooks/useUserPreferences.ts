@@ -11,6 +11,7 @@ import { useCallback } from "react";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuthStore } from "../store/authStore";
+import { updatePlayerProfile } from "../lib/firebaseService";
 import type { UserPreferences } from "../types";
 
 // Track which UIDs have already loaded preferences this session.
@@ -18,7 +19,7 @@ import type { UserPreferences } from "../types";
 const _prefsLoadedForUid = new Set<string>();
 
 export function useUserPreferences() {
-  const { user, updateCharacter, updatePreferences } = useAuthStore();
+  const { user, updatePreferences } = useAuthStore();
 
   /**
    * Loads preferences from Firestore and merges them into local store.
@@ -67,25 +68,34 @@ export function useUserPreferences() {
       // Silently ignore Firestore errors (offline / permission issues)
       console.warn("[useUserPreferences] loadPreferences failed:", err);
     }
-  }, [user?.uid]);
+  }, [user, updatePreferences]);
 
   /**
    * Saves the selected character to Firestore and updates local store.
+   * Now updates BOTH users/{uid} AND players/{uid} for consistency.
    */
   const saveCharacter = useCallback(
     async (characterId: string) => {
-      // Always update local immediately for snappy UI
-      updateCharacter(characterId);
-
       if (!user?.uid) return;
+
+      // Save to both collections to maintain consistency
       try {
+        // Update players/{uid} - this is the source of truth for the game
+        await updatePlayerProfile(user.uid, {
+          avatar: characterId,
+        });
+
+        // Also update users/{uid} for legacy compatibility
         const ref = doc(db, "users", user.uid);
         await setDoc(ref, { avatar: characterId }, { merge: true });
+
+        // Firebase listener will update local state automatically
+        // No need to call updateCharacter() here
       } catch (err) {
         console.warn("[useUserPreferences] saveCharacter failed:", err);
       }
     },
-    [user?.uid, updateCharacter],
+    [user],
   );
 
   /**
@@ -119,7 +129,7 @@ export function useUserPreferences() {
         }
       }
     },
-    [user?.uid, updatePreferences],
+    [user, updatePreferences],
   );
 
   return { loadPreferences, saveCharacter, savePreferences };

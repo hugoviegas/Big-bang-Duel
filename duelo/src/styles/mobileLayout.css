@@ -1,0 +1,597 @@
+/* ============================================================
+   mobileLayout.css
+   Mobile-first shell layout for Big Bang Duel
+   Western / Clash Royale inspired UI chrome
+   ============================================================ */
+
+/* ── Mobile Shell ─────────────────────────────────────────── */
+.mobile-shell {
+  width: 100%;
+  /* dvh = dynamic viewport height — adapts as browser UI chrome hides/shows */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(58, 14, 14, 0.25) 0%,
+      rgba(26, 10, 4, 0.5) 100%
+    ),
+    url("/assets/ui/bg_desert_portrait.webp");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-color: #1a0a04;
+  overflow: hidden;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .mobile-shell {
+    max-width: 430px;
+    /* Centre the shell vertically on large screens */
+    margin: auto;
+    border-radius: 24px;
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, 0.9),
+      0 0 0 2px #333;
+    /* Fill the viewport fully, then constrain with a sensible max */
+    height: 100dvh;
+    max-height: 960px;
+    background: var(--color-dark, #0e0604);
+  }
+}
+
+/* ── Desktop background (behind shell) ────────────────────── */
+.mobile-shell-bg {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mobile-shell-bg {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #0d0604;
+    z-index: -1;
+  }
+}
+
+/* ── Top Bar ──────────────────────────────────────────────── */
+.top-bar {
+  height: 72px;
+  background: linear-gradient(180deg, #4a0808 0%, #7a1010 100%);
+  border-bottom: 3px solid #8b6914;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: max(0px, env(safe-area-inset-top, 0px)) 12px 0 12px;
+  gap: 8px;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Avatar Ring ──────────────────────────────────────────── */
+.avatar-ring {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 3px solid #c8a84b;
+  box-shadow:
+    0 0 12px rgba(200, 168, 75, 0.5),
+    inset 0 0 0 2px #4a0808;
+  background: #1a0a04;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.avatar-ring:hover {
+  transform: scale(1.05);
+}
+
+/* ── Profile Info ─────────────────────────────────────────── */
+.profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.profile-name {
+  font-family: "Rye", serif;
+  font-size: 15px;
+  color: #f5e6c8;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+.level-badge {
+  background: #8b6914;
+  color: #f0d070;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid #c8a84b;
+  letter-spacing: 0.3px;
+}
+
+/* ── Coins Pill ───────────────────────────────────────────── */
+.coins-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 20px;
+  padding: 6px 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.coins-pill:hover {
+  background: rgba(200, 168, 75, 0.2);
+}
+
+.coins-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f0d070;
+  font-family: "Oswald", sans-serif;
+  letter-spacing: 0.5px;
+}
+
+/* ── Settings Button ──────────────────────────────────────── */
+.settings-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1.5px solid #5c3317;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.settings-btn:hover {
+  background: rgba(200, 168, 75, 0.2);
+  border-color: #c8a84b;
+  transform: rotate(30deg);
+}
+
+/* ── Bottom Navigation ────────────────────────────────────── */
+.bottom-nav {
+  height: calc(68px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: linear-gradient(180deg, #3b2010 0%, #0e0604 100%);
+  border-top: 2px solid #8b6914;
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.bottom-nav::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(200, 168, 75, 0.6) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* ── Nav Items ────────────────────────────────────────────── */
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+  padding-bottom: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-item.active {
+  background: rgba(200, 168, 75, 0.08);
+}
+
+.nav-item.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: linear-gradient(90deg, #8b6914, #f0d070, #8b6914);
+  border-radius: 3px 3px 0 0;
+  box-shadow: 0 0 8px rgba(200, 168, 75, 0.6);
+}
+
+.nav-icon {
+  font-size: 20px;
+  line-height: 1;
+  color: #f5e6c8;
+  transition: color 0.15s ease-out;
+}
+
+.nav-item.active .nav-icon {
+  color: #f0d070;
+  filter: drop-shadow(0 0 4px rgba(240, 208, 112, 0.5));
+}
+
+.nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(245, 230, 200, 0.45);
+}
+
+.nav-item.active .nav-label {
+  color: #f0d070;
+}
+
+.nav-badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 16px);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ef4444;
+  font-size: 9px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+/* ── Profile Dropdown ─────────────────────────────────────── */
+.profile-dropdown {
+  position: absolute;
+  top: 76px;
+  left: 14px;
+  width: 200px;
+  background: #1e0e06;
+  border: 1.5px solid #8b6914;
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 100;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  transform-origin: top left;
+  transform: scale(0);
+  opacity: 0;
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.15s;
+}
+
+.profile-dropdown.open {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.dropdown-header {
+  padding: 12px 14px;
+  background: #4a0808;
+  border-bottom: 1px solid #8b6914;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropdown-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #c8a84b;
+  background: #1a0a04;
+  overflow: hidden;
+}
+
+.dropdown-name {
+  font-family: "Rye", serif;
+  font-size: 13px;
+  color: #f5e6c8;
+}
+
+.dropdown-id {
+  font-size: 10px;
+  color: #8b6914;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  cursor: pointer;
+  color: #f5e6c8;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: rgba(200, 168, 75, 0.1);
+}
+
+.dropdown-item-icon {
+  font-size: 18px;
+}
+
+.dropdown-item-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f5e6c8;
+}
+
+.dropdown-item.danger .dropdown-item-text {
+  color: #e05040;
+}
+
+/* ── Overlay ──────────────────────────────────────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.overlay.show {
+  display: block;
+}
+
+/* ── Main Content Area with Overlay ───────────────────────── */
+main {
+  /* Takes remaining space between top-bar and bottom-nav */
+  flex: 1;
+  min-height: 0;
+  /* flex column so child pages can use flex: 1 to fill height */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 5;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 168, 75, 0.3) transparent;
+}
+
+/* ── Hero Section (Menu Page) ─────────────────────────────── */
+.hero {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Buttons stay at the bottom; remaining space above is the bg */
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 20px 20px 28px;
+}
+
+/* ── Play Buttons (Clash Royale style) ────────────────────── */
+.play-btn {
+  width: 100%;
+  height: 96px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 14px;
+  overflow: hidden;
+  transition:
+    transform 0.1s,
+    filter 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  text-align: left;
+}
+
+.play-btn:active {
+  transform: translateY(3px);
+  filter: brightness(0.9);
+}
+
+/* Online battle button (red theme) */
+.btn-online {
+  background: linear-gradient(180deg, #c02020 0%, #8b1515 50%, #6a0e0e 100%);
+  box-shadow:
+    0 6px 0 #4a0808,
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-bottom: 4px solid #4a0808;
+  border-top: 1px solid rgba(255, 100, 100, 0.3);
+}
+
+.btn-online::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Solo / practice button (brown/gold theme) */
+.btn-solo {
+  background: linear-gradient(180deg, #5c3a1e 0%, #3b2010 50%, #2a1608 100%);
+  box-shadow:
+    0 6px 0 #1a0a04,
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-bottom: 4px solid #1a0a04;
+  border-top: 1px solid rgba(200, 168, 75, 0.25);
+}
+
+.btn-solo::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Dot texture overlay */
+.btn-texture {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px
+  );
+  background-size: 6px 6px;
+  pointer-events: none;
+}
+
+/* Icon container */
+.btn-icon-wrap {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Button label */
+.btn-label {
+  font-family: "Rye", serif;
+  font-size: 22px;
+  color: #fff;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.6),
+    0 0 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.btn-solo .btn-label {
+  color: #f0d070;
+}
+
+/* Sub-label */
+.btn-sub {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  position: relative;
+  z-index: 1;
+}
+
+.btn-solo .btn-sub {
+  color: rgba(200, 168, 75, 0.6);
+}
+
+/* Arrow container */
+.btn-arrow {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* Pulse ring on online button */
+.pulse-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 80, 80, 0.5);
+  animation: pulseRing 2s ease-out infinite;
+  pointer-events: none;
+}
+
+/* ── Safe Area ────────────────────────────────────────────── */
+.safe-bottom {
+  height: env(safe-area-inset-bottom, 0px);
+  background: #0e0604;
+  flex-shrink: 0;
+}
+
+/* ── Keyframe Animations ──────────────────────────────────── */
+@keyframes xpGlow {
+  0% {
+    box-shadow: 0 0 4px rgba(200, 168, 75, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(200, 168, 75, 0.8);
+  }
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+@keyframes rippleAnim {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}

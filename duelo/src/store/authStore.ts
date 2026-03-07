@@ -15,6 +15,16 @@ import {
   setOnlinePresence,
   subscribeToPlayerProfile,
 } from "../lib/firebaseService";
+import {
+  calculateProgression,
+  normalizeCurrencies,
+  normalizeRanked,
+  normalizeUnlocks,
+} from "../lib/progression";
+
+type GlobalWithProfileUnsub = typeof globalThis & {
+  __bbd_profile_unsub?: (() => void) | null;
+};
 
 function emptyStatsByMode(): StatsByMode {
   return {
@@ -77,12 +87,13 @@ export const useAuthStore = create<AuthState>()(
       // so we can start/stop listeners when the logged user changes.
       setUser: (user) => {
         // Module-scoped unsubscribe handle (shared across store instance)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyWindow = globalThis as any;
+        const anyWindow = globalThis as GlobalWithProfileUnsub;
         if (anyWindow.__bbd_profile_unsub) {
           try {
             anyWindow.__bbd_profile_unsub();
-          } catch {}
+          } catch (error) {
+            void error;
+          }
           anyWindow.__bbd_profile_unsub = null;
         }
 
@@ -105,23 +116,35 @@ export const useAuthStore = create<AuthState>()(
                 });
                 return;
               }
+              // Firebase is the source of truth - always use Firebase data when available
               set({
                 user: {
-                  ...user,
-                  playerCode: profile.playerCode || user.playerCode,
-                  avatar: profile.avatar || user.avatar,
-                  wins: profile.wins ?? user.wins,
-                  losses: profile.losses ?? user.losses,
-                  draws: profile.draws ?? user.draws,
-                  totalGames: profile.totalGames ?? user.totalGames,
-                  winRate: profile.winRate ?? user.winRate,
+                  uid: user.uid,
+                  email: user.email,
+                  isGuest: user.isGuest,
+                  expiresAt: user.expiresAt,
+                  // All game data comes from Firebase profile (source of truth)
+                  playerCode: profile.playerCode ?? user.playerCode,
+                  avatar: profile.avatar ?? user.avatar,
+                  avatarPicture: profile.avatarPicture ?? user.avatarPicture,
+                  wins: profile.wins ?? 0,
+                  losses: profile.losses ?? 0,
+                  draws: profile.draws ?? 0,
+                  totalGames: profile.totalGames ?? 0,
+                  winRate: profile.winRate ?? 0,
                   statsByMode:
                     profile.statsByMode ?? normalizeStatsByModeFromUser(user),
-                  displayName: profile.displayName || user.displayName,
+                  progression: profile.progression ?? calculateProgression(0),
+                  currencies: profile.currencies ?? normalizeCurrencies({}),
+                  ranked: profile.ranked ?? normalizeRanked({}),
+                  unlocks: profile.unlocks ?? normalizeUnlocks({}),
+                  displayName: profile.displayName ?? user.displayName,
                   lastSeen: profile.lastSeen
                     ? new Date(profile.lastSeen)
-                    : user.lastSeen,
-                  onlineStatus: profile.onlineStatus ?? user.onlineStatus,
+                    : new Date(),
+                  onlineStatus: profile.onlineStatus ?? "online",
+                  preferences: user.preferences,
+                  createdAt: user.createdAt,
                 },
                 isAuthenticated: true,
                 isLoading: false,
@@ -129,6 +152,7 @@ export const useAuthStore = create<AuthState>()(
             },
           );
         } catch (err) {
+          void err;
           // fall back to setting user directly if subscription fails
           set({ user, isAuthenticated: !!user, isLoading: false });
         }
@@ -186,12 +210,14 @@ export const useAuthStore = create<AuthState>()(
         }
         // Cleanup profile listener if present
         try {
-          const anyWindow = globalThis as any;
+          const anyWindow = globalThis as GlobalWithProfileUnsub;
           if (anyWindow.__bbd_profile_unsub) {
             anyWindow.__bbd_profile_unsub();
             anyWindow.__bbd_profile_unsub = null;
           }
-        } catch {}
+        } catch (error) {
+          void error;
+        }
         signOut(auth).catch(() => {});
         set({
           user: null,
@@ -214,19 +240,34 @@ export const useAuthStore = create<AuthState>()(
           // Check if profile already exists in Firestore
           const existing = await getPlayerProfile(current.uid);
           if (existing) {
-            // Sync full profile from Firestore (stats, avatar, playerCode)
+            // Firebase is the source of truth - use Firebase data exclusively
             get().setUser({
-              ...current,
-              playerCode: existing.playerCode || current.playerCode,
-              avatar: existing.avatar || current.avatar,
-              wins: existing.wins ?? current.wins,
-              losses: existing.losses ?? current.losses,
-              draws: existing.draws ?? current.draws,
-              totalGames: existing.totalGames ?? current.totalGames,
-              winRate: existing.winRate ?? current.winRate,
+              uid: current.uid,
+              email: current.email,
+              isGuest: current.isGuest,
+              expiresAt: current.expiresAt,
+              // All game data from Firebase (source of truth)
+              playerCode: existing.playerCode ?? current.playerCode,
+              avatar: existing.avatar ?? current.avatar,
+              avatarPicture: existing.avatarPicture ?? current.avatarPicture,
+              wins: existing.wins ?? 0,
+              losses: existing.losses ?? 0,
+              draws: existing.draws ?? 0,
+              totalGames: existing.totalGames ?? 0,
+              winRate: existing.winRate ?? 0,
               statsByMode:
                 existing.statsByMode ?? normalizeStatsByModeFromUser(current),
-              displayName: existing.displayName || current.displayName,
+              progression: existing.progression ?? calculateProgression(0),
+              currencies: existing.currencies ?? normalizeCurrencies({}),
+              ranked: existing.ranked ?? normalizeRanked({}),
+              unlocks: existing.unlocks ?? normalizeUnlocks({}),
+              displayName: existing.displayName ?? current.displayName,
+              preferences: current.preferences,
+              createdAt: current.createdAt,
+              lastSeen: existing.lastSeen
+                ? new Date(existing.lastSeen)
+                : new Date(),
+              onlineStatus: existing.onlineStatus ?? "online",
             });
             set({ _profileEnsuredAt: Date.now() });
             // Update presence
@@ -247,6 +288,12 @@ export const useAuthStore = create<AuthState>()(
             totalGames: current.totalGames ?? 0,
             winRate: current.winRate ?? 0,
             statsByMode: normalizeStatsByModeFromUser(current),
+            progression: calculateProgression(
+              current.progression?.xpTotal ?? 0,
+            ),
+            currencies: normalizeCurrencies(current.currencies),
+            ranked: normalizeRanked(current.ranked),
+            unlocks: normalizeUnlocks(current.unlocks),
             createdAt: Date.now(),
             lastSeen: Date.now(),
             onlineStatus: "online",
@@ -270,12 +317,17 @@ export const useAuthStore = create<AuthState>()(
           displayName: user.displayName,
           playerCode: user.playerCode ?? "",
           avatar: user.avatar ?? "marshal",
+          avatarPicture: user.avatarPicture,
           wins: user.wins ?? 0,
           losses: user.losses ?? 0,
           draws: user.draws ?? 0,
           totalGames: user.totalGames ?? 0,
           winRate: user.winRate ?? 0,
           statsByMode: normalizeStatsByModeFromUser(user),
+          progression: calculateProgression(user.progression?.xpTotal ?? 0),
+          currencies: normalizeCurrencies(user.currencies),
+          ranked: normalizeRanked(user.ranked),
+          unlocks: normalizeUnlocks(user.unlocks),
           createdAt:
             user.createdAt instanceof Date
               ? user.createdAt.getTime()

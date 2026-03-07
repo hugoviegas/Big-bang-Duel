@@ -8,10 +8,11 @@
 @import "./animations.css";
 @import "./western.css";
 @import "./battleHeader.css";
+@import "./mobileLayout.css";
 
 /* Tailwind CSS v4 Theme Configuration */
 @theme {
-  /* Colors */
+  /* Colors — Original palette */
   --color-sand: #d4a855;
   --color-sand-light: #f0d080;
   --color-brown-dark: #3b1f0a;
@@ -25,6 +26,22 @@
   --color-sunset-2: #f7c59f;
   --color-black-ink: #1a0a00;
   --color-parchment: #f5e6c8;
+
+  /* Colors — Mobile prototype palette */
+  --color-crimson: #7a1010;
+  --color-crimson-d: #4a0808;
+  --color-crimson-l: #a01818;
+  --color-gold-proto: #c8a84b;
+  --color-gold-l: #f0d070;
+  --color-gold-d: #8b6914;
+  --color-cream: #f5e6c8;
+  --color-dark: #1a0a04;
+  --color-dark-mid: #2a1208;
+  --color-brown-proto: #3b2010;
+  --color-brown-mid-proto: #5c3317;
+  --color-btn-red: #c0281c;
+  --color-btn-brown: #4a2010;
+  --color-nav-bg: #1e0e06;
 
   /* Fonts */
   --font-family-western: "Rye", serif;

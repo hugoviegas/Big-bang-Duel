@@ -1,47 +1,181 @@
-# Overhaul Mobile-First — Big Bang Duel (Baseado no Prototype)
+# Overhaul Mobile-First — Big Bang Duel (Baseado no Prototype + Clash Royale)
 
-Redesign completo da interface do jogo, adotando uma estrutura "app-like" mobile-first, com navegação inferior (Bottom Nav) e barra de status superior (Top Bar), focando em profissionalismo e padronização visual. A tela de batalha (GameArena) será poupada nesta iteração.
+Redesign completo da interface do jogo, adotando uma estrutura "app-like" mobile-first com navegação inferior (Bottom Nav) e barra de status superior (Top Bar). O app é primariamente mobile — em telas desktop, toda a estrutura é fixada a um `max-width` (estilo phone shell) centralizado, mantendo proporções corretas. A tela de batalha (GameArena) será poupada nesta iteração.
 
-## Variáveis Globais & CSS
-### [MODIFY] [globals.css](file:///c:/Users/hugov/OneDrive/Documentos/Antigravity/Big%20bang%20Duel/duelo/src/styles/globals.css)
-- Importar nova estrutura de cores baseada no protótipo (`--crimson`, `--gold`, etc).
-- Criar abstrações de CSS para `.bottom-nav`, `.top-bar`, `.play-btn`, `.btn-online`, `.btn-solo`.
-- Adicionar animações de ripple, sun pulse, e xp glow.
+## Filosofia Mobile-First & Responsividade
 
-## Componentes Estruturais
-### [NEW] `TopBar.tsx`
-- Barra superior fixa contendo o avatar (ring dourado interativo), nome do nível, XP bar lustrosa, indicador de ouro (moedas) e botão de configurações.
-- Ancorar o `ProfileDropdown.tsx` aqui.
+### Princípios Fundamentais
+1. **Mobile é o padrão** — toda a UI é desenhada para telas 320px-430px primeiro.
+2. **Desktop = phone shell fixo** — em telas maiores, o app inteiro é limitado a `max-width: 430px` centralizado com um background temático (desktop-only) ao redor.
+3. **Background desktop ≠ mobile** — o background externo (fora do phone shell) usa `bg_desktop_landscape` ou gradiente dark temático. Dentro do shell, o background é idêntico ao mobile.
+4. **Proporções preservadas** — componentes usam unidades relativas (%, vw clamped, rem) para escalar corretamente entre 320px e 430px.
+5. **Sem breakpoints complexos** — apenas um breakpoint principal: `md (768px)` para ativar o "phone shell" wrapper no desktop.
 
-### [NEW] `ProfileDropdown.tsx`
-- Menu suspenso estilo overlay chamado ao clicar no avatar ou engrenagem.
-- Links para Editar Perfil, Conquistas, Configurações e Sair.
+---
 
-### [NEW] `BottomNav.tsx`
-- Barra de navegação inferior (tab bar) com itens: Home, Personagens (Cards), Loja, Amigos, Ranking.
-- Estado ativo com highlighting dourado visual.
+## Fase 1: Variáveis Globais & CSS Foundation
 
-### [NEW] `MobileLayout.tsx`
-- Wrapper principal da aplicação que limita o scope no desktop imitando um shell de celular, mas expande corretamente no mobile.
-- Renderiza a `TopBar` no topo, o `children` no centro scrollable (flex-1) e a `BottomNav` na base.
+### [MODIFY] `src/styles/globals.css`
+- Importar Google Font adicional `Rye` (já presente no prototype).
+- Adicionar novas CSS variables ao `@theme` do Tailwind v4:
+  ```
+  --color-crimson: #7a1010
+  --color-crimson-d: #4a0808
+  --color-crimson-l: #a01818
+  --color-gold-proto: #c8a84b       (gold do prototype, diferente do --gold existente)
+  --color-gold-l: #f0d070
+  --color-gold-d: #8b6914
+  --color-cream: #f5e6c8
+  --color-dark: #1a0a04
+  --color-dark-mid: #2a1208
+  --color-brown-proto: #3b2010
+  --color-brown-mid-proto: #5c3317
+  --color-btn-red: #c0281c
+  --color-btn-brown: #4a2010
+  --color-nav-bg: #1e0e06
+  ```
+- Adicionar utilitários CSS custom:
+  - `.mobile-shell` — o wrapper principal (flex column, 100svh no mobile, max-w-[430px] + sombra no desktop)
+  - Animações: `@keyframes xpGlow`, `@keyframes sunPulse`, `@keyframes pulseRing`, `@keyframes rippleAnim`
 
-## Redesign das Telas Baseadas no Prototype
-### [MODIFY] [menu.tsx](file:///c:/Users/hugov/OneDrive/Documentos/Antigravity/Big%20bang%20Duel/duelo/src/pages/menu.tsx) (Home Principal)
-- Construção do `.hero` com o background gradiente e SVG de cactos e sol do protótipo.
-- Trocar os botões estáticos pelos grandes botões interativos `Jogar Online` e `Jogar Solo` idênticos ao protótipo HTML.
-- Quando clicar em "Jogar Solo", ou abre um modal (BottomSheet) ou vai para uma tela de setup configurada no novo tema.
+### [NEW] `src/styles/mobileLayout.css`
+- Estilos dedicados do layout mobile:
+  - `.top-bar` — barra de perfil superior (height: 72px, gradient crimson, border-bottom gold)
+  - `.bottom-nav` — barra inferior (height: 68px, gradient brown → dark, border-top gold)
+  - `.nav-item` / `.nav-item.active` — itens de navegação com destaque dourado
+  - `.profile-dropdown` — menu dropdown animado (scale transform)
+  - `.hero-bg` — background gradiente western do prototype (scene de fundo)
+  - `.play-btn`, `.btn-online`, `.btn-solo` — botões de jogar estilo Clash Royale (grandes, com textura, pulse ring, ícones)
+  - Ripple effect CSS
 
-### [MODIFY] Identidade das Telas Secundárias
-Todas as seguintes páginas vão ser envolvidas pelo `MobileLayout.tsx` para padronização:
-- **Leaderboard**: Atualizar o visual da lista para casar com o dark-crimson-gold theme.
-- **CharactersPage**: Ajustar cores dos cards para não quebrar no novo background.
-- **OnlineLobby**: Embutido no mobile shell, ajustar tipografia e borders para `--gold-d` ou variação correta.
-- **Auth (LoginScreen)**: Deixar mais focado no tema dark com `TopBar` e `BottomNav` escondidos.
+---
+
+## Fase 2: Componentes Estruturais
+
+### [NEW] `src/components/layout/MobileLayout.tsx`
+- **Wrapper principal de todo o app** (exceto GameArena e Login).
+- Estrutura:
+  ```
+  <div className="mobile-shell">     ← max-w-[430px] no desktop, 100% no mobile
+    <TopBar />                         ← fixo no topo
+    <main className="flex-1 overflow-y-auto">
+      {children}                       ← conteúdo da página
+    </main>
+    <BottomNav />                      ← fixo na base
+  </div>
+  ```
+- No desktop (md+): adiciona background escuro/temático envolvendo o shell, box-shadow simulando telefone.
+- No mobile: ocupa 100vw × 100svh, sem bordas.
+- Props: `hideNav?: boolean` (para esconder TopBar/BottomNav em telas específicas como auth).
+
+### [NEW] `src/components/layout/TopBar.tsx`
+- Tradução direta da `.top-bar` do prototype para React:
+  - Avatar ring com borda dourada (clicável → abre ProfileDropdown)
+  - Profile info: Nome (font Rye), badge de nível, XP bar animada
+  - Coins pill (moedas)
+  - Settings gear button → abre SettingsModal existente
+- Dados puxados do `useAuthStore` (displayName, avatar, stats).
+- XP e nível: se não existir no store, usar mockup inicial (level 1, 0/100 XP).
+
+### [NEW] `src/components/layout/ProfileDropdown.tsx`
+- Menu dropdown que aparece ao clicar no avatar ou gear.
+- Estilo: overlay escuro + dropdown animado (scale 0→1, cubic-bezier bounce).
+- Itens: Editar Perfil (→ /profile), Conquistas (futuro), Configurações (→ SettingsModal), Sair (→ logout).
+- Fecha ao clicar fora (overlay click handler).
+
+### [NEW] `src/components/layout/BottomNav.tsx`
+- Tab bar inferior com 5 itens:
+  - Home (🔫) → /menu
+  - Cards (🃏) → /characters
+  - Loja (🪙) → futuro (disabled ou placeholder)
+  - Amigos (🤠) → /friends
+  - Ranking (🏆) → /leaderboard
+- Detecta rota ativa via `useLocation()` e aplica estilo `.active` (label dourado, barra inferior glow).
+- Navegação via `useNavigate()`.
+- Badge de notificação no "Amigos" quando há pendingRequests (count > 0 do friendsStore).
+
+---
+
+## Fase 3: Redesign da Home (Menu Principal)
+
+### [MODIFY] `src/pages/menu.tsx`
+- Remover toda a estrutura de background/overlay duplicada (será fornecida pelo MobileLayout).
+- Construir a cena hero central idêntica ao prototype:
+  - `.hero-bg` — gradiente western (#3d0e0e → #c05020 → #2a1208)
+  - SVG cactos (esquerda e direita)
+  - Sol animado (`. sun` com `sunPulse`)
+  - Partículas de poeira
+- Dois botões grandes estilo Clash Royale:
+  1. **Jogar Online** — botão vermelho com pulse ring, ícone SVG de 2 jogadores
+  2. **Jogar Solo** — botão marrom-dourado, ícone SVG de cowboy solo
+- Ambos com efeito ripple ao clicar.
+- "Jogar Solo" → abre a tela de setup (GamePrep) ou navega diretamente.
+- "Jogar Online" → navega para /online.
+- Remover os botões antigos (PERSONAGENS, RANKING, CONFIGURAÇÕES, SAIR) — agora estão no BottomNav e TopBar.
+
+---
+
+## Fase 4: Integração nas Páginas Secundárias
+
+### [MODIFY] `src/App.tsx`
+- Envolver todas as rotas protegidas (exceto `/game` e `/game/:roomId`) com `<MobileLayout>`.
+- Login (`/`) continua SEM MobileLayout.
+- GameArena continua com seu layout próprio (não toca nesta iteração).
+
+### [MODIFY] `src/pages/characters.tsx`
+- Remover background/overlay duplicado (MobileLayout fornece).
+- Remover header com botão VOLTAR (BottomNav já navega).
+- Ajustar cores do grid para funcionar sobre o dark theme do shell.
+- Manter a lógica de DetailPanel mobile/desktop intacta, mas ajustar internamente.
+
+### [MODIFY] `src/pages/leaderboard.tsx` / `src/components/leaderboard/Leaderboard.tsx`
+- Remover background/overlay duplicado.
+- Remover botão VOLTAR (BottomNav cuida da navegação).
+- Ajustar tipografia e borders para o dark-crimson-gold theme.
+
+### [MODIFY] `src/pages/friends.tsx`
+- Remover background duplicado e botão "VOLTAR AO MENU".
+- Manter tabs e card-wood intactos, ajustar cores se necessário.
+
+### [MODIFY] `src/pages/online.tsx` / `src/components/lobby/OnlineLobby.tsx`
+- Embutir no MobileLayout.
+- Ajustar tipografia e borders para harmonizar com o novo theme.
+
+### [MODIFY] `src/pages/profile.tsx`
+- Remover background duplicado.
+- Remover botão VOLTAR (navegação via BottomNav/TopBar).
+- Pode ser acessado via TopBar → ProfileDropdown → "Editar Perfil".
+
+### [MODIFY] `src/pages/index.tsx` (Login)
+- Manter sem MobileLayout (TopBar e BottomNav escondidos).
+- Ajustar para usar fundo dark temático consistente com o novo visual.
+
+---
+
+## Fase 5: Desktop Background & Polish
+
+### [MODIFY] Body/HTML background
+- Em telas desktop (md+), o `body` ganha um background temático diferente:
+  - Opção A: Imagem `bg_desktop_landscape.webp` com overlay escuro
+  - Opção B: Gradiente dark sólido (#0d0604) — mesma abordagem do prototype HTML
+- Apenas o conteúdo dentro do `.mobile-shell` tem o visual do app.
+- O shell no desktop recebe `border-radius: 24px`, `box-shadow` e uma leve borda simulando frame de celular.
+
+---
 
 ## Verification Plan
 
 ### Manual (Browser)
 - Verificar a transição fluida entre abas via `BottomNav`.
-- Garantir que a barra superior renderiza corretamente e o XP anima.
+- Garantir que a TopBar renderiza corretamente e o XP anima.
 - Iniciar uma partida Solo e confirmar que a tela de batalha (não modificada) continua funcionando corretamente.
-- Testar visualização no Device Emulation das ferramentas de desenvolvedor (iPhone 14/Pixel 7) para garantir imersão app-like.
+- Testar visualização no Device Emulation (iPhone 14/Pixel 7) para garantir imersão app-like.
+- Verificar que no desktop, o phone shell centraliza e o background externo aparece.
+- Confirmar que GameArena NÃO é afetada pelo MobileLayout.
+- `npm run build` deve compilar sem erros.
+
+### Breakpoints de Teste
+- **320px** (iPhone SE) — mínimo, tudo deve caber
+- **390px** (iPhone 14) — referência principal
+- **430px** (iPhone 15 Pro Max) — máximo do shell
+- **768px+** (Tablet/Desktop) — phone shell ativado, background externo visível

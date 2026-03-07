@@ -1,338 +1,537 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/authStore";
 import { useUserPreferences } from "../hooks/useUserPreferences";
 import {
   CHARACTERS,
+  CLASS_INFO,
   RARITY_STYLES,
   RARITY_LABELS,
   type CharacterDef,
 } from "../lib/characters";
+import type { CharacterClass } from "../types";
+import {
+  normalizeUnlocks,
+  getUnlockLevelForCharacter,
+  calculateProgression,
+} from "../lib/progression";
 
-/** Rarity border glow for the detail panel */
+/* ─── Rarity visual helpers ──────────────────────────────────────────── */
+const RARITY_BORDER: Record<CharacterDef["rarity"], string> = {
+  common: "border-sand/20",
+  rare: "border-sky-400/40",
+  legendary: "border-gold/50",
+};
+const RARITY_BORDER_ACTIVE: Record<CharacterDef["rarity"], string> = {
+  common: "border-sand/60",
+  rare: "border-sky-400",
+  legendary: "border-gold",
+};
 const RARITY_GLOW: Record<CharacterDef["rarity"], string> = {
   common: "",
-  rare: "shadow-[0_0_40px_rgba(56,189,248,0.20)]",
-  legendary: "shadow-[0_0_60px_rgba(234,179,8,0.25)]",
+  rare: "shadow-[0_0_20px_rgba(56,189,248,0.20)]",
+  legendary: "shadow-[0_0_40px_rgba(234,179,8,0.28)]",
+};
+const RARITY_ATMOSPHERE: Record<CharacterDef["rarity"], string> = {
+  common: "",
+  rare: "bg-[radial-gradient(ellipse_at_50%_85%,rgba(56,189,248,0.09),transparent_65%)]",
+  legendary:
+    "bg-[radial-gradient(ellipse_at_50%_85%,rgba(234,179,8,0.12),transparent_65%)]",
 };
 
-/** Reusable detail panel component - Professional layout with large image */
-function DetailPanel({
+/* ─── Class colour palette ──────────────────────────────────────────── */
+const CLASS_BOX: Record<CharacterClass, string> = {
+  atirador: "bg-red-950/70 border-red-500/45",
+  estrategista: "bg-blue-950/70 border-blue-500/45",
+  sorrateiro: "bg-purple-950/70 border-purple-500/45",
+  ricochete: "bg-yellow-950/70 border-yellow-500/45",
+  sanguinario: "bg-orange-950/70 border-orange-500/45",
+  suporte: "bg-green-950/70 border-green-500/45",
+};
+const CLASS_CARD_CHIP: Record<CharacterClass, string> = {
+  atirador: "bg-red-950/80 border-red-500/50 text-red-400",
+  estrategista: "bg-blue-950/80 border-blue-500/50 text-blue-400",
+  sorrateiro: "bg-purple-950/80 border-purple-500/50 text-purple-400",
+  ricochete: "bg-yellow-950/80 border-yellow-500/50 text-yellow-400",
+  sanguinario: "bg-orange-950/80 border-orange-500/50 text-orange-400",
+  suporte: "bg-green-950/80 border-green-500/50 text-green-400",
+};
+const CLASS_PILL_ACTIVE: Record<CharacterClass | "all", string> = {
+  all: "bg-gold/20 border-gold/60 text-gold",
+  atirador: "bg-red-900/80 border-red-500/60 text-red-300",
+  estrategista: "bg-blue-900/80 border-blue-500/60 text-blue-300",
+  sorrateiro: "bg-purple-900/80 border-purple-500/60 text-purple-300",
+  ricochete: "bg-yellow-900/80 border-yellow-500/60 text-yellow-300",
+  sanguinario: "bg-orange-900/80 border-orange-500/60 text-orange-300",
+  suporte: "bg-green-900/80 border-green-500/60 text-green-300",
+};
+
+/* ─── Filter descriptor list ─────────────────────────────────────────── */
+const CLASS_FILTERS: Array<{
+  value: CharacterClass | "all";
+  label: string;
+  icon: string;
+}> = [
+  { value: "all", label: "Todos", icon: "⚔️" },
+  { value: "atirador", label: "Atirador", icon: "🎯" },
+  { value: "estrategista", label: "Estrategista", icon: "🧠" },
+  { value: "sorrateiro", label: "Sorrateiro", icon: "👻" },
+  { value: "ricochete", label: "Ricochete", icon: "🔄" },
+  { value: "sanguinario", label: "Sanguinário", icon: "🩸" },
+  { value: "suporte", label: "Suporte", icon: "🛡️" },
+];
+
+/* ══════════════════════════════════════════════════════════════════════
+   GALLERY CARD
+══════════════════════════════════════════════════════════════════════ */
+function CharacterCard({
+  char,
+  isActive,
+  isLocked,
+  unlockLevel,
+  onClick,
+}: {
+  char: CharacterDef;
+  isActive: boolean;
+  isLocked: boolean;
+  unlockLevel: number | null;
+  onClick: () => void;
+}) {
+  const cls = CLASS_INFO[char.characterClass];
+
+  return (
+    <motion.button
+      layout
+      onClick={onClick}
+      whileTap={{ scale: 0.92 }}
+      initial={{ opacity: 0, scale: 0.94 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.94 }}
+      transition={{ duration: 0.2 }}
+      className={`relative flex flex-col rounded-2xl border-2 overflow-hidden select-none bg-black/60 transition-all duration-200
+        ${
+          isActive
+            ? `${RARITY_BORDER_ACTIVE[char.rarity]} ${RARITY_GLOW[char.rarity]}`
+            : `${RARITY_BORDER[char.rarity]} hover:border-sand/40`
+        }`}
+    >
+      {/* Active star */}
+      {isActive && (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="absolute top-2 left-2 z-20 w-5 h-5 rounded-full bg-gold flex items-center justify-center shadow-[0_0_10px_rgba(234,179,8,0.8)]"
+        >
+          <span className="text-[9px] text-black font-bold leading-none">
+            ★
+          </span>
+        </motion.div>
+      )}
+
+      {/* Rarity tag */}
+      <div
+        className={`absolute top-2 right-2 z-20 px-1.5 py-[3px] rounded-sm border ${RARITY_STYLES[char.rarity]} bg-black/85`}
+      >
+        <span className="text-[6px] font-stats uppercase tracking-widest font-bold">
+          {RARITY_LABELS[char.rarity]}
+        </span>
+      </div>
+
+      {/* Portrait */}
+      <div
+        className="relative w-full overflow-hidden bg-gradient-to-b from-zinc-900/60 to-black/60"
+        style={{ aspectRatio: "3/4" }}
+      >
+        {char.rarity !== "common" && (
+          <div
+            className={`absolute inset-0 pointer-events-none ${RARITY_ATMOSPHERE[char.rarity]}`}
+          />
+        )}
+        <img
+          src={char.image}
+          alt={char.name}
+          loading="lazy"
+          className="absolute inset-0 w-full h-[112%] object-contain object-top transition-transform duration-500 hover:scale-[1.04]"
+        />
+        <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black via-black/65 to-transparent pointer-events-none" />
+
+        {isLocked && (
+          <div className="absolute inset-0 z-30 bg-black/70 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1">
+            <span className="text-xl">🔒</span>
+            <span className="font-stats text-[9px] uppercase tracking-wider text-sand/80">
+              {unlockLevel ? `Nv ${unlockLevel}` : "Bloqueado"}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Name + class chip */}
+      <div className="px-2.5 pb-3 pt-2 bg-black/30">
+        <p className="font-western text-[10px] text-sand-light leading-tight line-clamp-1 mb-1.5">
+          {char.name}
+        </p>
+        <div
+          className={`inline-flex items-center gap-1 px-1.5 py-[3px] rounded-[5px] border ${CLASS_CARD_CHIP[char.characterClass]}`}
+        >
+          <span className="text-[9px] leading-none">{cls.icon}</span>
+          <span className="font-stats text-[7px] uppercase tracking-wide font-bold">
+            {cls.name}
+          </span>
+        </div>
+      </div>
+    </motion.button>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DETAIL MODAL — rendered via portal at document.body to escape
+   overflow:hidden constraints of .mobile-shell
+══════════════════════════════════════════════════════════════════════ */
+function CharacterModal({
   char,
   saving,
-  isSaved,
+  isActive,
+  isLocked,
+  unlockLevel,
   onSelect,
-  isMobile = false,
   onClose,
 }: {
   char: CharacterDef;
   saving: boolean;
-  isSaved: boolean;
+  isActive: boolean;
+  isLocked: boolean;
+  unlockLevel: number | null;
   onSelect: () => void;
-  isMobile?: boolean;
-  onClose?: () => void;
+  onClose: () => void;
 }) {
-  return (
+  const cls = CLASS_INFO[char.characterClass];
+  const clsBox = CLASS_BOX[char.characterClass];
+
+  // Portrait height : 55% of viewport height, capped at 360px
+  const portraitHeightStyle = "min(55vh, 360px)";
+
+  const modal = (
     <motion.div
-      key={char.id}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.3 }}
-      className={`card-wood rounded-2xl overflow-hidden flex flex-col ${isMobile ? "h-[90vh] max-h-[800px] w-[95vw] max-w-[450px] mx-auto my-auto shadow-2xl" : "h-auto max-h-[95vh] w-full max-w-md shadow-2xl"} ${RARITY_GLOW[char.rarity]}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      className="fixed inset-0 z-[9999] flex items-stretch justify-center bg-black/80"
+      onClick={onClose}
     >
-      {/* ═══ CHARACTER PORTRAIT (Responsive Height) ═══ */}
-      <div
-        className={`relative w-full overflow-hidden flex-shrink-0 ${
-          isMobile ? "h-[55vh] max-h-[550px]" : "h-[350px] md:h-[400px]"
-        } bg-black/40`}
+      {/* Inner shell — matches max-width of mobile-shell on desktop */}
+      <motion.div
+        initial={{ y: 48, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 48, opacity: 0 }}
+        transition={{ type: "spring", damping: 32, stiffness: 340, mass: 0.8 }}
+        className="relative w-full max-w-[430px] bg-black flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
       >
-        <img
-          src={char.image}
-          alt={char.name}
-          className="w-full h-full object-contain object-top transition-all duration-700 hover:scale-105"
-        />
-
-        {/* Dynamic Name Overlay */}
-        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none" />
-
-        <div className="absolute inset-x-0 bottom-0 text-center pb-3 md:pb-4 px-4">
-          <motion.h2
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="font-western text-2xl md:text-4xl text-gold text-glow-gold leading-none drop-shadow-2xl"
+        {/* ── TOP BAR ── */}
+        <div
+          className="flex-none flex items-center justify-between px-4 pb-2 z-10"
+          style={{ paddingTop: "max(16px, calc(env(safe-area-inset-top, 0px) + 16px))" }}
+        >
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 bg-white/5 border border-sand/15 rounded-full px-3 py-1.5 text-sand/70 hover:text-sand active:scale-95 transition-colors"
           >
-            {char.name}
-          </motion.h2>
-          <motion.p
-            initial={{ y: 5, opacity: 0 }}
-            animate={{ y: 0, opacity: 0.8 }}
-            className="font-stats text-[9px] md:text-xs text-sand/90 uppercase tracking-[0.15em] mt-0.5 drop-shadow-md"
-          >
-            {char.title}
-          </motion.p>
-        </div>
-      </div>
-
-      {/* ═══ INFORMATION & ACTIONS (Fixed Height, Scrollable Content) ═══ */}
-      <div
-        className={`flex flex-col gap-3 overflow-hidden ${
-          isMobile
-            ? "p-4 flex-1 bg-black/20"
-            : "p-4 md:p-5 h-[calc(95vh-400px)] md:h-[calc(95vh-450px)] max-h-96 bg-black/10"
-        }`}
-      >
-        {/* Rarity Badge */}
-        <div className="flex items-center justify-between flex-shrink-0">
+            <span className="text-base leading-none">←</span>
+            <span className="font-stats text-[10px] uppercase tracking-wider">
+              Voltar
+            </span>
+          </button>
           <div
-            className={`px-3 py-1 rounded-full border ${RARITY_STYLES[char.rarity]} bg-black/60 shadow-inner`}
+            className={`px-2.5 py-1 rounded-full border ${RARITY_STYLES[char.rarity]} bg-black/70`}
           >
-            <span className="text-[9px] md:text-[10px] font-stats uppercase tracking-widest font-bold">
+            <span className="font-stats text-[9px] uppercase tracking-widest font-bold">
               {RARITY_LABELS[char.rarity]}
             </span>
           </div>
-          <div className="h-px flex-1 mx-3 bg-gradient-to-r from-transparent via-sand/20 to-transparent" />
         </div>
 
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-          {/* Description Box */}
-          <div className="bg-black/50 border border-sand/30 rounded-lg p-3 md:p-4 relative overflow-hidden transition-all hover:border-gold/30 flex-shrink-0">
-            <div className="absolute inset-0 opacity-[0.02] pointer-events-none" />
-            <p className="font-stats text-xs md:text-sm text-sand-light leading-relaxed relative z-10 text-center">
-              "{char.description}"
-            </p>
+        {/* ── PORTRAIT ── */}
+        <div
+          className="flex-none relative w-full overflow-hidden"
+          style={{ height: portraitHeightStyle }}
+        >
+          {/* Atmospheric bg */}
+          <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black" />
+          {char.rarity !== "common" && (
+            <div
+              className={`absolute inset-0 pointer-events-none ${RARITY_ATMOSPHERE[char.rarity]}`}
+            />
+          )}
+
+          {/* Character image: h-[115%] slightly overflows so feet are cropped */}
+          <img
+            src={char.image}
+            alt={char.name}
+            className="absolute inset-x-0 top-0 object-contain object-top"
+          />
+
+          {/* Fade into info — minimal gradient, just enough to blend */}
+          <div className="absolute inset-x-0 bottom-0 h-[20%] bg-gradient-to-t from-black to-transparent pointer-events-none" />
+        </div>
+
+        {/* ── SCROLLABLE INFO ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-black px-5 py-4">
+          {/* Name + title */}
+          <div className="mb-4">
+            <motion.h2
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.08 }}
+              className="font-western text-[2rem] leading-tight text-white"
+            >
+              {char.name}
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.12 }}
+              className="font-sans text-sm text-gray-300 mt-1"
+            >
+              {char.title}
+            </motion.p>
           </div>
 
-          {/* Story Fragment (Desktop Only) */}
-          {!isMobile && char.story && (
-            <div className="mt-3 text-center flex-shrink-0">
-              <p className="font-western text-[8px] text-gold/40 uppercase tracking-wider mb-1">
-                Lenda
-              </p>
-              <p className="font-stats text-[11px] text-sand/50 leading-relaxed italic">
-                {char.story}
+          {/* Passive ability */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.16 }}
+            className="mb-4"
+          >
+            <p className="font-sans text-xs text-gray-400 mb-2.5 uppercase tracking-wide">
+              Habilidade Passiva — 20% de chance
+            </p>
+            <div className={`rounded-xl border-2 p-3.5 ${clsBox}`}>
+              <div className="flex items-start gap-3 mb-3">
+                <span className="text-3xl leading-none flex-shrink-0">{cls.icon}</span>
+                <div>
+                  <p className="font-sans text-base font-bold text-white leading-tight">
+                    {cls.abilityName}
+                  </p>
+                  <p className="font-sans text-xs text-gray-300 mt-0.5 capitalize">
+                    {cls.name}
+                  </p>
+                </div>
+              </div>
+              <div className="h-[1px] bg-white/10 mb-3" />
+              <p className="font-sans text-sm leading-relaxed text-white">
+                {cls.description}
               </p>
             </div>
-          )}
+          </motion.div>
+
+          {/* Quote/Description */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.22 }}
+            className="font-sans text-base text-gray-200 leading-relaxed mb-4 text-center"
+          >
+            "{char.description}"
+          </motion.p>
+
+          {/* Spacer */}
+          <div className="h-2" />
         </div>
 
-        {/* ═══ ACTION BUTTONS (Always Visible at Bottom) ═══ */}
-        <div className="flex gap-2 flex-shrink-0 pt-2 border-t border-sand/10">
-          {isMobile && (
-            <button
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-lg border border-sand/30 text-sand/60 hover:text-sand font-western text-xs tracking-wider transition-all hover:bg-white/5 active:scale-95"
-            >
-              VOLTAR
-            </button>
-          )}
-
-          {isSaved ? (
-            <div
-              className={`${isMobile ? "flex-1" : "w-full"} flex items-center justify-center gap-1.5 py-2.5 rounded-lg border border-gold/40 bg-gradient-to-b from-gold/20 to-gold/5 shadow-[0_0_15px_rgba(234,179,8,0.1)]`}
-            >
+        {/* ── CTA — outside the scroll area, always visible ── */}
+        <div className="flex-none px-5 pt-3 pb-6 bg-black border-t border-white/5">
+          {isActive ? (
+            <div className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl border border-gold/40 bg-gold/10 shadow-[0_0_20px_rgba(234,179,8,0.10)]">
               <svg
-                className="w-4 h-4 text-gold animate-pulse"
+                className="w-5 h-5 text-gold flex-shrink-0"
                 fill="currentColor"
                 viewBox="0 0 24 24"
               >
                 <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
               </svg>
-              <span className="font-western text-gold text-xs md:text-sm tracking-[0.15em]">
-                ATIVO
+              <span className="font-western text-gold text-base tracking-[0.1em]">
+                PERSONAGEM ATIVO
+              </span>
+            </div>
+          ) : isLocked ? (
+            <div className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl border border-sand/30 bg-black/40">
+              <span className="font-western text-sand-light text-sm tracking-[0.08em]">
+                BLOQUEADO {unlockLevel ? `· REQUER NV ${unlockLevel}` : ""}
               </span>
             </div>
           ) : (
             <button
               onClick={onSelect}
               disabled={saving}
-              className={`${isMobile ? "flex-1" : "w-full"} py-2.5 rounded-lg bg-btn-western border border-gold/40 text-gold font-western text-xs md:text-sm tracking-[0.15em] shadow-lg shadow-black/40 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 disabled:opacity-50`}
+              className="w-full py-4 rounded-2xl bg-btn-western border border-gold/40 text-gold font-western text-base tracking-[0.1em] shadow-lg shadow-black/50 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {saving ? (
-                <div className="w-3 h-3 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
               ) : (
-                "SELECIONAR"
+                "SELECIONAR PERSONAGEM"
               )}
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
+
+  // Portal to body — escapes overflow:hidden on .mobile-shell
+  return createPortal(modal, document.body);
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   PAGE ROOT
+══════════════════════════════════════════════════════════════════════ */
 export default function CharactersPage() {
-  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { loadPreferences, saveCharacter } = useUserPreferences();
+  const progression = calculateProgression(user?.progression?.xpTotal ?? 0);
+  const unlocks = normalizeUnlocks(user?.unlocks);
+  const unlockedSet = new Set(unlocks.charactersUnlocked);
 
   const currentCharId = user?.avatar ?? "marshal";
   const [expanded, setExpanded] = useState<CharacterDef | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string>(currentCharId);
+  const [filter, setFilter] = useState<CharacterClass | "all">("all");
 
-  // Load preferences on mount
   useEffect(() => {
     loadPreferences();
-  }, []);
+  }, [loadPreferences]);
 
-  // Sync saved ID with store
+  // Prevent body scroll while modal is open
   useEffect(() => {
-    setSavedId(user?.avatar ?? "marshal");
-  }, [user?.avatar]);
+    if (expanded) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [expanded]);
 
   const handleSelect = async (char: CharacterDef) => {
+    if (!unlockedSet.has(char.id)) {
+      return;
+    }
     setSaving(true);
     await saveCharacter(char.id);
     setSavedId(char.id);
     setSaving(false);
-    // Auto-close modal on mobile after selection
     setExpanded(null);
   };
 
-  return (
-    <div className="min-h-screen flex flex-col bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60 pointer-events-none" />
+  const filtered =
+    filter === "all"
+      ? CHARACTERS
+      : CHARACTERS.filter((c) => c.characterClass === filter);
 
-      {/* ── Header ── */}
-      <header className="relative z-10 flex items-center gap-4 px-4 pt-5 pb-3 md:px-8">
-        <button
-          onClick={() => navigate("/menu")}
-          className="flex items-center gap-2 text-sand/60 hover:text-sand font-western text-sm tracking-widest transition-colors"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          VOLTAR
-        </button>
-        <div className="flex-1" />
-        <h1 className="font-western text-2xl md:text-3xl text-gold text-glow-gold tracking-widest">
+  const filteredWithState = filtered.map((char) => {
+    const unlockLevel = getUnlockLevelForCharacter(char.id);
+    const isUnlocked = unlockedSet.has(char.id);
+    return {
+      char,
+      unlockLevel,
+      isLocked: !isUnlocked,
+    };
+  });
+
+  const expandedUnlockLevel = expanded
+    ? getUnlockLevelForCharacter(expanded.id)
+    : null;
+  const expandedLocked = expanded ? !unlockedSet.has(expanded.id) : false;
+
+  return (
+    <div className="w-full px-3 pt-4 pb-8">
+      {/* Header */}
+      <div className="text-center mb-5">
+        <h1 className="font-western text-3xl text-gold text-glow-gold tracking-widest">
           PISTOLEIROS
         </h1>
-        <div className="flex-1" />
-        <div className="w-16" />
-      </header>
+        <p className="font-stats text-[10px] text-sand/40 uppercase tracking-[0.2em] mt-1">
+          {CHARACTERS.length} personagens · escolha o seu
+        </p>
+      </div>
 
-      {/* ── Body — Desktop: two-column, Mobile: single column ── */}
-      <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-4 px-3 pb-6 md:px-6 md:gap-6 overflow-hidden">
-        {/* ── Gallery grid ── */}
-        <div className="flex-1 md:w-[55%] lg:w-[60%] overflow-y-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 pb-4">
-            {CHARACTERS.map((char) => {
-              const isSelected = savedId === char.id;
-              return (
-                <motion.button
-                  key={char.id}
-                  layout
-                  onClick={() => setExpanded(char)}
-                  whileTap={{ scale: 0.94 }}
-                  className={`
-                    relative flex flex-col items-center rounded-xl border-2 transition-all duration-200 overflow-hidden
-                    ${isSelected ? "border-gold bg-gold/10 shadow-lg shadow-gold/20" : "border-sand/20 bg-black/40 hover:border-sand/50 hover:bg-black/60"}
-                  `}
-                >
-                  {/* Selected badge */}
-                  {isSelected && (
-                    <div className="absolute top-1 right-1 z-10 bg-gold rounded-full w-3 h-3 shadow-[0_0_6px_rgba(234,179,8,0.8)]" />
-                  )}
-
-                  {/* Rarity badge */}
-                  <div
-                    className={`absolute bottom-1 left-1 z-10 text-[7px] font-stats uppercase px-1 py-0.5 rounded border ${RARITY_STYLES[char.rarity]} bg-black/70`}
-                  >
-                    {RARITY_LABELS[char.rarity]}
-                  </div>
-
-                  {/* Character image */}
-                  <div className="w-full aspect-[3/4] overflow-hidden">
-                    <img
-                      src={char.image}
-                      alt={char.name}
-                      loading="lazy"
-                      className="w-full h-full object-contain object-center transition-transform duration-300 hover:scale-105"
-                    />
-                  </div>
-
-                  {/* Name */}
-                  <div className="w-full px-1 pb-2 pt-1 text-center">
-                    <span className="font-western text-[9px] md:text-[10px] text-sand-light leading-tight line-clamp-1">
-                      {char.name}
-                    </span>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── RIGHT — Desktop detail panel (hidden on mobile) ── */}
-        <div className="hidden md:flex md:w-[45%] lg:w-[40%] md:sticky md:top-0 md:self-start md:flex-col md:max-h-screen">
-          <AnimatePresence mode="wait">
-            {expanded ? (
-              <DetailPanel
-                char={expanded}
-                saving={saving}
-                isSaved={savedId === expanded.id}
-                onSelect={() => handleSelect(expanded)}
-                isMobile={false}
-              />
-            ) : (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="card-wood rounded-2xl p-8 text-center opacity-40"
+      {/* Class filter pills */}
+      <div className="mb-5 -mx-3 px-3 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex gap-2 pb-1" style={{ width: "max-content" }}>
+          {CLASS_FILTERS.map(({ value, label, icon }) => {
+            const isActive = filter === value;
+            return (
+              <motion.button
+                key={value}
+                onClick={() => setFilter(value)}
+                whileTap={{ scale: 0.93 }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all whitespace-nowrap
+                  ${
+                    isActive
+                      ? CLASS_PILL_ACTIVE[value]
+                      : "bg-black/40 border-sand/15 text-sand/45 hover:border-sand/30 hover:text-sand/65"
+                  }`}
               >
-                <p className="font-western text-sand text-sm">
-                  Selecione um pistoleiro para ver os detalhes
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <span className="text-sm leading-none">{icon}</span>
+                <span className="font-stats text-[10px] font-bold uppercase tracking-wider">
+                  {label}
+                </span>
+                {isActive && filter !== "all" && (
+                  <span className="font-stats text-[9px] opacity-60 ml-0.5">
+                    {filtered.length}
+                  </span>
+                )}
+              </motion.button>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── MOBILE MODAL — fullscreen overlay on mobile ── */}
+      {/* Grid */}
+      <motion.div layout className="grid grid-cols-2 gap-3">
+        <AnimatePresence mode="popLayout">
+          {filteredWithState.map(({ char, isLocked, unlockLevel }) => (
+            <CharacterCard
+              key={char.id}
+              char={char}
+              isActive={savedId === char.id}
+              isLocked={isLocked}
+              unlockLevel={unlockLevel}
+              onClick={() => setExpanded(char)}
+            />
+          ))}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Detail modal — portal-rendered */}
       <AnimatePresence>
         {expanded && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/80 md:hidden flex flex-col p-3 pt-safe"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex-1 flex flex-col min-h-0"
-            >
-              <DetailPanel
-                char={expanded}
-                saving={saving}
-                isSaved={savedId === expanded.id}
-                onSelect={() => handleSelect(expanded)}
-                isMobile={true}
-                onClose={() => setExpanded(null)}
-              />
-            </motion.div>
-          </motion.div>
+          <CharacterModal
+            char={expanded}
+            saving={saving}
+            isActive={savedId === expanded.id}
+            isLocked={expandedLocked}
+            unlockLevel={expandedUnlockLevel}
+            onSelect={() => handleSelect(expanded)}
+            onClose={() => setExpanded(null)}
+          />
         )}
       </AnimatePresence>
+
+      <div className="mt-5 rounded-xl border border-sand/20 bg-black/25 p-3">
+        <p className="font-stats text-[10px] uppercase tracking-widest text-sand/50 mb-1">
+          Progressão de desbloqueio
+        </p>
+        <p className="font-stats text-xs text-sand/70">
+          Nível atual: <span className="text-gold font-bold">Nv {progression.level}</span>
+          {" · "}
+          Personagens liberados: <span className="text-gold font-bold">{unlockedSet.size}</span>
+        </p>
+      </div>
     </div>
   );
 }

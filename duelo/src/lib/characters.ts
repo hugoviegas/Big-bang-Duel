@@ -4,23 +4,87 @@
  * game arena, status bar, and future story/effect systems.
  */
 
+import type { CharacterClass } from "../types";
+
 export interface CharacterDef {
   id: string;
   name: string;
   title: string; // Display tagline shown under name
   description: string; // Short lore flavour text
   image: string; // Full-body sprite for arena / gallery
+  /** Dedicated profile photo for circular avatar thumbnails. */
+  profileImage: string;
+  /** Additional profile photo variants (e.g. alternate poses). */
+  profileImageAlts?: string[];
   /** CSS object-position to crop into the face area inside the circular avatar thumbnail.
-   *  Format: "center X%" where X moves the viewport down the image.
-   *  0% = top edge, 100% = bottom edge. ~10-20% shows the head for most sprites.
-   *  Will be replaced by a dedicated profile-photo when available.
+   *  Used as fallback when profileImage is not available.
    */
   avatarCropY: string;
   rarity: "common" | "rare" | "legendary";
+  /** Passive ability class — determines which special mechanic this character uses. */
+  characterClass: CharacterClass;
   // ── Placeholders for future features ─────────────────────────────────────
   story?: string; // In-universe biography (WIP)
   specialEffect?: string; // Name of the unique combat effect (WIP)
 }
+
+/**
+ * Display info for each character class.
+ * Used in UI (character select, profile, battle HUD).
+ */
+export const CLASS_INFO: Record<
+  CharacterClass,
+  {
+    name: string;
+    abilityName: string;
+    description: string;
+    icon: string;
+    color: string;
+  }
+> = {
+  atirador: {
+    name: "Atirador",
+    abilityName: "Tiro Crítico",
+    description: "Ao usar Tiro, tem 20% de chance de dar um tiro crítico que tira 2 vidas.",
+    icon: "🎯",
+    color: "text-red-400",
+  },
+  estrategista: {
+    name: "Estrategista",
+    abilityName: "Recarga Dupla",
+    description: "Ao usar Recarga, tem 20% de chance de ganhar +2 munições ao invés de +1.",
+    icon: "🧠",
+    color: "text-blue-400",
+  },
+  sorrateiro: {
+    name: "Sorrateiro",
+    abilityName: "Esquiva Fantasma",
+    description: "Ao usar qualquer carta, tem 20% de chance de esquivar automaticamente de tiros inimigos.",
+    icon: "👻",
+    color: "text-purple-400",
+  },
+  ricochete: {
+    name: "Ricochete",
+    abilityName: "Ricochete",
+    description: "Ao usar Contra-golpe, tem 20% de chance de dobrar o dano de retorno (40% contra Tiro Duplo).",
+    icon: "🔄",
+    color: "text-yellow-400",
+  },
+  sanguinario: {
+    name: "Sanguinário",
+    abilityName: "Bala Fantasma",
+    description: "Ao usar Tiro Duplo, tem 20% de chance de consumir apenas 1 munição.",
+    icon: "🩸",
+    color: "text-orange-400",
+  },
+  suporte: {
+    name: "Suporte",
+    abilityName: "Escudo",
+    description: "Ao levar um tiro, tem 20% de chance de ativar um escudo que bloqueia 1 HP (máx 2x por partida).",
+    icon: "🛡️",
+    color: "text-green-400",
+  },
+};
 
 export const CHARACTERS: CharacterDef[] = [
   // ─── Original trio ───────────────────────────────────────────────────────
@@ -30,8 +94,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Xerife Destemido",
     description: "Guarda a lei com punho de ferro e pontaria certeira.",
     image: "/assets/characters/the_marshal.webp",
+    profileImage: "/assets/characters_profile/the_marshal_profile.webp",
     avatarCropY: "10%",
     rarity: "rare",
+    characterClass: "atirador",
   },
   {
     id: "skull",
@@ -39,8 +105,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Fora-da-Lei",
     description: "Procurado em seis estados. Nunca foi pego.",
     image: "/assets/characters/the_skull.webp",
+    profileImage: "/assets/characters_profile/the_skull_profile.webp",
     avatarCropY: "10%",
     rarity: "rare",
+    characterClass: "sorrateiro",
   },
   {
     id: "la_dama",
@@ -48,8 +116,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "A Pistoleira Lendária",
     description: "Elegante como uma rosa, mortal como seu revólver.",
     image: "/assets/characters/la_dama.webp",
+    profileImage: "/assets/characters_profile/la_dama_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
+    characterClass: "suporte",
   },
 
   // ─── New roster ──────────────────────────────────────────────────────────
@@ -59,8 +129,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Senhor das Trevas",
     description: "Imortal por maldição, letal por vontade.",
     image: "/assets/characters/alucard_idle.webp",
+    profileImage: "/assets/characters_profile/alucard_profile.webp",
     avatarCropY: "12%",
     rarity: "legendary",
+    characterClass: "suporte",
   },
   {
     id: "detective_hopps",
@@ -68,8 +140,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "A Detetive Implacável",
     description: "Nenhum criminoso escapou dela. Nenhum.",
     image: "/assets/characters/detective_hopps_idle.webp",
+    profileImage: "/assets/characters_profile/detective_hopps_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
+    characterClass: "estrategista",
   },
   {
     id: "mokey_king",
@@ -77,8 +151,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Rei dos Macacos",
     description: "Ágil, malandro e impossível de acertar.",
     image: "/assets/characters/mokey_king_idle.webp",
+    profileImage: "/assets/characters_profile/mokey_king_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
+    characterClass: "sorrateiro",
   },
   {
     id: "pe_de_pano",
@@ -86,8 +162,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Fantasma do Sertão",
     description: "Ninguém ouve seus passos. Poucos veem sua saída.",
     image: "/assets/characters/pe_de_pano_idle.webp",
+    profileImage: "/assets/characters_profile/pe_de_pano_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
+    characterClass: "sorrateiro",
   },
   {
     id: "serpent_queen",
@@ -95,8 +173,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "A Rainha Serpente",
     description: "Seu veneno chega antes mesmo do duelo começar.",
     image: "/assets/characters/serpent_queen_idle.webp",
+    profileImage: "/assets/characters_profile/serpent_queen_profile.webp",
     avatarCropY: "12%",
     rarity: "legendary",
+    characterClass: "ricochete",
   },
   {
     id: "spider_noir",
@@ -104,8 +184,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Vigilante das Sombras",
     description: "Tece suas armadilhas antes de chegar ao duelo.",
     image: "/assets/characters/spider_noir_idle.webp",
+    profileImage: "/assets/characters_profile/spider_noir_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
+    characterClass: "estrategista",
   },
   {
     id: "stormtrooper",
@@ -113,8 +195,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Soldado do Império",
     description: "Armado até os dentes. A mira é outra história.",
     image: "/assets/characters/stormtrooper_idle.webp",
+    profileImage: "/assets/characters_profile/stormtrooper_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
+    characterClass: "sanguinario",
   },
   {
     id: "the_cowboy",
@@ -122,8 +206,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Pistoleiro Clássico",
     description: "Direto do Velho Oeste, sem enfeite e sem piedade.",
     image: "/assets/characters/the_cowboy_idle.webp",
+    profileImage: "/assets/characters_profile/the_cowboy_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
+    characterClass: "atirador",
   },
   {
     id: "the_jedi",
@@ -131,8 +217,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Guardião da Força",
     description: "Seu sabre brilha antes do seu inimigo perceber.",
     image: "/assets/characters/the_jedi_idle.webp",
+    profileImage: "/assets/characters_profile/the_jedi_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
+    characterClass: "ricochete",
   },
   {
     id: "the_mandalorian",
@@ -140,8 +228,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Caçador de Recompensas",
     description: "Este é o caminho. E termina no duelo.",
     image: "/assets/characters/the_mandalorian_idle.webp",
+    profileImage: "/assets/characters_profile/the_mandalorian_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
+    characterClass: "suporte",
   },
   {
     id: "the_outlaw",
@@ -149,8 +239,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Fora-da-Lei Errante",
     description: "Nenhuma cidade o aceita; todas o temem.",
     image: "/assets/characters/the_outlaw_idle.webp",
+    profileImage: "/assets/characters_profile/the_outlaw_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
+    characterClass: "sanguinario",
   },
   {
     id: "the_rango",
@@ -158,8 +250,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Xerife Acidental",
     description: "Um camaleão num mundo de cowboys. Improvisa bem.",
     image: "/assets/characters/the_rango_idle.webp",
+    profileImage: "/assets/characters_profile/the_rango_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
+    characterClass: "estrategista",
   },
   {
     id: "the_scrapper",
@@ -167,8 +261,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Sucateiro Feroz",
     description: "Construído com peças de ferro-velho e ódio puro.",
     image: "/assets/characters/the_scrapper_idle.webp",
+    profileImage: "/assets/characters_profile/the_scrapper_profile.webp",
     avatarCropY: "10%",
     rarity: "rare",
+    characterClass: "sanguinario",
   },
   {
     id: "the_sheriff",
@@ -176,8 +272,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Guardião da Cidade",
     description: "Estrela no peito, bala na câmara, lei na ponta da língua.",
     image: "/assets/characters/the_sheriff_idle.webp",
+    profileImage: "/assets/characters_profile/the_sheriff_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
+    characterClass: "atirador",
   },
   {
     id: "the_witcher",
@@ -185,8 +283,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "O Bruxo Errante",
     description: "Monster slayer por profissão. Duelos, por prazer.",
     image: "/assets/characters/the_witcher_idle.webp",
+    profileImage: "/assets/characters_profile/the_witcher_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
+    characterClass: "sorrateiro",
   },
   {
     id: "tigress_blaze",
@@ -194,8 +294,10 @@ export const CHARACTERS: CharacterDef[] = [
     title: "A Chama Selvagem",
     description: "Quem toca no fogo, queima. Simples assim.",
     image: "/assets/characters/tigress_blaze_idle.webp",
+    profileImage: "/assets/characters_profile/tigress_blaze_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
+    characterClass: "atirador",
   },
   {
     id: "the_razor",
@@ -204,8 +306,10 @@ export const CHARACTERS: CharacterDef[] = [
     description:
       "Movimenta-se como sombra — a lâmina encontra o alvo antes do som.",
     image: "/assets/characters/the_razor_idle.webp",
+    profileImage: "/assets/characters_profile/the_razor_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
+    characterClass: "ricochete",
   },
 ];
 
@@ -219,9 +323,69 @@ export function getCharacterImage(id: string): string {
   return getCharacter(id).image;
 }
 
+/** Returns the profile image path for a character id. */
+export function getProfileImage(id: string): string {
+  return getCharacter(id).profileImage;
+}
+
+/**
+ * Returns all available profile images for a character (main + alts).
+ */
+export function getAllProfileImages(id: string): string[] {
+  const char = getCharacter(id);
+  return [char.profileImage, ...(char.profileImageAlts ?? [])];
+}
+
+/**
+ * Returns all profile image options across all characters.
+ */
+export function getAllAvatarOptions(): {
+  image: string;
+  characterId: string;
+  characterName: string;
+}[] {
+  const options: {
+    image: string;
+    characterId: string;
+    characterName: string;
+  }[] = [];
+  for (const char of CHARACTERS) {
+    options.push({
+      image: char.profileImage,
+      characterId: char.id,
+      characterName: char.name,
+    });
+    for (const alt of char.profileImageAlts ?? []) {
+      options.push({
+        image: alt,
+        characterId: char.id,
+        characterName: char.name,
+      });
+    }
+  }
+  return options;
+}
+
+/**
+ * Resolves the avatar picture to display for a user.
+ * Priority: custom avatarPicture > character's profileImage.
+ */
+export function resolveAvatarPicture(
+  avatarId: string,
+  avatarPicture?: string | null,
+): string {
+  if (avatarPicture) return avatarPicture;
+  return getProfileImage(avatarId);
+}
+
 /** CSS object-position string for avatar face crop. */
 export function getAvatarCrop(id: string): string {
   return `center ${getCharacter(id).avatarCropY}`;
+}
+
+/** Returns the CharacterClass for a given character id. */
+export function getCharacterClass(id: string): CharacterClass {
+  return getCharacter(id).characterClass;
 }
 
 export const RARITY_STYLES: Record<CharacterDef["rarity"], string> = {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../../store/gameStore";
@@ -7,6 +7,14 @@ import { recordMatchResult } from "../../lib/firebaseService";
 import { getCharacter } from "../../lib/characters";
 import type { MatchResult } from "../../lib/firebaseService";
 import type { MatchMode } from "../../types";
+import {
+  calculateMatchRewards,
+  calculateProgression,
+  normalizeUnlocks,
+  getLevelUpRewards,
+  type MatchRewardSummary,
+  type LevelReward,
+} from "../../lib/progression";
 
 function Star({
   filled,
@@ -53,7 +61,43 @@ export function GameOver() {
   } = useGameStore();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const updateUser = useAuthStore((s) => s.updateUser);
+
+  let result: MatchResult;
+  if (winnerId === player.id) {
+    result = "win";
+  } else if (winnerId === opponent.id) {
+    result = "loss";
+  } else {
+    result = "draw";
+  }
+
+  const matchMode: MatchMode = isOnline ? "online" : "solo";
+
+  const rewardSnapshot = useMemo<{
+    rewardSummary: MatchRewardSummary;
+    levelRewards: LevelReward[];
+    levelBefore: number;
+    levelAfter: number;
+  }>(() => {
+    const currentProgression = calculateProgression(
+      user?.progression?.xpTotal ?? 0,
+    );
+    const rewardSummary = calculateMatchRewards(matchMode, result);
+    const nextProgression = calculateProgression(
+      (user?.progression?.xpTotal ?? 0) + rewardSummary.xpGained,
+    );
+    const unlocks = normalizeUnlocks(user?.unlocks);
+    return {
+      rewardSummary,
+      levelRewards: getLevelUpRewards(
+        currentProgression.level,
+        nextProgression.level,
+        unlocks,
+      ),
+      levelBefore: currentProgression.level,
+      levelAfter: nextProgression.level,
+    };
+  }, [matchMode, result, user?.progression?.xpTotal, user?.unlocks]);
 
   // Record stats only once per game-over render
   const statsRecorded = useRef(false);
@@ -61,67 +105,19 @@ export function GameOver() {
     if (statsRecorded.current || !user) return;
     statsRecorded.current = true;
 
-    let result: MatchResult;
-    if (winnerId === player.id) {
-      result = "win";
-    } else if (winnerId === opponent.id) {
-      result = "loss";
-    } else {
-      result = "draw";
-    }
+    const reward = rewardSnapshot.rewardSummary;
 
-    const matchMode: MatchMode = isOnline ? "online" : "solo";
-    const currentStats = user.statsByMode ?? {
-      solo: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
-      online: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
-      overall: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
-    };
-    const modeStats = currentStats[matchMode];
-    const nextModeStats = {
-      wins: modeStats.wins + (result === "win" ? 1 : 0),
-      losses: modeStats.losses + (result === "loss" ? 1 : 0),
-      draws: modeStats.draws + (result === "draw" ? 1 : 0),
-      totalGames: modeStats.totalGames + 1,
-      winRate: 0,
-    };
-    nextModeStats.winRate =
-      nextModeStats.totalGames > 0
-        ? Math.round((nextModeStats.wins / nextModeStats.totalGames) * 1000) /
-          10
-        : 0;
-
-    const nextSolo = matchMode === "solo" ? nextModeStats : currentStats.solo;
-    const nextOnline =
-      matchMode === "online" ? nextModeStats : currentStats.online;
-    const nextOverall = {
-      wins: nextSolo.wins + nextOnline.wins,
-      losses: nextSolo.losses + nextOnline.losses,
-      draws: nextSolo.draws + nextOnline.draws,
-      totalGames: nextSolo.totalGames + nextOnline.totalGames,
-      winRate: 0,
-    };
-    nextOverall.winRate =
-      nextOverall.totalGames > 0
-        ? Math.round((nextOverall.wins / nextOverall.totalGames) * 1000) / 10
-        : 0;
-
-    // Update local auth state
-    updateUser({
-      wins: nextOverall.wins,
-      losses: nextOverall.losses,
-      draws: nextOverall.draws,
-      totalGames: nextOverall.totalGames,
-      winRate: nextOverall.winRate,
-      statsByMode: {
-        solo: nextSolo,
-        online: nextOnline,
-        overall: nextOverall,
-      },
+    // Persist to Firestore - Firebase is the source of truth
+    // The real-time listener will automatically update local state when saved
+    recordMatchResult(user.uid, result, matchMode, reward).catch((error) => {
+      console.error("[GameOver] Failed to save match result:", error);
     });
+  }, [matchMode, result, user, rewardSnapshot]);
 
-    // Persist to Firestore
-    recordMatchResult(user.uid, result, matchMode).catch(() => {});
-  }, []);
+  const rewardSummary = rewardSnapshot.rewardSummary;
+  const levelRewards = rewardSnapshot.levelRewards;
+  const levelBefore = rewardSnapshot.levelBefore;
+  const levelAfter = rewardSnapshot.levelAfter;
 
   // Resolve avatar image using character registry
   const resolveAvatar = (avatarId: string): string => {
@@ -282,6 +278,120 @@ export function GameOver() {
             </div>
           )}
         </div>
+
+        {/* Rewards */}
+        {rewardSummary && (
+          <div className="w-full bg-black/35 border border-gold/25 rounded-xl p-4 mb-6 space-y-2 font-stats text-sm text-sand-light">
+            <div className="flex items-center justify-between border-b border-sand/10 pb-1">
+              <span className="text-sand/60 flex items-center gap-2">
+                <span className="inline-flex w-4 h-4 items-center justify-center rounded-full border border-sky/40 text-sky text-[10px]">
+                  ✦
+                </span>
+                XP ganho
+              </span>
+              <span className="font-bold text-sky">
+                +{rewardSummary.xpGained}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-b border-sand/10 pb-1">
+              <span className="text-sand/60 flex items-center gap-2">
+                <picture>
+                  <source
+                    srcSet="/assets/ui/gold_coin.webp"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/assets/ui/gold_coin.png"
+                    alt="gold"
+                    className="w-4 h-4"
+                  />
+                </picture>
+                Ouro ganho
+              </span>
+              <span className="font-bold text-gold">
+                +{rewardSummary.goldGained}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-b border-sand/10 pb-1">
+              <span className="text-sand/60 flex items-center gap-2">
+                <picture>
+                  <source
+                    srcSet="/assets/ui/ruby_coin.webp"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/assets/ui/ruby_coin.png"
+                    alt="ruby"
+                    className="w-4 h-4"
+                  />
+                </picture>
+                Ruby ganho
+              </span>
+              <span className="font-bold text-fuchsia-300">
+                +{rewardSummary.rubyGained}
+              </span>
+            </div>
+            {isOnline && (
+              <div className="flex items-center justify-between border-b border-sand/10 pb-1">
+                <span className="text-sand/60 flex items-center gap-2">
+                  <picture>
+                    <source
+                      srcSet="/assets/ui/trophie_icon.webp"
+                      type="image/webp"
+                    />
+                    <img
+                      src="/assets/ui/trophie_icon.png"
+                      alt="trophy"
+                      className="w-4 h-4"
+                    />
+                  </picture>
+                  Troféus
+                </span>
+                <span
+                  className={`font-bold ${
+                    rewardSummary.trophyDelta >= 0
+                      ? "text-green-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {rewardSummary.trophyDelta >= 0 ? "+" : ""}
+                  {rewardSummary.trophyDelta}
+                </span>
+              </div>
+            )}
+            {levelBefore !== null && levelAfter !== null && (
+              <div className="flex items-center justify-between border-b border-sand/10 pb-1">
+                <span className="text-sand/60">Nível</span>
+                <span className="font-bold text-purple-300">
+                  Nv {levelBefore} → Nv {levelAfter}
+                </span>
+              </div>
+            )}
+            {levelRewards.length > 0 && (
+              <div className="pt-1">
+                <p className="text-[10px] uppercase tracking-widest text-sand/50 mb-2">
+                  Recompensas de nível
+                </p>
+                <div className="space-y-1">
+                  {levelRewards.map((reward) => (
+                    <div
+                      key={reward.level}
+                      className="flex items-center justify-between text-xs text-sand"
+                    >
+                      <span>Nv {reward.level}</span>
+                      <span className="text-gold">
+                        +{reward.gold} ouro
+                        {reward.unlockedCharacterId
+                          ? ` · ${reward.unlockedCharacterId}`
+                          : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Buttons */}
         <div className="w-full space-y-3">
