@@ -45,48 +45,42 @@ export const CLASS_INFO: Record<
   atirador: {
     name: "Atirador",
     abilityName: "Tiro Crítico",
-    description:
-      "Ao usar Tiro, tem 5% de chance de dar um tiro crítico que tira 2 vidas.",
+    description: "Ao usar Tiro, tem 20% de chance de dar um tiro crítico que tira 2 vidas.",
     icon: "🎯",
     color: "text-red-400",
   },
   estrategista: {
     name: "Estrategista",
     abilityName: "Recarga Dupla",
-    description:
-      "Ao usar Recarga, tem 5% de chance de ganhar +2 munições ao invés de +1.",
+    description: "Ao usar Recarga, tem 20% de chance de ganhar +2 munições ao invés de +1.",
     icon: "🧠",
     color: "text-blue-400",
   },
   sorrateiro: {
     name: "Sorrateiro",
     abilityName: "Esquiva Fantasma",
-    description:
-      "Ao usar qualquer carta, tem 5% de chance de esquivar automaticamente de tiros inimigos.",
+    description: "Ao usar qualquer carta, tem 20% de chance de esquivar automaticamente de tiros inimigos.",
     icon: "👻",
     color: "text-purple-400",
   },
   ricochete: {
     name: "Ricochete",
     abilityName: "Ricochete",
-    description:
-      "Ao usar Contra-golpe, tem 5% de chance de dobrar o dano de retorno (10% contra Tiro Duplo).",
+    description: "Ao usar Contra-golpe, tem 20% de chance de dobrar o dano de retorno (40% contra Tiro Duplo).",
     icon: "🔄",
     color: "text-yellow-400",
   },
   sanguinario: {
     name: "Sanguinário",
     abilityName: "Bala Fantasma",
-    description:
-      "Ao usar Tiro Duplo, tem 5% de chance de consumir apenas 1 munição.",
+    description: "Ao usar Tiro Duplo, tem 20% de chance de consumir apenas 1 munição.",
     icon: "🩸",
     color: "text-orange-400",
   },
   suporte: {
     name: "Suporte",
     abilityName: "Escudo",
-    description:
-      "Ao levar um tiro, tem 5% de chance de ativar um escudo que bloqueia 1 HP (máx 2x por partida).",
+    description: "Ao levar um tiro, tem 20% de chance de ativar um escudo que bloqueia 1 HP (máx 2x por partida).",
     icon: "🛡️",
     color: "text-green-400",
   },

@@ -22,8 +22,8 @@ export const MAX_AMMO = 3;
 export const MAX_DODGE_STREAK = 3; // Maximum consecutive dodges before forced to pick another card
 export const MAX_DOUBLE_SHOT_USES = 3;
 
-/** Base ability trigger chance (5%). Scales with character level in the future. */
-export const BASE_ABILITY_CHANCE = 0.05;
+/** Base ability trigger chance (20%). Testing phase. Scales with character level in the future. */
+export const BASE_ABILITY_CHANCE = 0.20;
 
 export function getAvailableCards(
   mode: GameMode,
