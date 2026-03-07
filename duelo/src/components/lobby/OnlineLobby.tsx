@@ -184,13 +184,8 @@ export function OnlineLobby() {
   const timerLabel = (t: number) => `${t}s`;
 
   return (
-    <div className="min-h-screen bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50 pointer-events-none" />
-
-      <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* ══ LEFT — configuration ══ */}
-        <div className="flex flex-col gap-4">
-          <h1 className="font-western text-4xl text-gold text-center md:text-left text-glow-gold animate-drop-bounce">
+    <div className="w-full px-4 py-4 space-y-4">
+          <h1 className="font-western text-4xl text-gold text-center text-glow-gold animate-drop-bounce">
             SALÃO ONLINE
           </h1>
 
@@ -435,16 +430,6 @@ export function OnlineLobby() {
             </form>
           </div>
 
-          <button
-            onClick={() => navigate("/menu")}
-            className="w-full text-center text-sand/50 font-western text-sm hover:text-sand transition-colors"
-          >
-            VOLTAR AO MENU
-          </button>
-        </div>
-
-        {/* ══ RIGHT — rooms ══ */}
-        <div className="flex flex-col gap-4 animate-fade-up animate-fade-up-delay-3">
           {/* Tab header */}
           <div className="flex rounded-xl overflow-hidden border border-sand/20">
             <button
@@ -624,8 +609,6 @@ export function OnlineLobby() {
           >
             ↻ Atualizar listas
           </button>
-        </div>
-      </div>
     </div>
   );
 }

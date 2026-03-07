@@ -13,6 +13,7 @@ import ProfilePage from "./pages/profile";
 import FriendsPage from "./pages/friends";
 import DesignSystemPage from "./pages/design-system";
 import { AssetPreloader } from "./components/common/AssetPreloader";
+import { MobileLayout } from "./components/layout/MobileLayout";
 import { useAuthStore } from "./store/authStore";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -21,14 +22,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Wraps a page in MobileLayout + ProtectedRoute */
+function MobilePage({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute>
+      <MobileLayout>{children}</MobileLayout>
+    </ProtectedRoute>
+  );
+}
+
 function App() {
   useEffect(() => {
     // Listen to Firebase Auth state changes.
-    // - On logout: clear Zustand store.
-    // - On login (or app reload with active session): if the store doesn't
-    //   match Firebase, restore a minimal user object so ensureProfile() can
-    //   load the full profile from Firestore. This handles the case where
-    //   localStorage was cleared but Firebase Auth is still active.
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       const store = useAuthStore.getState();
 
@@ -51,7 +56,13 @@ function App() {
           winRate: 0,
           statsByMode: {
             solo: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
-            online: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
+            online: {
+              wins: 0,
+              losses: 0,
+              draws: 0,
+              totalGames: 0,
+              winRate: 0,
+            },
             overall: {
               wins: 0,
               losses: 0,
@@ -76,15 +87,10 @@ function App() {
   return (
     <AssetPreloader>
       <Routes>
+        {/* Auth — no MobileLayout */}
         <Route path="/" element={<IndexPage />} />
-        <Route
-          path="/menu"
-          element={
-            <ProtectedRoute>
-              <MenuPage />
-            </ProtectedRoute>
-          }
-        />
+
+        {/* Game — own full-screen layout */}
         <Route
           path="/game"
           element={
@@ -101,54 +107,65 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* All other pages — wrapped in MobileLayout */}
+        <Route
+          path="/menu"
+          element={
+            <MobilePage>
+              <MenuPage />
+            </MobilePage>
+          }
+        />
         <Route
           path="/online"
           element={
-            <ProtectedRoute>
+            <MobilePage>
               <OnlinePage />
-            </ProtectedRoute>
+            </MobilePage>
           }
         />
         <Route
           path="/leaderboard"
           element={
-            <ProtectedRoute>
+            <MobilePage>
               <LeaderboardPage />
-            </ProtectedRoute>
+            </MobilePage>
           }
         />
         <Route
           path="/characters"
           element={
-            <ProtectedRoute>
+            <MobilePage>
               <CharactersPage />
-            </ProtectedRoute>
+            </MobilePage>
           }
         />
         <Route
           path="/profile"
           element={
-            <ProtectedRoute>
+            <MobilePage>
               <ProfilePage />
-            </ProtectedRoute>
+            </MobilePage>
           }
         />
         <Route
           path="/friends"
           element={
-            <ProtectedRoute>
+            <MobilePage>
               <FriendsPage />
-            </ProtectedRoute>
+            </MobilePage>
           }
         />
         <Route
           path="/design-system"
           element={
-            <ProtectedRoute>
+            <MobilePage>
               <DesignSystemPage />
-            </ProtectedRoute>
+            </MobilePage>
           }
         />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AssetPreloader>

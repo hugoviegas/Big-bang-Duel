@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/authStore";
 import { useUserPreferences } from "../hooks/useUserPreferences";
@@ -164,7 +163,6 @@ function DetailPanel({
 }
 
 export default function CharactersPage() {
-  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { loadPreferences, saveCharacter } = useUserPreferences();
 
@@ -193,118 +191,59 @@ export default function CharactersPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60 pointer-events-none" />
+    <div className="w-full px-3 py-4">
+      <h1 className="font-western text-2xl text-gold text-glow-gold tracking-widest text-center mb-4">
+        PISTOLEIROS
+      </h1>
 
-      {/* ── Header ── */}
-      <header className="relative z-10 flex items-center gap-4 px-4 pt-5 pb-3 md:px-8">
-        <button
-          onClick={() => navigate("/menu")}
-          className="flex items-center gap-2 text-sand/60 hover:text-sand font-western text-sm tracking-widest transition-colors"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          VOLTAR
-        </button>
-        <div className="flex-1" />
-        <h1 className="font-western text-2xl md:text-3xl text-gold text-glow-gold tracking-widest">
-          PISTOLEIROS
-        </h1>
-        <div className="flex-1" />
-        <div className="w-16" />
-      </header>
-
-      {/* ── Body — Desktop: two-column, Mobile: single column ── */}
-      <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-4 px-3 pb-6 md:px-6 md:gap-6 overflow-hidden">
-        {/* ── Gallery grid ── */}
-        <div className="flex-1 md:w-[55%] lg:w-[60%] overflow-y-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 pb-4">
-            {CHARACTERS.map((char) => {
-              const isSelected = savedId === char.id;
-              return (
-                <motion.button
-                  key={char.id}
-                  layout
-                  onClick={() => setExpanded(char)}
-                  whileTap={{ scale: 0.94 }}
-                  className={`
+      {/* ── Gallery grid ── */}
+      <div className="grid grid-cols-2 gap-2 pb-4">
+        {CHARACTERS.map((char) => {
+          const isSelected = savedId === char.id;
+          return (
+            <motion.button
+              key={char.id}
+              layout
+              onClick={() => setExpanded(char)}
+              whileTap={{ scale: 0.94 }}
+              className={`
                     relative flex flex-col items-center rounded-xl border-2 transition-all duration-200 overflow-hidden
                     ${isSelected ? "border-gold bg-gold/10 shadow-lg shadow-gold/20" : "border-sand/20 bg-black/40 hover:border-sand/50 hover:bg-black/60"}
                   `}
-                >
-                  {/* Selected badge */}
-                  {isSelected && (
-                    <div className="absolute top-1 right-1 z-10 bg-gold rounded-full w-3 h-3 shadow-[0_0_6px_rgba(234,179,8,0.8)]" />
-                  )}
+            >
+              {/* Selected badge */}
+              {isSelected && (
+                <div className="absolute top-1 right-1 z-10 bg-gold rounded-full w-3 h-3 shadow-[0_0_6px_rgba(234,179,8,0.8)]" />
+              )}
 
-                  {/* Rarity badge */}
-                  <div
-                    className={`absolute bottom-1 left-1 z-10 text-[7px] font-stats uppercase px-1 py-0.5 rounded border ${RARITY_STYLES[char.rarity]} bg-black/70`}
-                  >
-                    {RARITY_LABELS[char.rarity]}
-                  </div>
-
-                  {/* Character image */}
-                  <div className="w-full aspect-[3/4] overflow-hidden">
-                    <img
-                      src={char.image}
-                      alt={char.name}
-                      loading="lazy"
-                      className="w-full h-full object-contain object-center transition-transform duration-300 hover:scale-105"
-                    />
-                  </div>
-
-                  {/* Name */}
-                  <div className="w-full px-1 pb-2 pt-1 text-center">
-                    <span className="font-western text-[9px] md:text-[10px] text-sand-light leading-tight line-clamp-1">
-                      {char.name}
-                    </span>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── RIGHT — Desktop detail panel (hidden on mobile) ── */}
-        <div className="hidden md:flex md:w-[45%] lg:w-[40%] md:sticky md:top-0 md:self-start md:flex-col md:max-h-screen">
-          <AnimatePresence mode="wait">
-            {expanded ? (
-              <DetailPanel
-                char={expanded}
-                saving={saving}
-                isSaved={savedId === expanded.id}
-                onSelect={() => handleSelect(expanded)}
-                isMobile={false}
-              />
-            ) : (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="card-wood rounded-2xl p-8 text-center opacity-40"
+              {/* Rarity badge */}
+              <div
+                className={`absolute bottom-1 left-1 z-10 text-[7px] font-stats uppercase px-1 py-0.5 rounded border ${RARITY_STYLES[char.rarity]} bg-black/70`}
               >
-                <p className="font-western text-sand text-sm">
-                  Selecione um pistoleiro para ver os detalhes
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+                {RARITY_LABELS[char.rarity]}
+              </div>
 
-      {/* ── MOBILE MODAL — fullscreen overlay on mobile ── */}
+              {/* Character image */}
+              <div className="w-full aspect-[3/4] overflow-hidden">
+                <img
+                  src={char.image}
+                  alt={char.name}
+                  loading="lazy"
+                  className="w-full h-full object-contain object-center transition-transform duration-300 hover:scale-105"
+                />
+              </div>
+
+              {/* Name */}
+              <div className="w-full px-1 pb-2 pt-1 text-center">
+                <span className="font-western text-[9px] md:text-[10px] text-sand-light leading-tight line-clamp-1">
+                  {char.name}
+                </span>
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+      {/* ── Character detail modal ── */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -312,7 +251,7 @@ export default function CharactersPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/80 md:hidden flex flex-col p-3 pt-safe"
+            className="fixed inset-0 z-50 bg-black/80 flex flex-col p-3 pt-safe"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
