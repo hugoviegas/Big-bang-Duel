@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./lib/firebase";
+import { loadStrategies } from "./lib/strategyLoader";
 import IndexPage from "./pages/index";
 import MenuPage from "./pages/menu";
 import GamePage from "./pages/game";
@@ -65,6 +66,11 @@ function App() {
       }
     });
     return unsub;
+  }, []);
+
+  // Load AI strategy files (non-blocking)
+  useEffect(() => {
+    loadStrategies();
   }, []);
 
   return (

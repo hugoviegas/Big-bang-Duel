@@ -171,6 +171,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           pHistory,
           currentState.mode,
           currentState.botDifficulty || "medium",
+          currentState.player,
         );
         set({
           opponent: { ...currentState.opponent, selectedCard: botCard },

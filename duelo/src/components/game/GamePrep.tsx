@@ -36,17 +36,17 @@ const DIFFICULTIES = [
   {
     id: "easy" as BotDifficulty,
     name: "FÁCIL",
-    desc: "Bot aleatório - 30s de ataque",
+    desc: "IA treinada para errar — aprenda o jogo · 30s por jogada",
   },
   {
     id: "medium" as BotDifficulty,
     name: "MÉDIO",
-    desc: "Bot com estratégia - 10s de ataque",
+    desc: "IA com estratégia equilibrada — desafio justo · 10s por jogada",
   },
   {
     id: "hard" as BotDifficulty,
     name: "DIFÍCIL",
-    desc: "Bot lê seus padrões - 5s de ataque",
+    desc: "IA otimizada por Q-Learning — lê seus padrões · 5s por jogada",
   },
 ];
 

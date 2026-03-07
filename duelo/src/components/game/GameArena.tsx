@@ -13,6 +13,7 @@ export function GameArena() {
   const {
     player,
     opponent,
+    turn,
     phase,
     lastResult,
     isOnline,
@@ -143,6 +144,7 @@ export function GameArena() {
           playerStars={playerStars}
           opponentStars={opponentStars}
           currentRound={currentRound}
+          turn={turn}
           onPause={() => {
             if (!isOnline) {
               setShowPauseMenu(true);

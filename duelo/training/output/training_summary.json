@@ -1,0 +1,162 @@
+{
+  "training_date": "2026-03-07T04:11:20.185665",
+  "total_time_seconds": 6668.08,
+  "episodes_per_mode": 2000000,
+  "modes": [
+    "beginner",
+    "normal",
+    "advanced"
+  ],
+  "results": {
+    "beginner": {
+      "validation": {
+        "hard_vs_random": {
+          "win_rate": 92.92,
+          "loss_rate": 1.12,
+          "draw_rate": 5.96,
+          "avg_game_length": 28.28
+        },
+        "medium_vs_random": {
+          "win_rate": 82.82,
+          "loss_rate": 5.63,
+          "draw_rate": 11.55,
+          "avg_game_length": 31.74
+        },
+        "easy_vs_random": {
+          "win_rate": 25.61,
+          "loss_rate": 66.81,
+          "draw_rate": 7.58,
+          "avg_game_length": 14.94
+        },
+        "hard_vs_medium": {
+          "hard_win_rate": 56.72,
+          "medium_win_rate": 20.88,
+          "draw_rate": 22.4
+        },
+        "hard_vs_easy": {
+          "hard_win_rate": 94.04,
+          "easy_win_rate": 2.88,
+          "draw_rate": 3.08
+        },
+        "medium_vs_easy": {
+          "medium_win_rate": 89.62,
+          "easy_win_rate": 5.6,
+          "draw_rate": 4.78
+        },
+        "win_speed_distribution": {
+          "5-10": 11.46,
+          "10-15": 19.31,
+          "15-20": 14.94,
+          "20-25": 10.76,
+          "25-30": 8.76,
+          "30-35": 34.77
+        }
+      },
+      "strategies_count": {
+        "hard": 576,
+        "medium": 576,
+        "easy": 576
+      }
+    },
+    "normal": {
+      "validation": {
+        "hard_vs_random": {
+          "win_rate": 98.56,
+          "loss_rate": 0.17,
+          "draw_rate": 1.27,
+          "avg_game_length": 35.59
+        },
+        "medium_vs_random": {
+          "win_rate": 92.82,
+          "loss_rate": 1.35,
+          "draw_rate": 5.83,
+          "avg_game_length": 31.34
+        },
+        "easy_vs_random": {
+          "win_rate": 31.71,
+          "loss_rate": 58.82,
+          "draw_rate": 9.47,
+          "avg_game_length": 15.56
+        },
+        "hard_vs_medium": {
+          "hard_win_rate": 60.37,
+          "medium_win_rate": 25.73,
+          "draw_rate": 13.9
+        },
+        "hard_vs_easy": {
+          "hard_win_rate": 99.42,
+          "easy_win_rate": 0.05,
+          "draw_rate": 0.53
+        },
+        "medium_vs_easy": {
+          "medium_win_rate": 96.55,
+          "easy_win_rate": 0.55,
+          "draw_rate": 2.9
+        },
+        "win_speed_distribution": {
+          "5-10": 3.09,
+          "10-15": 15.53,
+          "15-20": 17.2,
+          "20-25": 13.24,
+          "25-30": 9.16,
+          "30-35": 41.78
+        }
+      },
+      "strategies_count": {
+        "hard": 1280,
+        "medium": 1280,
+        "easy": 1280
+      }
+    },
+    "advanced": {
+      "validation": {
+        "hard_vs_random": {
+          "win_rate": 98.07,
+          "loss_rate": 1.05,
+          "draw_rate": 0.88,
+          "avg_game_length": 40.02
+        },
+        "medium_vs_random": {
+          "win_rate": 90.75,
+          "loss_rate": 6.53,
+          "draw_rate": 2.72,
+          "avg_game_length": 42.03
+        },
+        "easy_vs_random": {
+          "win_rate": 35.77,
+          "loss_rate": 56.46,
+          "draw_rate": 7.77,
+          "avg_game_length": 21.91
+        },
+        "hard_vs_medium": {
+          "hard_win_rate": 51.93,
+          "medium_win_rate": 32.63,
+          "draw_rate": 15.44
+        },
+        "hard_vs_easy": {
+          "hard_win_rate": 99.63,
+          "easy_win_rate": 0.23,
+          "draw_rate": 0.14
+        },
+        "medium_vs_easy": {
+          "medium_win_rate": 95.91,
+          "easy_win_rate": 3.11,
+          "draw_rate": 0.98
+        },
+        "win_speed_distribution": {
+          "5-10": 0.1,
+          "10-15": 2.33,
+          "15-20": 6.49,
+          "20-25": 10.16,
+          "25-30": 11.69,
+          "30-35": 69.24
+        }
+      },
+      "strategies_count": {
+        "hard": 1536,
+        "medium": 1536,
+        "easy": 1536
+      }
+    }
+  }
+}

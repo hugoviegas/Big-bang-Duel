@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>DUELO — Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Playfair+Display:wght@700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --crimson:    #7a1010;
+    --crimson-d:  #4a0808;
+    --crimson-l:  #a01818;
+    --gold:       #c8a84b;
+    --gold-l:     #f0d070;
+    --gold-d:     #8b6914;
+    --cream:      #f5e6c8;
+    --dark:       #1a0a04;
+    --dark-mid:   #2a1208;
+    --brown:      #3b2010;
+    --brown-mid:  #5c3317;
+    --btn-red:    #c0281c;
+    --btn-brown:  #4a2010;
+    --nav-bg:     #1e0e06;
+  }
+
+  html, body {
+    height: 100%;
+    background: #0d0604;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+  }
+
+  /* ── PHONE SHELL ── */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--dark);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.9), 0 0 0 2px #333;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    height: 44px;
+    background: var(--crimson-d);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .status-time { color: var(--cream); font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+  .status-icons svg { width: 16px; height: 16px; fill: var(--cream); }
+
+  /* ── TOP PROFILE BAR ── */
+  .top-bar {
+    height: 90px;
+    background: linear-gradient(180deg, var(--crimson-d) 0%, var(--crimson) 100%);
+    border-bottom: 3px solid var(--gold-d);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 12px;
+    position: relative;
+    z-index: 10;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    background-image:
+      linear-gradient(180deg, var(--crimson-d) 0%, var(--crimson) 100%),
+      repeating-linear-gradient(90deg, transparent, transparent 30px, rgba(0,0,0,0.06) 31px, rgba(0,0,0,0.06) 32px);
+  }
+
+  .avatar-ring {
+    width: 62px; height: 62px;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    box-shadow: 0 0 12px rgba(200,168,75,0.5), inset 0 0 0 2px var(--crimson-d);
+    background: var(--dark);
+    overflow: hidden;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s;
+  }
+  .avatar-ring:hover { transform: scale(1.05); }
+  .avatar-ring svg { width: 100%; height: 100%; }
+
+  .profile-info { flex: 1; min-width: 0; }
+  .profile-name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+  .profile-name {
+    font-family: 'Rye', serif;
+    font-size: 17px;
+    color: var(--cream);
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+    white-space: nowrap;
+  }
+  .crown-badge {
+    font-size: 14px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+  }
+  .level-badge {
+    background: var(--gold-d);
+    color: var(--gold-l);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    border: 1px solid var(--gold);
+    letter-spacing: 0.3px;
+  }
+  .xp-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .xp-bar-bg {
+    flex: 1;
+    height: 8px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 4px;
+    border: 1px solid var(--gold-d);
+    overflow: hidden;
+  }
+  .xp-bar-fill {
+    height: 100%;
+    width: 68%;
+    background: linear-gradient(90deg, var(--gold-d), var(--gold-l));
+    border-radius: 4px;
+    box-shadow: 0 0 6px rgba(200,168,75,0.6);
+    animation: xpGlow 2s ease-in-out infinite alternate;
+  }
+  @keyframes xpGlow {
+    from { box-shadow: 0 0 4px rgba(200,168,75,0.4); }
+    to   { box-shadow: 0 0 10px rgba(200,168,75,0.9); }
+  }
+  .xp-text { font-size: 10px; color: var(--gold); font-weight: 600; white-space: nowrap; }
+
+  .coins-pill {
+    display: flex; align-items: center; gap: 5px;
+    background: rgba(0,0,0,0.35);
+    border: 1.5px solid var(--gold-d);
+    border-radius: 20px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .coins-pill:hover { background: rgba(200,168,75,0.15); }
+  .coin-icon { font-size: 18px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)); }
+  .coins-amount { font-size: 14px; font-weight: 700; color: var(--gold-l); }
+
+  .settings-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.3);
+    border: 1.5px solid var(--brown-mid);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .settings-btn:hover { background: rgba(200,168,75,0.2); border-color: var(--gold); transform: rotate(30deg); }
+  .settings-btn svg { width: 18px; height: 18px; fill: var(--cream); }
+
+  /* ── HERO / CENTER SCENE ── */
+  .hero {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 20px 20px 10px;
+  }
+
+  /* Western background painting */
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg,
+        #3d0e0e 0%,
+        #7a2010 25%,
+        #c05020 50%,
+        #d88040 70%,
+        #8a4020 85%,
+        #2a1208 100%
+      );
+    z-index: 0;
+  }
+  /* Flat silhouette shapes */
+  .hero-bg::before {
+    content: '';
+    position: absolute;
+    bottom: 30%;
+    left: 0; right: 0;
+    height: 40%;
+    background:
+      radial-gradient(ellipse 120px 180px at 15% 100%, #1a0a04 99%, transparent 100%),
+      radial-gradient(ellipse 80px 140px at 25% 100%, #1a0a04 99%, transparent 100%),
+      radial-gradient(ellipse 200px 160px at 50% 110%, #1a0a04 99%, transparent 100%),
+      radial-gradient(ellipse 90px 150px at 75% 100%, #1a0a04 99%, transparent 100%),
+      radial-gradient(ellipse 110px 130px at 88% 100%, #1a0a04 99%, transparent 100%);
+  }
+  .hero-bg::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 32%;
+    background: linear-gradient(180deg, transparent, #1a0a04 80%);
+  }
+
+  /* Cactus SVG shapes */
+  .cactus {
+    position: absolute;
+    bottom: 28%;
+    z-index: 1;
+    opacity: 0.85;
+  }
+  .cactus-l { left: 8%; }
+  .cactus-r { right: 10%; transform: scaleX(-1); }
+
+  /* Sun glow */
+  .sun {
+    position: absolute;
+    top: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70px; height: 70px;
+    background: radial-gradient(circle, #ffcc44 0%, #ff7700 50%, transparent 75%);
+    border-radius: 50%;
+    opacity: 0.6;
+    filter: blur(8px);
+    z-index: 1;
+    animation: sunPulse 3s ease-in-out infinite alternate;
+  }
+  @keyframes sunPulse {
+    from { opacity: 0.5; transform: translateX(-50%) scale(1); }
+    to   { opacity: 0.75; transform: translateX(-50%) scale(1.1); }
+  }
+
+  /* Dust particles */
+  .dust {
+    position: absolute;
+    bottom: 29%;
+    width: 100%;
+    height: 20px;
+    background: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(200,120,60,0.12) 42px);
+    filter: blur(2px);
+    z-index: 1;
+  }
+
+  /* ── PLAY BUTTONS ── */
+  .play-btn {
+    width: 100%;
+    height: 108px;
+    border-radius: 16px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+    overflow: hidden;
+    transition: transform 0.1s, filter 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    text-align: left;
+  }
+  .play-btn:active { transform: translateY(3px); filter: brightness(0.9); }
+
+  .btn-online {
+    background: linear-gradient(135deg, #c0281c 0%, #8a1010 60%, #600808 100%);
+    box-shadow:
+      0 6px 0 #4a0808,
+      0 8px 20px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(255,200,150,0.15);
+    border: 2px solid #e04030;
+    outline: 3px solid #4a0808;
+    outline-offset: -5px;
+  }
+  .btn-online::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 50%);
+    border-radius: 14px;
+  }
+
+  .btn-solo {
+    background: linear-gradient(135deg, #5c3010 0%, #3a1a08 60%, #241004 100%);
+    box-shadow:
+      0 6px 0 #1a0a04,
+      0 8px 20px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(255,200,100,0.1);
+    border: 2px solid #c8a84b;
+    outline: 3px solid #1a0a04;
+    outline-offset: -5px;
+  }
+  .btn-solo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 50%);
+    border-radius: 14px;
+  }
+
+  /* Stamp/texture overlay on button */
+  .btn-texture {
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Ccircle cx='1' cy='1' r='0.5' fill='rgba(0,0,0,0.15)'/%3E%3C/svg%3E");
+    border-radius: 14px;
+    pointer-events: none;
+  }
+
+  .btn-icon-wrap {
+    width: 72px; height: 72px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .btn-online .btn-icon-wrap {
+    background: rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,150,120,0.3);
+  }
+  .btn-solo .btn-icon-wrap {
+    background: rgba(0,0,0,0.3);
+    border: 2px solid rgba(200,168,75,0.3);
+  }
+  .btn-icon-wrap svg { width: 52px; height: 52px; }
+
+  .btn-text-wrap { flex: 1; position: relative; z-index: 1; }
+  .btn-label {
+    font-family: 'Rye', serif;
+    font-size: 24px;
+    color: #fff;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.8), 0 0 20px rgba(255,100,50,0.3);
+    display: block;
+    line-height: 1.1;
+  }
+  .btn-solo .btn-label { color: var(--gold-l); text-shadow: 2px 2px 0 rgba(0,0,0,0.8), 0 0 15px rgba(200,168,75,0.4); }
+  .btn-sub {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 5px;
+    display: block;
+  }
+  .btn-online .btn-sub { color: rgba(255,200,180,0.7); }
+  .btn-solo .btn-sub { color: rgba(200,168,75,0.6); }
+
+  .btn-arrow {
+    position: relative; z-index: 1;
+    flex-shrink: 0;
+  }
+  .btn-arrow svg { width: 28px; height: 28px; }
+  .btn-online .btn-arrow svg { fill: rgba(255,200,180,0.5); }
+  .btn-solo .btn-arrow svg { fill: rgba(200,168,75,0.5); }
+
+  /* Pulse ring on online btn */
+  .pulse-ring {
+    position: absolute;
+    top: 50%; left: 20px;
+    transform: translateY(-50%);
+    width: 80px; height: 80px;
+    border-radius: 14px;
+    border: 2px solid rgba(255,80,50,0.6);
+    animation: pulseRing 2s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes pulseRing {
+    0%   { transform: translateY(-50%) scale(0.95); opacity: 0.8; }
+    100% { transform: translateY(-50%) scale(1.25); opacity: 0; }
+  }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    height: 82px;
+    background: linear-gradient(180deg, var(--brown) 0%, #0e0604 100%);
+    border-top: 2px solid var(--gold-d);
+    display: flex;
+    align-items: stretch;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+  .bottom-nav::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.5;
+  }
+
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s;
+    padding-bottom: 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.04); }
+  .nav-item.active {
+    background: rgba(200,168,75,0.08);
+  }
+  .nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 20%; right: 20%;
+    height: 3px;
+    background: var(--gold);
+    border-radius: 2px 2px 0 0;
+    box-shadow: 0 0 8px var(--gold);
+  }
+  .nav-icon { font-size: 22px; line-height: 1; filter: grayscale(0.3); }
+  .nav-item.active .nav-icon { filter: none; }
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(245,230,200,0.45);
+  }
+  .nav-item.active .nav-label { color: var(--gold-l); }
+
+  /* ── PROFILE DROPDOWN ── */
+  .profile-dropdown {
+    position: absolute;
+    top: 134px; left: 14px;
+    width: 200px;
+    background: #1e0e06;
+    border: 1.5px solid var(--gold-d);
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 100;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    transform-origin: top left;
+    transform: scale(0);
+    opacity: 0;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s;
+  }
+  .profile-dropdown.open { transform: scale(1); opacity: 1; }
+
+  .dropdown-header {
+    padding: 12px 14px;
+    background: var(--crimson-d);
+    border-bottom: 1px solid var(--gold-d);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .dropdown-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--gold); background: var(--dark); overflow: hidden; }
+  .dropdown-avatar svg { width: 100%; height: 100%; }
+  .dropdown-name { font-family: 'Rye', serif; font-size: 13px; color: var(--cream); }
+  .dropdown-id { font-size: 10px; color: var(--gold-d); }
+
+  .dropdown-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover { background: rgba(200,168,75,0.1); }
+  .dropdown-item span:first-child { font-size: 18px; }
+  .dropdown-item span:last-child { font-size: 13px; font-weight: 600; color: var(--cream); }
+  .dropdown-item.danger span:last-child { color: #e05040; }
+
+  /* ── OVERLAY ── */
+  .overlay {
+    position: absolute; inset: 0;
+    z-index: 90;
+    display: none;
+  }
+  .overlay.show { display: block; }
+
+  /* Safe area */
+  .safe-bottom { height: 8px; background: #0e0604; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span class="status-time">21:30</span>
+    <div class="status-icons">
+      <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
+  </div>
+
+  <!-- TOP PROFILE BAR -->
+  <div class="top-bar">
+    <div class="avatar-ring" id="avatarBtn" onclick="toggleDropdown()">
+      <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="30" cy="30" r="30" fill="#2a1208"/>
+        <!-- wolf body -->
+        <ellipse cx="30" cy="42" rx="14" ry="10" fill="#5c3010"/>
+        <!-- vest -->
+        <path d="M22 40 Q30 34 38 40 L38 54 L22 54Z" fill="#3a1a08"/>
+        <path d="M26 40 Q30 36 34 40 L34 54 L26 54Z" fill="#8a5020"/>
+        <!-- head -->
+        <ellipse cx="30" cy="24" rx="12" ry="11" fill="#7a4020"/>
+        <!-- ears -->
+        <polygon points="20,16 17,8 25,14" fill="#7a4020"/>
+        <polygon points="40,16 43,8 35,14" fill="#7a4020"/>
+        <polygon points="20,15 18,10 24,14" fill="#c07040"/>
+        <polygon points="40,15 42,10 36,14" fill="#c07040"/>
+        <!-- face -->
+        <ellipse cx="30" cy="26" rx="8" ry="7" fill="#c07040"/>
+        <!-- eyes -->
+        <circle cx="26" cy="22" r="3" fill="white"/>
+        <circle cx="34" cy="22" r="3" fill="white"/>
+        <circle cx="27" cy="23" r="1.5" fill="#1a0a04"/>
+        <circle cx="35" cy="23" r="1.5" fill="#1a0a04"/>
+        <!-- nose -->
+        <ellipse cx="30" cy="27" rx="2.5" ry="1.8" fill="#3a1a08"/>
+        <!-- smile -->
+        <path d="M25 30 Q30 33 35 30" stroke="#3a1a08" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <!-- hat -->
+        <rect x="16" y="14" width="28" height="5" rx="2" fill="#1a0a04"/>
+        <rect x="20" y="5" width="20" height="12" rx="4" fill="#1a0a04"/>
+        <!-- sheriff star -->
+        <text x="28" y="40" font-size="9" fill="#c8a84b" text-anchor="middle">★</text>
+      </svg>
+    </div>
+
+    <div class="profile-info">
+      <div class="profile-name-row">
+        <span class="profile-name">Hviegas</span>
+        <span class="crown-badge">👑</span>
+        <span class="level-badge">Nv 12</span>
+      </div>
+      <div class="xp-row">
+        <div class="xp-bar-bg"><div class="xp-bar-fill"></div></div>
+        <span class="xp-text">680 / 1000 XP</span>
+      </div>
+    </div>
+
+    <div class="coins-pill">
+      <span class="coin-icon">🪙</span>
+      <span class="coins-amount">4.250</span>
+    </div>
+
+    <div class="settings-btn" onclick="toggleDropdown()">
+      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+    </div>
+  </div>
+
+  <!-- PROFILE DROPDOWN -->
+  <div class="overlay" id="overlay" onclick="closeDropdown()"></div>
+  <div class="profile-dropdown" id="dropdown">
+    <div class="dropdown-header">
+      <div class="dropdown-avatar">
+        <svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="#2a1208"/><ellipse cx="30" cy="24" rx="12" ry="11" fill="#7a4020"/><rect x="20" y="5" width="20" height="12" rx="4" fill="#1a0a04"/><rect x="16" y="14" width="28" height="5" rx="2" fill="#1a0a04"/></svg>
+      </div>
+      <div>
+        <div class="dropdown-name">Hviegas</div>
+        <div class="dropdown-id">#8A4591F1A</div>
+      </div>
+    </div>
+    <div class="dropdown-item"><span>✏️</span><span>Editar Perfil</span></div>
+    <div class="dropdown-item"><span>🏆</span><span>Conquistas</span></div>
+    <div class="dropdown-item"><span>⚙️</span><span>Configurações</span></div>
+    <div class="dropdown-item danger"><span>🚪</span><span>Sair</span></div>
+  </div>
+
+  <!-- HERO SCENE -->
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="sun"></div>
+
+    <!-- Cactus left -->
+    <svg class="cactus cactus-l" width="38" height="80" viewBox="0 0 38 80">
+      <rect x="15" y="20" width="8" height="60" rx="4" fill="#1a0a04"/>
+      <rect x="2" y="35" width="16" height="7" rx="3.5" fill="#1a0a04"/>
+      <rect x="2" y="28" width="8" height="15" rx="4" fill="#1a0a04"/>
+      <rect x="22" y="42" width="16" height="7" rx="3.5" fill="#1a0a04"/>
+      <rect x="30" y="35" width="8" height="15" rx="4" fill="#1a0a04"/>
+    </svg>
+
+    <!-- Cactus right -->
+    <svg class="cactus cactus-r" width="30" height="60" viewBox="0 0 30 60">
+      <rect x="11" y="15" width="8" height="45" rx="4" fill="#1a0a04"/>
+      <rect x="0" y="26" width="13" height="6" rx="3" fill="#1a0a04"/>
+      <rect x="0" y="20" width="7" height="14" rx="3.5" fill="#1a0a04"/>
+    </svg>
+
+    <div class="dust"></div>
+
+    <!-- ONLINE BUTTON -->
+    <button class="play-btn btn-online" onclick="ripple(event, this)">
+      <div class="btn-texture"></div>
+      <div class="pulse-ring"></div>
+      <div class="btn-icon-wrap">
+        <!-- 2 players icon -->
+        <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- player 1 -->
+          <circle cx="17" cy="14" r="7" fill="rgba(255,200,180,0.9)" stroke="rgba(0,0,0,0.4)" stroke-width="1.5"/>
+          <path d="M5 40 C5 30 29 30 29 40 L29 44 L5 44Z" fill="rgba(255,200,180,0.9)" stroke="rgba(0,0,0,0.4)" stroke-width="1.5"/>
+          <!-- player 2 -->
+          <circle cx="36" cy="14" r="7" fill="rgba(255,120,80,0.9)" stroke="rgba(0,0,0,0.4)" stroke-width="1.5"/>
+          <path d="M24 40 C24 30 48 30 48 40 L48 44 L24 44Z" fill="rgba(255,120,80,0.9)" stroke="rgba(0,0,0,0.4)" stroke-width="1.5"/>
+          <!-- VS -->
+          <text x="26" y="28" text-anchor="middle" font-family="serif" font-weight="900" font-size="10" fill="white" stroke="#7a1010" stroke-width="0.5">VS</text>
+          <!-- swords -->
+          <line x1="14" y1="34" x2="22" y2="26" stroke="rgba(255,220,100,0.8)" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="30" y1="26" x2="38" y2="34" stroke="rgba(255,220,100,0.8)" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="btn-text-wrap">
+        <span class="btn-label">Jogar Online</span>
+        <span class="btn-sub">2 Jogadores • Ranked</span>
+      </div>
+      <div class="btn-arrow">
+        <svg viewBox="0 0 24 24"><path d="M8 5l8 7-8 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </div>
+    </button>
+
+    <!-- SOLO BUTTON -->
+    <button class="play-btn btn-solo" onclick="ripple(event, this)">
+      <div class="btn-texture"></div>
+      <div class="btn-icon-wrap">
+        <!-- 1 player icon (cowboy) -->
+        <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="26" cy="16" r="9" fill="rgba(200,168,75,0.9)" stroke="rgba(0,0,0,0.4)" stroke-width="1.5"/>
+          <!-- hat -->
+          <rect x="14" y="10" width="24" height="5" rx="2.5" fill="#1a0a04"/>
+          <rect x="18" y="4" width="16" height="9" rx="4" fill="#1a0a04"/>
+          <!-- body -->
+          <path d="M12 46 C12 34 40 34 40 46 L40 50 L12 50Z" fill="rgba(200,168,75,0.9)" stroke="rgba(0,0,0,0.4)" stroke-width="1.5"/>
+          <!-- star badge -->
+          <text x="26" y="38" text-anchor="middle" font-size="12" fill="#c8a84b">★</text>
+          <!-- gun -->
+          <rect x="34" y="32" width="12" height="4" rx="2" fill="#4a3010" transform="rotate(30 34 32)"/>
+        </svg>
+      </div>
+      <div class="btn-text-wrap">
+        <span class="btn-label">Jogar Solo</span>
+        <span class="btn-sub">1 Jogador • vs IA</span>
+      </div>
+      <div class="btn-arrow">
+        <svg viewBox="0 0 24 24"><path d="M8 5l8 7-8 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </div>
+    </button>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="setNav(this)">
+      <span class="nav-icon">🔫</span>
+      <span class="nav-label">Home</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">🃏</span>
+      <span class="nav-label">Cards</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">🪙</span>
+      <span class="nav-label">Loja</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">🤠</span>
+      <span class="nav-label">Amigos</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">Ranking</span>
+    </div>
+  </div>
+  <div class="safe-bottom"></div>
+
+</div>
+
+<script>
+  function toggleDropdown() {
+    const d = document.getElementById('dropdown');
+    const o = document.getElementById('overlay');
+    const open = d.classList.contains('open');
+    if (open) { d.classList.remove('open'); o.classList.remove('show'); }
+    else       { d.classList.add('open');    o.classList.add('show'); }
+  }
+  function closeDropdown() {
+    document.getElementById('dropdown').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+  }
+  function setNav(el) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+  }
+  function ripple(e, btn) {
+    const r = document.createElement('span');
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    r.style.cssText = `
+      position:absolute; border-radius:50%;
+      width:${size}px; height:${size}px;
+      left:${e.clientX - rect.left - size/2}px;
+      top:${e.clientY - rect.top - size/2}px;
+      background:rgba(255,255,255,0.18);
+      transform:scale(0); animation:rippleAnim 0.5s ease-out forwards;
+      pointer-events:none; z-index:20;
+    `;
+    btn.appendChild(r);
+    setTimeout(() => r.remove(), 500);
+  }
+  const style = document.createElement('style');
+  style.textContent = `@keyframes rippleAnim { to { transform:scale(2.5); opacity:0; } }`;
+  document.head.appendChild(style);
+</script>
+</body>
+</html>

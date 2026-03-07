@@ -1,67 +1,89 @@
-import type { PlayerState, CardType, GameMode } from '../types';
-import { getAvailableCards } from './gameEngine';
-
-export type BotDifficulty = 'easy' | 'medium' | 'hard';
+import type { PlayerState, CardType, GameMode, BotDifficulty } from "../types";
+import { getAvailableCards } from "./gameEngine";
+import { getSmartBotCard, hasStrategy } from "./strategyLoader";
 
 export function botChooseCard(
   botState: PlayerState,
   playerHistory: CardType[],
   mode: GameMode,
-  difficulty: BotDifficulty
+  difficulty: BotDifficulty,
+  playerState?: PlayerState,
 ): CardType {
   const available = getAvailableCards(mode, botState.ammo);
 
-  if (difficulty === 'easy' || available.length === 1) {
+  // ─── Estratégia treinada (Q-Learning) ────────────────────────────────
+  // Se os arquivos de estratégia estão carregados, usá-los para todos os níveis
+  if (hasStrategy(mode) && playerState) {
+    const lastPlayerCard =
+      playerHistory.length > 0 ? playerHistory[playerHistory.length - 1] : null;
+
+    const smartCard = getSmartBotCard(
+      mode,
+      difficulty,
+      botState.life,
+      botState.ammo,
+      playerState.life,
+      playerState.ammo,
+      lastPlayerCard,
+      available,
+    );
+
+    if (smartCard) return smartCard;
+  }
+
+  // ─── Fallback: lógica original ───────────────────────────────────────
+  if (difficulty === "easy" || available.length === 1) {
     return available[Math.floor(Math.random() * available.length)];
   }
 
   const rand = Math.random() * 100;
 
-  if (difficulty === 'medium') {
+  if (difficulty === "medium") {
     if (botState.ammo === 0) {
-      if (rand < 80) return 'reload';
-      return 'dodge';
+      if (rand < 80) return "reload";
+      return "dodge";
     } else if (botState.ammo === 1) {
-      if (rand < 40 && available.includes('shot')) return 'shot';
-      if (rand < 70) return 'dodge';
-      return 'reload';
+      if (rand < 40 && available.includes("shot")) return "shot";
+      if (rand < 70) return "dodge";
+      return "reload";
     } else if (botState.ammo === 2) {
-      if (rand < 35 && available.includes('shot')) return 'shot';
-      if (rand < 60 && available.includes('double_shot')) return 'double_shot';
-      if (rand < 80) return 'dodge';
-      return 'reload';
+      if (rand < 35 && available.includes("shot")) return "shot";
+      if (rand < 60 && available.includes("double_shot")) return "double_shot";
+      if (rand < 80) return "dodge";
+      return "reload";
     } else {
-      if (rand < 30 && available.includes('shot')) return 'shot';
-      if (rand < 70 && available.includes('double_shot')) return 'double_shot';
-      if (rand < 85) return 'dodge';
-      return 'reload';
+      if (rand < 30 && available.includes("shot")) return "shot";
+      if (rand < 70 && available.includes("double_shot")) return "double_shot";
+      if (rand < 85) return "dodge";
+      return "reload";
     }
   }
 
   // Hard Logic
-  const lastPlayerCard = playerHistory.length > 0 ? playerHistory[playerHistory.length - 1] : null;
+  const lastPlayerCard =
+    playerHistory.length > 0 ? playerHistory[playerHistory.length - 1] : null;
 
   if (botState.ammo === 0) {
-    if (lastPlayerCard === 'reload' || lastPlayerCard === 'counter') {
-      return 'reload';
+    if (lastPlayerCard === "reload" || lastPlayerCard === "counter") {
+      return "reload";
     }
-    return rand < 50 ? 'reload' : 'dodge';
+    return rand < 50 ? "reload" : "dodge";
   }
 
-  if (lastPlayerCard === 'shot' || lastPlayerCard === 'double_shot') {
-    if (available.includes('counter') && rand < 60) return 'counter';
-    if (rand < 40) return 'dodge';
-    return available.includes('double_shot') ? 'double_shot' : 'shot';
+  if (lastPlayerCard === "shot" || lastPlayerCard === "double_shot") {
+    if (available.includes("counter") && rand < 60) return "counter";
+    if (rand < 40) return "dodge";
+    return available.includes("double_shot") ? "double_shot" : "shot";
   }
 
-  if (lastPlayerCard === 'counter' || lastPlayerCard === 'dodge') {
-    return 'reload'; 
+  if (lastPlayerCard === "counter" || lastPlayerCard === "dodge") {
+    return "reload";
   }
 
-  if (lastPlayerCard === 'reload') {
-    if (available.includes('double_shot') && rand < 70) return 'double_shot';
-    if (available.includes('shot')) return 'shot';
-    return 'reload';
+  if (lastPlayerCard === "reload") {
+    if (available.includes("double_shot") && rand < 70) return "double_shot";
+    if (available.includes("shot")) return "shot";
+    return "reload";
   }
 
   return available[Math.floor(Math.random() * available.length)];

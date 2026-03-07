@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { useAuthStore } from "../../store/authStore";
+import { createPlayerProfile, generateUniquePlayerCode } from "../../lib/firebaseService";
 
 export function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -36,6 +37,27 @@ export function LoginScreen() {
         firebaseUser = credential.user;
         const name = displayName.trim() || "Pistoleiro Anônimo";
         await updateProfile(firebaseUser, { displayName: name });
+        // Create Firestore player profile immediately for newly registered users
+        try {
+          const playerCode = await generateUniquePlayerCode();
+          const profile = {
+            uid: firebaseUser.uid,
+            displayName: name,
+            playerCode,
+            avatar: "marshal",
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            totalGames: 0,
+            winRate: 0,
+            createdAt: Date.now(),
+            lastSeen: Date.now(),
+            onlineStatus: "online",
+          };
+          await createPlayerProfile(profile as any);
+        } catch (err) {
+          console.warn("Could not create player profile immediately:", err);
+        }
       } else {
         const credential = await signInWithEmailAndPassword(
           auth,

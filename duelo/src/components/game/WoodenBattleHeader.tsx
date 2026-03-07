@@ -8,10 +8,17 @@ interface WoodenBattleHeaderProps {
   playerStars: number;
   opponentStars: number;
   currentRound: number;
+  turn: number;
   onPause: () => void;
 }
 
-function Star({ active, danger = false }: { active: boolean; danger?: boolean }) {
+function Star({
+  active,
+  danger = false,
+}: {
+  active: boolean;
+  danger?: boolean;
+}) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -25,7 +32,13 @@ function Star({ active, danger = false }: { active: boolean; danger?: boolean })
   );
 }
 
-function PlayerPanel({ player, isRight = false }: { player: PlayerState; isRight?: boolean }) {
+function PlayerPanel({
+  player,
+  isRight = false,
+}: {
+  player: PlayerState;
+  isRight?: boolean;
+}) {
   const charDef = getCharacter(player.avatar);
   const cropPos = `center ${charDef.avatarCropY}`;
 
@@ -64,17 +77,30 @@ function PlayerPanel({ player, isRight = false }: { player: PlayerState; isRight
               viewBox="0 0 10 24"
               className={`battle-bullet${i < player.ammo ? " is-active" : ""}`}
             >
-              <rect x="1" y="10" width="8" height="14" rx="1"
+              <rect
+                x="1"
+                y="10"
+                width="8"
+                height="14"
+                rx="1"
                 fill={i < player.ammo ? "#B45309" : "#374151"}
                 stroke={i < player.ammo ? "#78350F" : "#1F2937"}
                 strokeWidth="0.5"
               />
-              <ellipse cx="5" cy="10" rx="4" ry="3"
+              <ellipse
+                cx="5"
+                cy="10"
+                rx="4"
+                ry="3"
                 fill={i < player.ammo ? "#FBBF24" : "#4B5563"}
                 stroke={i < player.ammo ? "#D97706" : "#374151"}
                 strokeWidth="0.5"
               />
-              <ellipse cx="5" cy="8" rx="3" ry="4"
+              <ellipse
+                cx="5"
+                cy="8"
+                rx="3"
+                ry="4"
                 fill={i < player.ammo ? "#FDE68A" : "#6B7280"}
               />
             </svg>
@@ -92,6 +118,7 @@ export function WoodenBattleHeader({
   playerStars,
   opponentStars,
   currentRound,
+  turn,
   onPause,
 }: WoodenBattleHeaderProps) {
   return (
@@ -128,6 +155,12 @@ export function WoodenBattleHeader({
                   alt="BBD"
                   className="battle-top-logo"
                 />
+
+                {/* Turn indicator (small, centered) */}
+                <div className="battle-turn-indicator">
+                  TURNO {String(turn)}
+                </div>
+
                 {bestOf3 ? (
                   <div className="battle-top-stars-row">
                     <div className="battle-top-stars">
@@ -135,10 +168,16 @@ export function WoodenBattleHeader({
                         <Star key={`p-${i}`} active={i < playerStars} />
                       ))}
                     </div>
-                    <span className="battle-top-round-label">R{currentRound}</span>
+                    <span className="battle-top-round-label">
+                      R{currentRound}
+                    </span>
                     <div className="battle-top-stars">
                       {[0, 1].map((i) => (
-                        <Star key={`o-${i}`} active={i < opponentStars} danger />
+                        <Star
+                          key={`o-${i}`}
+                          active={i < opponentStars}
+                          danger
+                        />
                       ))}
                     </div>
                   </div>
