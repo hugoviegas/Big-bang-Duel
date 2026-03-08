@@ -351,7 +351,27 @@ export const useAuthStore = create<AuthState>()(
           if (Date.now() > expiresAt) {
             console.log("Guest session expired");
             state.logout();
+            return;
           }
+        }
+
+        // If a user was restored from localStorage, re-establish the
+        // real-time profile subscription and ensure their Firestore profile.
+        // This fixes the PWA/localStorage case where the app bootstraps from
+        // cached state but never re-attaches listeners, causing DB updates
+        // to not reflect in the local UI.
+        try {
+          if (state?.user && typeof state.setUser === "function") {
+            // Re-attach listener using the restored user object
+            state.setUser(state.user);
+          }
+          // Ensure profile exists in Firestore (creates players/{uid} if missing)
+          if (state?.user && typeof state.ensureProfile === "function") {
+            void state.ensureProfile();
+          }
+        } catch (err) {
+          // Don't break hydration for minor errors
+          console.warn("[authStore] onRehydrateStorage error:", err);
         }
       },
     },
