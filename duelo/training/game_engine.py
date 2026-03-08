@@ -36,13 +36,13 @@ LIFE_BY_MODE: Dict[str, int] = {
 
 MAX_AMMO = 3
 MAX_TURNS = 50
-MAX_DODGE_STREAK = 4
+MAX_DODGE_STREAK = 3
 MAX_DOUBLE_SHOT_USES = 3
 
 
-def get_available_cards(mode: str, ammo: int, double_shots_left: int = MAX_DOUBLE_SHOT_USES) -> List[str]:
-    """Retorna cartas disponíveis baseado no modo, munição atual e usos de double_shot restantes.
-    Espelha exatamente getAvailableCards() do TypeScript, com checagem adicional de `double_shots_left`.
+def get_available_cards(mode: str, ammo: int, double_shots_left: int = MAX_DOUBLE_SHOT_USES, dodge_streak: int = 0) -> List[str]:
+    """Retorna cartas disponíveis baseado no modo, munição atual, usos de double_shot e dodge_streak.
+    Espelha exatamente getAvailableCards() do TypeScript.
     """
     cards = []
     for card in CARDS_BY_MODE[mode]:
@@ -52,6 +52,8 @@ def get_available_cards(mode: str, ammo: int, double_shots_left: int = MAX_DOUBL
             continue
         if card == CARD_COUNTER and ammo < 1:
             continue
+        if card == CARD_DODGE and dodge_streak >= MAX_DODGE_STREAK:
+            continue  # Can't dodge if already at max streak (3)
         cards.append(card)
     return cards
 

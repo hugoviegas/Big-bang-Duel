@@ -356,8 +356,12 @@ class UltraFastTrainer:
         s = self._random_start_state() if self.rng.random() < 0.3 else self._initial_state()
 
         while True:
-            p_cols = self.available_cols[(s['p_ammo'], s['p_double'])]
-            o_cols = self.available_cols[(s['o_ammo'], s['o_double'])]
+            # Filter available columns: ammo+double_shots constraints, PLUS dodge_streak constraint
+            p_base_cols = self.available_cols[(s['p_ammo'], s['p_double'])]
+            p_cols = [c for c in p_base_cols if self.col_to_action[c] != A_DODGE or s['p_dodge'] < MAX_DODGE_STREAK]
+            
+            o_base_cols = self.available_cols[(s['o_ammo'], s['o_double'])]
+            o_cols = [c for c in o_base_cols if self.col_to_action[c] != A_DODGE or s['o_dodge'] < MAX_DODGE_STREAK]
 
             p_state_idx = self._state_index(
                 s['p_life'], s['p_ammo'], s['o_life'], s['last_o'], s['p_dodge'], s['p_double']
@@ -416,7 +420,10 @@ class UltraFastTrainer:
                     s['o_life'], s['o_ammo'], s['p_life'], s['last_p'], s['o_dodge'], s['o_double']
                 )
                 next_p_cols = self.available_cols[(s['p_ammo'], s['p_double'])]
+                next_p_cols = [c for c in next_p_cols if self.col_to_action[c] != A_DODGE or s['p_dodge'] < MAX_DODGE_STREAK]
+                
                 next_o_cols = self.available_cols[(s['o_ammo'], s['o_double'])]
+                next_o_cols = [c for c in next_o_cols if self.col_to_action[c] != A_DODGE or s['o_dodge'] < MAX_DODGE_STREAK]
 
                 max_next_p = max(float(self.q_p[next_p_idx, c]) for c in next_p_cols)
                 max_next_o = max(float(self.q_o[next_o_idx, c]) for c in next_o_cols)
