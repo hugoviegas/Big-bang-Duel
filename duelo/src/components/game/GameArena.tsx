@@ -9,6 +9,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useMatchSync } from "../../hooks/useFirebase";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
 import { WoodenBattleHeader } from "./WoodenBattleHeader";
+import { ref, get as rtdbGet } from "firebase/database";
+import { rtdb } from "../../lib/firebase";
+import { useAuthStore } from "../../store/authStore";
 
 export function GameArena() {
   const {
@@ -34,6 +37,7 @@ export function GameArena() {
   const [showPauseMenu, setShowPauseMenu] = useState(false);
   const { joinRoom } = useMatchSync(roomId || null);
   const { markPlayerReturnedToMenu, cancelWaitingRoom } = useFirebaseRoom();
+  const user = useAuthStore((s) => s.user);
 
   const handleBackToMenuOnline = async () => {
     if (!roomId) {
@@ -41,6 +45,9 @@ export function GameArena() {
       navigate("/menu");
       return;
     }
+
+    // Mark intentional leave so the auto-reconnect in menu.tsx doesn't fire
+    sessionStorage.setItem(`bbd_left_${roomId}`, "1");
 
     try {
       if (roomStatus === "waiting") {
@@ -55,6 +62,13 @@ export function GameArena() {
     useGameStore.getState().quitGame();
     navigate("/menu");
   };
+
+  // Guard: if we land on /game without a roomId (solo) while state is idle, redirect to menu
+  useEffect(() => {
+    if (!roomId && useGameStore.getState().phase === "idle") {
+      navigate("/menu", { replace: true });
+    }
+  }, [roomId, navigate]);
 
   // Track previous room status to detect entry
   useEffect(() => {
@@ -103,18 +117,39 @@ export function GameArena() {
     const checkAndJoin = async () => {
       const state = useGameStore.getState();
 
-      // If we have a roomId but the game isn't initialized or we're not the host
+      // If we have a roomId but the game isn't initialized
       if (roomId && state.phase === "idle") {
-        // Try to join as guest or verify if we are already in
+        // Read room data first to determine mode and role
+        const roomRef = ref(rtdb, `rooms/${roomId}`);
+        const snap = await rtdbGet(roomRef);
+        if (!snap.exists()) return;
+        const roomData = snap.val();
+
+        const isHost = user?.uid === roomData.hostId;
+        const mode = roomData.mode || "normal";
+        const config = roomData.config || {};
+        const avatar = isHost
+          ? (roomData.hostAvatar ?? "marshal")
+          : (roomData.guestAvatar ?? user?.avatar ?? "marshal");
+
+        // Try to join (or verify already in)
         const success = await joinRoom(roomId);
         if (success) {
-          state.initializeGame("normal", true, false, roomId);
+          state.initializeGame(
+            mode,
+            true,
+            isHost,
+            roomId,
+            avatar,
+            config,
+            user?.displayName,
+          );
         }
       }
     };
 
     checkAndJoin();
-  }, [roomId, joinRoom]);
+  }, [roomId, joinRoom, user?.uid, user?.avatar, user?.displayName]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -132,6 +167,17 @@ export function GameArena() {
     lastResult &&
     (lastResult.playerLifeLost > 0 || lastResult.opponentLifeLost > 0);
 
+  const [dustParticles] = useState(() =>
+    Array.from({ length: 6 }).map((_, i) => ({
+      id: i,
+      width: `${2 + Math.random() * 4}px`,
+      height: `${2 + Math.random() * 4}px`,
+      left: `${10 + Math.random() * 80}%`,
+      bottom: `${Math.random() * 20}%`,
+      animationDelay: `${Math.random() * 5}s`,
+    })),
+  );
+
   return (
     <div
       className={`relative w-full min-h-[100svh] bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center overflow-hidden ${isShaking ? "screen-shake" : ""}`}
@@ -140,22 +186,22 @@ export function GameArena() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none" />
 
       {/* Dust particles */}
-      {Array.from({ length: 6 }).map((_, i) => (
+      {dustParticles.map((p) => (
         <div
-          key={i}
+          key={p.id}
           className="dust-particle absolute rounded-full bg-sand/40 pointer-events-none z-0"
           style={{
-            width: `${2 + Math.random() * 4}px`,
-            height: `${2 + Math.random() * 4}px`,
-            left: `${10 + Math.random() * 80}%`,
-            bottom: `${Math.random() * 20}%`,
-            animationDelay: `${Math.random() * 5}s`,
+            width: p.width,
+            height: p.height,
+            left: p.left,
+            bottom: p.bottom,
+            animationDelay: p.animationDelay,
           }}
         />
       ))}
 
       {/* Main Layout */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col min-h-[100svh]">
+      <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col h-[100svh] pb-[180px] sm:pb-[200px]">
         <WoodenBattleHeader
           player={player}
           opponent={opponent}
@@ -175,7 +221,7 @@ export function GameArena() {
         />
 
         {/* ===== ARENA — CHARACTERS ===== */}
-        <div className="flex-1 flex items-end justify-between px-8 md:px-16 pb-75 sm:pb-56 md:pb-60 relative mt-2">
+        <div className="flex-1 flex items-center justify-between px-3 sm:px-6 md:px-12 lg:px-16 relative">
           <Character player={player} />
           <Character player={opponent} isRight />
         </div>

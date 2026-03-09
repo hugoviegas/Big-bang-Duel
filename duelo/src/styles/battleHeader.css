@@ -1,17 +1,17 @@
 .battle-top-wrap {
   width: 100%;
-  padding: clamp(8px, 1.8vw, 16px) clamp(10px, 3vw, 22px) 0;
+  padding: clamp(6px, 1.5vw, 14px) clamp(8px, 2.5vw, 20px) 0;
 }
 
 .battle-top-nine {
   width: min(1140px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: clamp(28px, 6.4vw, 76px) 1fr clamp(28px, 6.4vw, 76px);
+  grid-template-columns: clamp(20px, 5.5vw, 76px) 1fr clamp(20px, 5.5vw, 76px);
   grid-template-rows:
-    clamp(24px, 4.4vw, 52px) minmax(clamp(110px, 22vw, 170px), auto)
-    clamp(28px, 5.5vw, 64px);
-  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.45));
+    clamp(18px, 3.8vw, 48px) minmax(clamp(90px, 18vw, 150px), auto)
+    clamp(20px, 4.5vw, 58px);
+  filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.45));
 }
 
 .battle-nine-tl,
@@ -96,7 +96,7 @@
   position: relative;
   z-index: 1;
   height: 100%;
-  padding: clamp(8px, 1.8vw, 14px) clamp(12px, 2.4vw, 20px);
+  padding: clamp(6px, 1.5vw, 12px) clamp(10px, 2vw, 18px);
   display: flex;
   align-items: center;
 }
@@ -116,10 +116,10 @@
 /* ── Pause button ── */
 .battle-top-pause-btn {
   position: absolute;
-  top: clamp(6px, 1vw, 10px);
-  right: clamp(8px, 1.4vw, 14px);
-  width: clamp(28px, 3.6vw, 40px);
-  height: clamp(28px, 3.6vw, 40px);
+  top: clamp(4px, 0.8vw, 8px);
+  right: clamp(6px, 1.2vw, 12px);
+  width: clamp(24px, 3.2vw, 38px);
+  height: clamp(24px, 3.2vw, 38px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -133,8 +133,8 @@
 }
 
 .battle-top-pause-btn svg {
-  width: clamp(12px, 1.6vw, 18px);
-  height: clamp(12px, 1.6vw, 18px);
+  width: clamp(10px, 1.4vw, 16px);
+  height: clamp(10px, 1.4vw, 16px);
 }
 
 .battle-top-pause-btn:hover {
@@ -150,7 +150,7 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   width: 100%;
-  gap: clamp(6px, 1.8vw, 18px);
+  gap: clamp(4px, 1.5vw, 16px);
   position: relative;
   z-index: 1;
 }
@@ -159,7 +159,7 @@
 .battle-player-panel {
   display: flex;
   align-items: center;
-  gap: clamp(8px, 1.2vw, 12px);
+  gap: clamp(6px, 1vw, 10px);
 }
 
 .battle-player-panel.is-right {
@@ -167,8 +167,8 @@
 }
 
 .battle-player-avatar {
-  width: clamp(38px, 5.8vw, 58px);
-  height: clamp(38px, 5.8vw, 58px);
+  width: clamp(32px, 5vw, 54px);
+  height: clamp(32px, 5vw, 54px);
   border-radius: 50%;
   border: 2px solid rgba(255, 215, 0, 0.5);
   overflow: hidden;
@@ -179,7 +179,7 @@
 .battle-player-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .battle-player-panel.is-right .battle-player-info {
@@ -189,7 +189,7 @@
 .battle-player-name {
   font-family: var(--font-western);
   color: var(--color-sand-light);
-  font-size: clamp(0.72rem, 1.5vw, 1rem);
+  font-size: clamp(0.65rem, 1.4vw, 0.95rem);
   letter-spacing: 0.06em;
   text-shadow:
     0 1px 6px rgba(0, 0, 0, 0.9),
@@ -202,7 +202,7 @@
 .battle-player-bullets {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1.5px;
 }
 
 .battle-player-hearts.is-right,
@@ -211,8 +211,8 @@
 }
 
 .battle-heart {
-  width: clamp(14px, 2.2vw, 20px);
-  height: clamp(14px, 2.2vw, 20px);
+  width: clamp(12px, 2vw, 18px);
+  height: clamp(12px, 2vw, 18px);
   transition: all 0.3s;
 }
 
@@ -221,8 +221,8 @@
 }
 
 .battle-bullet {
-  width: clamp(7px, 1vw, 11px);
-  height: clamp(16px, 2.6vw, 24px);
+  width: clamp(6px, 0.9vw, 10px);
+  height: clamp(14px, 2.3vw, 22px);
   transition: all 0.3s;
 }
 
@@ -235,26 +235,26 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(3px, 0.6vw, 7px);
+  gap: clamp(2px, 0.5vw, 6px);
   flex-shrink: 0;
 }
 
 .battle-top-logo {
-  width: clamp(28px, 4.2vw, 46px);
-  height: clamp(28px, 4.2vw, 46px);
+  width: clamp(24px, 3.8vw, 42px);
+  height: clamp(24px, 3.8vw, 42px);
   object-fit: contain;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
 }
 
 .battle-turn-indicator {
-  margin-top: 6px;
+  margin-top: 4px;
   font-family: var(--font-western);
   color: var(--color-sand-light);
   background: rgba(0, 0, 0, 0.28);
-  padding: 4px 8px;
+  padding: 3px 7px;
   border-radius: 999px;
   border: 1px solid rgba(255, 215, 0, 0.14);
-  font-size: clamp(0.62rem, 1.1vw, 0.86rem);
+  font-size: clamp(0.55rem, 1vw, 0.8rem);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
@@ -263,18 +263,18 @@
 .battle-top-stars-row {
   display: flex;
   align-items: center;
-  gap: clamp(5px, 0.9vw, 9px);
+  gap: clamp(4px, 0.8vw, 8px);
 }
 
 .battle-top-stars {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1.5px;
 }
 
 .battle-top-star {
-  width: clamp(10px, 1.5vw, 16px);
-  height: clamp(10px, 1.5vw, 16px);
+  width: clamp(9px, 1.4vw, 15px);
+  height: clamp(9px, 1.4vw, 15px);
   color: rgba(240, 208, 128, 0.2);
 }
 
@@ -291,7 +291,7 @@
 .battle-top-round-label {
   font-family: var(--font-stats);
   color: var(--color-sand-light);
-  font-size: clamp(0.58rem, 1.1vw, 0.76rem);
+  font-size: clamp(0.52rem, 1vw, 0.72rem);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
@@ -300,7 +300,7 @@
 .battle-top-vs {
   font-family: var(--font-western);
   color: rgba(255, 215, 0, 0.72);
-  font-size: clamp(0.8rem, 1.8vw, 1.1rem);
+  font-size: clamp(0.72rem, 1.6vw, 1rem);
   text-shadow:
     0 0 10px rgba(255, 215, 0, 0.3),
     0 1px 4px rgba(0, 0, 0, 0.65);
@@ -310,22 +310,22 @@
 /* ── Responsive ── */
 @media (max-width: 560px) {
   .battle-top-nine {
-    grid-template-columns: clamp(20px, 8vw, 34px) 1fr clamp(20px, 8vw, 34px);
+    grid-template-columns: clamp(16px, 7vw, 28px) 1fr clamp(16px, 7vw, 28px);
     grid-template-rows:
-      clamp(14px, 5vw, 24px) minmax(clamp(110px, 30vw, 150px), auto)
-      clamp(16px, 5.5vw, 28px);
+      clamp(12px, 4.5vw, 20px) minmax(clamp(85px, 26vw, 130px), auto)
+      clamp(14px, 5vw, 24px);
   }
 
   .battle-top-content {
-    padding: 8px 10px;
+    padding: 6px 8px;
   }
 
   .battle-player-name {
-    font-size: clamp(0.58rem, 2.8vw, 0.8rem);
+    font-size: clamp(0.52rem, 2.5vw, 0.72rem);
   }
 
   .battle-top-pause-btn {
-    top: 5px;
-    right: 6px;
+    top: 3px;
+    right: 5px;
   }
 }

@@ -37,23 +37,21 @@ export function Character({
   player,
   isRight: _isRight = false,
 }: CharacterProps) {
-  // não mais espelhamos o sprite porque pode conter o nome
-  // const scaleX = isRight ? -1 : 1;
   const imgSrc = getCharacterImage(player.avatar);
 
   return (
     <div className="relative flex flex-col items-center justify-end">
       <motion.img
+        key={player.avatar + "-" + player.life}
         src={imgSrc}
         alt={player.displayName}
         variants={charVariants}
         animate={player.currentAnimation}
         initial="idle"
-        // style={{ scaleX }} // deixamos de aplicar o flip horizontal
-        className="w-32 h-40 sm:w-44 sm:h-56 md:w-56 md:h-72 lg:w-64 lg:h-80 object-contain filter drop-shadow-2xl z-10"
+        className="w-[35vw] max-w-[180px] sm:max-w-[220px] md:max-w-[260px] aspect-[3/4] object-contain filter drop-shadow-2xl z-10"
       />
       {/* Shadow under character */}
-      <div className="w-24 h-3 bg-black/30 rounded-full blur-sm -mt-2" />
+      <div className="w-[20vw] max-w-[90px] h-2 sm:h-3 bg-black/30 rounded-full blur-sm -mt-1 sm:-mt-2" />
     </div>
   );
 }

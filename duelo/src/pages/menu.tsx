@@ -1,22 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Gamepad2 } from "lucide-react";
+import { Users, Gamepad2, PlayCircle, Trash2, Wifi } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { useGameStore } from "../store/gameStore";
+import { getSavedSoloMatch, clearSavedSoloMatch } from "../store/gameStore";
 import { ref, onValue, off } from "firebase/database";
 import { rtdb } from "../lib/firebase";
 import { useFirebaseRoom } from "../hooks/useFirebase";
 import { useUserPreferences } from "../hooks/useUserPreferences";
 import { GamePrep } from "../components/game/GamePrep";
-import type { GameMode, BotDifficulty, Room } from "../types";
+import type { GameMode, Room } from "../types";
 import { normalizeUnlocks } from "../lib/progression";
 
 type MenuStep = "main" | "solo_setup";
 type QuickMatchStatus = "searching" | "error" | null;
 
-// Storage keys
+// Storage key
 const STORAGE_KEY_MODE = "gameprep-selected-mode";
-const STORAGE_KEY_DIFFICULTY = "gameprep-selected-difficulty";
 
 const SEARCHING_MESSAGES = [
   "Varrendo o salao por duelos abertos...",
@@ -27,11 +27,6 @@ const SEARCHING_MESSAGES = [
 function loadSavedGameMode(): GameMode {
   const stored = localStorage.getItem(STORAGE_KEY_MODE);
   return (stored as GameMode) || "normal";
-}
-
-function loadSavedBotDifficulty(): BotDifficulty {
-  const stored = localStorage.getItem(STORAGE_KEY_DIFFICULTY);
-  return (stored as BotDifficulty) || "medium";
 }
 
 /** Ripple effect on button press */
@@ -64,8 +59,89 @@ export default function MenuPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const initializeGame = useGameStore((state) => state.initializeGame);
+  const restoreSoloMatch = useGameStore((state) => state.restoreSoloMatch);
   const { loadPreferences } = useUserPreferences();
   const ripple = useRipple();
+
+  // ─── Active match detection ─────────────────────────────────────────
+  const [savedSolo, setSavedSolo] = useState(() => getSavedSoloMatch());
+  const [activeOnlineRoom, setActiveOnlineRoom] = useState<Room | null>(null);
+  const {
+    quickMatch,
+    getUserRooms,
+    markPlayerReturnedToMenu,
+    cancelWaitingRoom,
+  } = useFirebaseRoom();
+  const quickListenerRef = useRef<(() => void) | null>(null);
+  const quickRoomIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    getUserRooms().then((rooms) => {
+      const active = rooms.find(
+        (r) => r.status === "in_progress" || r.status === "resolving",
+      );
+      setActiveOnlineRoom(active ?? null);
+    });
+  }, [getUserRooms]);
+
+  // Auto-reconnect on page refresh: only when the user did NOT intentionally leave
+  useEffect(() => {
+    if (!activeOnlineRoom || !user) return;
+    // Skip auto-reconnect if the user explicitly left this room in the current session
+    if (sessionStorage.getItem(`bbd_left_${activeOnlineRoom.id}`)) return;
+    const room = activeOnlineRoom;
+    const isHost = room.hostId === user.uid;
+    initializeGame(
+      room.mode,
+      true,
+      isHost,
+      room.id,
+      isHost ? room.hostAvatar : (room.guestAvatar ?? "marshal"),
+      room.config,
+      user.displayName,
+    );
+    navigate(`/game/${room.id}`);
+  }, [activeOnlineRoom, user, initializeGame, navigate]);
+
+  const handleResumeSolo = () => {
+    const ok = restoreSoloMatch();
+    if (ok) {
+      navigate("/game");
+    } else {
+      setSavedSolo(null);
+    }
+  };
+
+  const handleDiscardSolo = () => {
+    clearSavedSoloMatch();
+    setSavedSolo(null);
+  };
+
+  const handleReconnectOnline = () => {
+    if (!activeOnlineRoom) return;
+    const room = activeOnlineRoom;
+    const isHost = room.hostId === user?.uid;
+    initializeGame(
+      room.mode,
+      true,
+      isHost,
+      room.id,
+      isHost ? room.hostAvatar : (room.guestAvatar ?? "marshal"),
+      room.config,
+      user?.displayName,
+    );
+    navigate(`/game/${room.id}`);
+  };
+
+  const handleAbandonOnline = async () => {
+    if (!activeOnlineRoom) return;
+    try {
+      await markPlayerReturnedToMenu(activeOnlineRoom.id);
+    } catch (e) {
+      console.error("[menu] abandon room error:", e);
+    }
+    setActiveOnlineRoom(null);
+  };
 
   const unlocks = normalizeUnlocks(user?.unlocks);
   const unlockedCharacters = unlocks.charactersUnlocked;
@@ -73,7 +149,6 @@ export default function MenuPage() {
     ? (user?.avatar ?? "marshal")
     : (unlockedCharacters[0] ?? "marshal");
   const savedMode = loadSavedGameMode();
-  const savedDifficulty = loadSavedBotDifficulty();
 
   useEffect(() => {
     loadPreferences();
@@ -88,14 +163,17 @@ export default function MenuPage() {
     return () => clearInterval(cycle);
   }, [quickMatchStatus]);
 
-  const { quickMatch } = useFirebaseRoom();
-  const quickListenerRef = useRef<(() => void) | null>(null);
-
   const handleCancelQuickMatch = async () => {
-    // Cleanup listener
+    // Stop listening for a guest
     if (quickListenerRef.current) {
       quickListenerRef.current();
       quickListenerRef.current = null;
+    }
+
+    // Delete the waiting room we created (prevents ghost rooms)
+    if (quickRoomIdRef.current) {
+      cancelWaitingRoom(quickRoomIdRef.current).catch(() => {});
+      quickRoomIdRef.current = null;
     }
 
     setQuickMatchStatus(null);
@@ -129,7 +207,6 @@ export default function MenuPage() {
           true,
           false,
           result.roomId,
-          undefined,
           selectedCharacter,
           result.config,
           user?.displayName,
@@ -140,6 +217,7 @@ export default function MenuPage() {
 
       // host: listen for guest joining
       const roomRef = ref(rtdb, `rooms/${result.roomId}`);
+      quickRoomIdRef.current = result.roomId; // track for cancellation
       let unsub = false;
       const unsubscribe = onValue(roomRef, (snap) => {
         if (unsub) return;
@@ -149,13 +227,13 @@ export default function MenuPage() {
           unsub = true;
           off(roomRef, "value", unsubscribe);
           quickListenerRef.current = null;
+          quickRoomIdRef.current = null;
           setQuickMatchStatus(null);
           initializeGame(
             result.mode,
             true,
             true,
             result.roomId,
-            undefined,
             selectedCharacter,
             result.config,
             user?.displayName,
@@ -175,12 +253,8 @@ export default function MenuPage() {
     }
   };
 
-  const handleStartSolo = (
-    character: string,
-    mode: GameMode,
-    difficulty: BotDifficulty,
-  ) => {
-    initializeGame(mode, false, false, undefined, difficulty, character);
+  const handleStartSolo = (character: string, mode: GameMode) => {
+    initializeGame(mode, false, false, undefined, character);
     navigate("/game");
   };
 
@@ -188,6 +262,66 @@ export default function MenuPage() {
     <>
       {step === "main" && (
         <div className="hero">
+          {/* ── Active Match Banners ── */}
+          {savedSolo && (
+            <div className="w-full max-w-md mx-auto mb-4 rounded-xl bg-amber-900/60 border-2 border-gold/40 p-4 flex items-center gap-3 animate-fade-up">
+              <PlayCircle size={32} className="text-gold shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-western text-gold text-sm tracking-wider">
+                  PARTIDA EM ANDAMENTO
+                </p>
+                <p className="font-stats text-sand/60 text-[10px] uppercase tracking-widest">
+                  Turno {savedSolo.turn} &bull;{" "}
+                  {savedSolo.mode.charAt(0).toUpperCase() +
+                    savedSolo.mode.slice(1)}{" "}
+                  &bull; Vida: {savedSolo.player.life}/
+                  {savedSolo.player.maxLife}
+                </p>
+              </div>
+              <button
+                onClick={handleResumeSolo}
+                className="px-3 py-1.5 rounded-lg bg-green-700/80 hover:bg-green-600 text-white font-western text-xs tracking-wider transition-colors"
+              >
+                CONTINUAR
+              </button>
+              <button
+                onClick={handleDiscardSolo}
+                className="p-1.5 rounded-lg bg-red-900/60 hover:bg-red-700 text-red-300 transition-colors"
+                title="Descartar partida"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          )}
+
+          {activeOnlineRoom && (
+            <div className="w-full max-w-md mx-auto mb-4 rounded-xl bg-sky-900/60 border-2 border-sky-400/40 p-4 flex items-center gap-3 animate-fade-up">
+              <Wifi size={32} className="text-sky-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-western text-sky-300 text-sm tracking-wider">
+                  PARTIDA ONLINE ATIVA
+                </p>
+                <p className="font-stats text-sand/60 text-[10px] uppercase tracking-widest">
+                  Sala: {activeOnlineRoom.id} &bull;{" "}
+                  {activeOnlineRoom.mode.charAt(0).toUpperCase() +
+                    activeOnlineRoom.mode.slice(1)}
+                </p>
+              </div>
+              <button
+                onClick={handleReconnectOnline}
+                className="px-3 py-1.5 rounded-lg bg-sky-700/80 hover:bg-sky-600 text-white font-western text-xs tracking-wider transition-colors"
+              >
+                RECONECTAR
+              </button>
+              <button
+                onClick={handleAbandonOnline}
+                className="p-1.5 rounded-lg bg-red-900/60 hover:bg-red-700 text-red-300 transition-colors"
+                title="Abandonar partida"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          )}
           {/* ── Online Button ── */}
           <button
             className="play-btn btn-online"
@@ -274,7 +408,6 @@ export default function MenuPage() {
             selectedCharacter={selectedCharacter}
             availableCharacterIds={unlockedCharacters}
             selectedMode={savedMode}
-            selectedDifficulty={savedDifficulty}
           />
           <button
             onClick={() => setStep("main")}

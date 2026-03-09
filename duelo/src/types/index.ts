@@ -1,6 +1,5 @@
 export type GameMode = "beginner" | "normal" | "advanced";
 export type CardType = "shot" | "double_shot" | "dodge" | "reload" | "counter";
-export type BotDifficulty = "easy" | "medium" | "hard";
 export type AttackTimer = 2 | 3 | 5 | 10 | 30;
 
 /**
@@ -94,7 +93,7 @@ export interface GameState {
   roomStatus?: "waiting" | "in_progress" | "resolving" | "finished";
   winnerId: string | null;
   history: TurnResult[];
-  botDifficulty?: BotDifficulty;
+  // Room config
   // New config fields
   attackTimer: AttackTimer;
   bestOf3: boolean;
@@ -285,4 +284,34 @@ export interface Room {
   hostStars: number;
   guestStars: number;
   currentRound: number;
+  // Phase 2: per-turn state sync fields
+  hostLife?: number;
+  guestLife?: number;
+  hostAmmo?: number;
+  guestAmmo?: number;
+  turn?: number;
+  hostDodgeStreak?: number;
+  guestDodgeStreak?: number;
+  hostDoubleShotsLeft?: number;
+  guestDoubleShotsLeft?: number;
+  hostShieldUsesLeft?: number;
+  guestShieldUsesLeft?: number;
+  // Host-authoritative TurnResult for ability sync
+  lastTurnResult?: {
+    turn: number;
+    hostCard: CardType;
+    guestCard: CardType;
+    hostLifeLost: number;
+    guestLifeLost: number;
+    hostAmmoChange: number;
+    guestAmmoChange: number;
+    narrative: string;
+    hostAbilityTriggered?: string | null;
+    guestAbilityTriggered?: string | null;
+    hostShieldUsed?: boolean;
+    guestShieldUsed?: boolean;
+  };
+  // Reconnect window: set when a player leaves; cleared when they rejoin
+  hostLeftAt?: number;
+  guestLeftAt?: number;
 }

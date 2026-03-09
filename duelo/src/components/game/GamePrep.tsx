@@ -1,18 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CHARACTERS, getCharacter } from "../../lib/characters";
-import type { GameMode, BotDifficulty } from "../../types";
+import type { GameMode } from "../../types";
 
 interface GamePrepProps {
-  onStart: (
-    character: string,
-    mode: GameMode,
-    difficulty: BotDifficulty,
-  ) => void;
+  onStart: (character: string, mode: GameMode) => void;
   selectedCharacter: string;
   availableCharacterIds?: string[];
   selectedMode: GameMode;
-  selectedDifficulty: BotDifficulty;
 }
 
 const MODES = [
@@ -33,37 +28,13 @@ const MODES = [
   },
 ];
 
-const DIFFICULTIES = [
-  {
-    id: "easy" as BotDifficulty,
-    name: "FÁCIL",
-    desc: "IA treinada para errar — aprenda o jogo · 30s por jogada",
-  },
-  {
-    id: "medium" as BotDifficulty,
-    name: "MÉDIO",
-    desc: "IA com estratégia equilibrada — desafio justo · 10s por jogada",
-  },
-  {
-    id: "hard" as BotDifficulty,
-    name: "DIFÍCIL",
-    desc: "IA otimizada por Q-Learning — lê seus padrões · 5s por jogada",
-  },
-];
+type AccordionSection = "character" | "mode" | null;
 
-type AccordionSection = "character" | "mode" | "difficulty" | null;
-
-// Storage keys
+// Storage key
 const STORAGE_KEY_MODE = "gameprep-selected-mode";
-const STORAGE_KEY_DIFFICULTY = "gameprep-selected-difficulty";
 
-// Helper functions for localStorage
 function saveGameMode(mode: GameMode) {
   localStorage.setItem(STORAGE_KEY_MODE, mode);
-}
-
-function saveBotDifficulty(difficulty: BotDifficulty) {
-  localStorage.setItem(STORAGE_KEY_DIFFICULTY, difficulty);
 }
 
 export function GamePrep({
@@ -71,9 +42,10 @@ export function GamePrep({
   selectedCharacter: initialChar,
   availableCharacterIds,
   selectedMode: initialMode,
-  selectedDifficulty: initialDiff,
 }: GamePrepProps) {
-  const availableSet = new Set(availableCharacterIds ?? CHARACTERS.map((c) => c.id));
+  const availableSet = new Set(
+    availableCharacterIds ?? CHARACTERS.map((c) => c.id),
+  );
   const availableCharacters = CHARACTERS.filter((c) => availableSet.has(c.id));
   const initialResolved = availableSet.has(initialChar)
     ? initialChar
@@ -82,7 +54,6 @@ export function GamePrep({
   const [expanded, setExpanded] = useState<AccordionSection>("character");
   const [selectedCharacter, setSelectedCharacter] = useState(initialResolved);
   const [selectedMode, setSelectedMode] = useState(initialMode);
-  const [selectedDifficulty, setSelectedDifficulty] = useState(initialDiff);
 
   const activeChar = getCharacter(
     availableSet.has(selectedCharacter)
@@ -90,14 +61,10 @@ export function GamePrep({
       : (availableCharacters[0]?.id ?? "marshal"),
   );
 
-  // Save to localStorage whenever mode or difficulty changes
+  // Save to localStorage whenever mode changes
   useEffect(() => {
     saveGameMode(selectedMode);
   }, [selectedMode]);
-
-  useEffect(() => {
-    saveBotDifficulty(selectedDifficulty);
-  }, [selectedDifficulty]);
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-3">
@@ -248,78 +215,9 @@ export function GamePrep({
         </AnimatePresence>
       </div>
 
-      {/* Difficulty Selection */}
-      <div className="card-wood rounded-xl overflow-hidden border border-gold/20">
-        <button
-          onClick={() =>
-            setExpanded(expanded === "difficulty" ? null : "difficulty")
-          }
-          className="w-full flex items-center justify-between p-4 hover:bg-gold/5 transition-colors"
-        >
-          <div className="text-left">
-            <h3 className="font-western text-gold tracking-wider">
-              DIFICULDADE
-            </h3>
-            <p className="font-stats text-sand/70 text-sm">
-              {DIFFICULTIES.find((d) => d.id === selectedDifficulty)?.name}
-            </p>
-          </div>
-          <motion.svg
-            className="w-5 h-5 text-gold"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            animate={{ rotate: expanded === "difficulty" ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M19 14l-7 7m0 0l-7-7m7 7V3"
-            />
-          </motion.svg>
-        </button>
-
-        <AnimatePresence>
-          {expanded === "difficulty" && (
-            <motion.div
-              initial={{ height: 0 }}
-              animate={{ height: "auto" }}
-              exit={{ height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden border-t border-gold/10"
-            >
-              <div className="p-4 space-y-2">
-                {DIFFICULTIES.map((diff) => (
-                  <button
-                    key={diff.id}
-                    onClick={() => setSelectedDifficulty(diff.id)}
-                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                      selectedDifficulty === diff.id
-                        ? "border-gold bg-gold/10"
-                        : "border-sand/20 bg-black/20 hover:border-sand/50 hover:bg-black/40"
-                    }`}
-                  >
-                    <div className="font-western text-gold text-sm tracking-wider">
-                      {diff.name}
-                    </div>
-                    <div className="font-stats text-sand/70 text-xs mt-1">
-                      {diff.desc}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
       {/* Start Button */}
       <button
-        onClick={() =>
-          onStart(activeChar.id, selectedMode, selectedDifficulty)
-        }
+        onClick={() => onStart(activeChar.id, selectedMode)}
         className="w-full py-4 rounded-xl btn-western text-lg mt-6 bg-gradient-to-r from-gold/20 to-gold/10 hover:from-gold/30 hover:to-gold/20 border border-gold/40 text-gold font-western tracking-widest"
       >
         INICIAR DUELO
