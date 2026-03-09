@@ -7,6 +7,7 @@ import {
   update,
   onDisconnect,
   off,
+  serverTimestamp,
 } from "firebase/database";
 import { rtdb } from "../lib/firebase";
 import { useAuthStore } from "../store/authStore";
@@ -70,10 +71,18 @@ export function useFirebaseRoom() {
       hostReady: false,
       guestReady: false,
       turn: 1,
+      currentRound: 1,
       hostLife: initialLife,
       guestLife: initialLife,
       hostAmmo: 0,
       guestAmmo: 0,
+      // Phase 2: Initialize state persistence fields
+      hostDodgeStreak: 0,
+      guestDodgeStreak: 0,
+      hostDoubleShotsLeft: 2,
+      guestDoubleShotsLeft: 2,
+      hostShieldUsesLeft: 2,
+      guestShieldUsesLeft: 2,
     });
 
     return roomId;
@@ -97,6 +106,10 @@ export function useFirebaseRoom() {
           guestName: user.displayName || "Pistoleiro",
           guestAvatar: playerAvatar,
           status: "in_progress",
+          // Ensure state persistence fields are initialized for guest
+          guestDodgeStreak: room.guestDodgeStreak ?? 0,
+          guestDoubleShotsLeft: room.guestDoubleShotsLeft ?? 2,
+          guestShieldUsesLeft: room.guestShieldUsesLeft ?? 2,
         });
         setCurrentRoomId(roomId);
         return room;
@@ -129,13 +142,14 @@ export function useFirebaseRoom() {
     const activeRooms: Room[] = [];
     const now = Date.now();
     const THIRTY_MINS = 30 * 60 * 1000;
+    const TWO_MINS_MS = 2 * 60 * 1000;
 
     for (const room of Object.values(roomsData) as any[]) {
       if (
         (room.hostId === user.uid || room.guestId === user.uid) &&
         room.status !== "finished"
       ) {
-        // If room is waiting for more than 30 mins, mark it as finished (deleted/expired)
+        // Expire waiting rooms older than 30 min
         if (
           room.status === "waiting" &&
           room.createdAt &&
@@ -144,9 +158,36 @@ export function useFirebaseRoom() {
           update(ref(rtdb, `rooms/${room.id}`), { status: "finished" }).catch(
             () => {},
           );
-        } else {
-          activeRooms.push(room);
+          continue;
         }
+
+        // Clean up in_progress rooms where BOTH players have been gone > 2 min
+        const hostLeftAt: number | undefined = room.hostLeftAt;
+        const guestLeftAt: number | undefined = room.guestLeftAt;
+        if (
+          hostLeftAt &&
+          guestLeftAt &&
+          now - hostLeftAt > TWO_MINS_MS &&
+          now - guestLeftAt > TWO_MINS_MS
+        ) {
+          set(ref(rtdb, `rooms/${room.id}`), null).catch(() => {});
+          continue;
+        }
+
+        // For in_progress rooms, only include if the current user can still rejoin
+        // (their own LeftAt is either unset or within the 2-minute window)
+        if (room.status === "in_progress" || room.status === "resolving") {
+          const isHost = room.hostId === user.uid;
+          const myLeftAt: number | undefined = isHost
+            ? room.hostLeftAt
+            : room.guestLeftAt;
+          if (myLeftAt && now - myLeftAt > TWO_MINS_MS) {
+            // User's reconnect window has expired — skip
+            continue;
+          }
+        }
+
+        activeRooms.push(room);
       }
     }
 
@@ -211,6 +252,28 @@ export function useFirebaseRoom() {
       }
     }
 
+    // ── Reuse the user's own existing waiting quick-match room (prevents ghost rooms) ──
+    if (snapshot.exists()) {
+      const roomsData = snapshot.val();
+      for (const room of Object.values(roomsData) as any[]) {
+        if (
+          room.hostId === user.uid &&
+          room.mode === QUICK_MATCH_MODE &&
+          room.status === "waiting" &&
+          !room.guestId &&
+          room.createdAt &&
+          now - room.createdAt < THIRTY_MINS
+        ) {
+          return {
+            roomId: room.id,
+            mode: QUICK_MATCH_MODE,
+            config: QUICK_MATCH_CONFIG,
+            isHost: true,
+          };
+        }
+      }
+    }
+
     // FIFO entry into the oldest available quick room.
     candidates.sort((a, b) => a.createdAt - b.createdAt);
     for (const room of candidates) {
@@ -255,32 +318,36 @@ export function useFirebaseRoom() {
     if (!snapshot.exists()) return "not_found";
 
     const room = snapshot.val() as Room & {
-      hostReturnedToMenuAt?: number;
-      guestReturnedToMenuAt?: number;
+      hostLeftAt?: number;
+      guestLeftAt?: number;
     };
 
     const isHost = room.hostId === user.uid;
     const isGuest = room.guestId === user.uid;
     if (!isHost && !isGuest) return "pending";
 
+    // Only mark the leaving player — keep room status as-is so the other
+    // player or the same player can rejoin within TWO_MINS_MS.
     const rolePrefix = isHost ? "host" : "guest";
+    const now = Date.now();
     await update(roomRef, {
-      [`${rolePrefix}ReturnedToMenuAt`]: Date.now(),
-      status: "finished",
+      [`${rolePrefix}LeftAt`]: now,
     });
 
+    // Read fresh state and clean up if BOTH players have been gone > 2 minutes
     const latestSnap = await get(roomRef);
     if (!latestSnap.exists()) return "deleted";
-
     const latest = latestSnap.val() as {
-      status?: string;
-      hostReturnedToMenuAt?: number;
-      guestReturnedToMenuAt?: number;
+      hostLeftAt?: number;
+      guestLeftAt?: number;
     };
-
-    const bothReturned =
-      !!latest.hostReturnedToMenuAt && !!latest.guestReturnedToMenuAt;
-    if (latest.status === "finished" && bothReturned) {
+    const TWO_MINS_MS = 2 * 60 * 1000;
+    if (
+      latest.hostLeftAt &&
+      latest.guestLeftAt &&
+      now - latest.hostLeftAt > TWO_MINS_MS &&
+      now - latest.guestLeftAt > TWO_MINS_MS
+    ) {
       await set(roomRef, null);
       return "deleted";
     }
@@ -326,9 +393,14 @@ export function useMatchSync(roomId: string | null) {
     const snapshot = await get(roomRef);
     if (snapshot.exists()) {
       const room = snapshot.val() as Room;
-      // If already in game or host, allow entry without update
-      if (room.hostId === user.uid || room.guestId === user.uid) return true;
-      // Otherwise try joining as guest
+      // If already in room (as host or guest), allow re-entry and clear LeftAt
+      if (room.hostId === user.uid || room.guestId === user.uid) {
+        const isHost = room.hostId === user.uid;
+        const rolePrefix = isHost ? "host" : "guest";
+        await update(roomRef, { [`${rolePrefix}LeftAt`]: null });
+        return true;
+      }
+      // Otherwise try joining as guest (waiting room only)
       if (room.status === "waiting" && !room.guestId) {
         await update(roomRef, {
           guestId: user.uid,
@@ -344,8 +416,20 @@ export function useMatchSync(roomId: string | null) {
   useEffect(() => {
     if (!roomId || !user) return;
     const roomRef = ref(rtdb, `rooms/${roomId}`);
-    const presenceRef = ref(rtdb, `rooms/${roomId}/status`);
-    onDisconnect(presenceRef).set("finished");
+
+    // Track per-player disconnect: sets role-specific LeftAt with server timestamp
+    // so the room stays in_progress and the player can rejoin within 2 minutes.
+    let leftAtRef: ReturnType<typeof ref> | null = null;
+    let effectCancelled = false;
+    get(roomRef).then((snap) => {
+      if (effectCancelled || !snap.exists()) return;
+      const roomData = snap.val();
+      const isHost = roomData.hostId === user.uid;
+      const rolePrefix = isHost ? "host" : "guest";
+      leftAtRef = ref(rtdb, `rooms/${roomId}/${rolePrefix}LeftAt`);
+      onDisconnect(leftAtRef).set(serverTimestamp());
+    });
+
     const unsubscribe = onValue(roomRef, (snapshot) => {
       if (!snapshot.exists()) return;
       const roomData = snapshot.val();
@@ -353,8 +437,13 @@ export function useMatchSync(roomId: string | null) {
       useGameStore.getState().syncFromFirebase(roomData, isHost);
     });
     return () => {
+      effectCancelled = true;
       unsubscribe();
       off(roomRef);
+      // Cancel the disconnect handler — player is intentionally navigating away
+      if (leftAtRef) {
+        onDisconnect(leftAtRef).cancel();
+      }
     };
   }, [roomId, user?.uid]);
 

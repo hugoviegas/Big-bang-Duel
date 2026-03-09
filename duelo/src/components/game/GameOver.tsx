@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../../store/gameStore";
@@ -7,7 +7,7 @@ import { recordMatchResult } from "../../lib/firebaseService";
 import { getCharacter } from "../../lib/characters";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
 import type { MatchResult } from "../../lib/firebaseService";
-import type { MatchMode } from "../../types";
+import type { MatchMode, StatsByMode } from "../../types";
 import {
   calculateMatchRewards,
   calculateProgression,
@@ -54,7 +54,6 @@ export function GameOver() {
     mode,
     quitGame,
     initializeGame,
-    botDifficulty,
     isOnline,
     roomId,
     bestOf3,
@@ -63,6 +62,7 @@ export function GameOver() {
   } = useGameStore();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const { markPlayerReturnedToMenu } = useFirebaseRoom();
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">(
     () => (user ? "saving" : "saved"),
@@ -80,7 +80,9 @@ export function GameOver() {
 
   const matchMode: MatchMode = isOnline ? "online" : "solo";
 
-  const rewardSnapshot = useMemo<{
+  // Computed ONCE at mount time — frozen so Firestore subscription updates
+  // don't cause the reward display to recompute with already-saved values.
+  const [rewardSnapshot] = useState<{
     rewardSummary: MatchRewardSummary;
     levelRewards: LevelReward[];
     levelBefore: number;
@@ -104,7 +106,7 @@ export function GameOver() {
       levelBefore: currentProgression.level,
       levelAfter: nextProgression.level,
     };
-  }, [matchMode, result, user?.progression?.xpTotal, user?.unlocks]);
+  });
 
   // Record stats only once per game-over render
   const statsRecorded = useRef(false);
@@ -115,11 +117,74 @@ export function GameOver() {
     if (!user) return;
 
     const reward = rewardSnapshot.rewardSummary;
+    const snapshotUser = user;
 
-    // Persist to Firestore - Firebase is the source of truth
-    // The real-time listener will automatically update local state when saved
-    recordMatchResult(user.uid, result, matchMode, reward)
-      .then(() => {
+    // Persist to Firestore — Firebase is the source of truth
+    recordMatchResult(snapshotUser.uid, result, matchMode, reward)
+      .then((update) => {
+        if (update) {
+          // Immediately sync local authStore — don't wait for Firestore onSnapshot.
+          // This ensures progression/currencies/stats are up-to-date right away.
+          const curr = useAuthStore.getState().user;
+          if (curr) {
+            const existingMode = curr.statsByMode?.[matchMode] ?? {
+              wins: 0,
+              losses: 0,
+              draws: 0,
+              totalGames: 0,
+              winRate: 0,
+            };
+            const nextMode = {
+              wins: existingMode.wins + (result === "win" ? 1 : 0),
+              losses: existingMode.losses + (result === "loss" ? 1 : 0),
+              draws: existingMode.draws + (result === "draw" ? 1 : 0),
+              totalGames: existingMode.totalGames + 1,
+              winRate: 0,
+            };
+            const soloStats =
+              matchMode === "solo"
+                ? nextMode
+                : (curr.statsByMode?.solo ?? {
+                    wins: 0,
+                    losses: 0,
+                    draws: 0,
+                    totalGames: 0,
+                    winRate: 0,
+                  });
+            const onlineStats =
+              matchMode === "online"
+                ? nextMode
+                : (curr.statsByMode?.online ?? {
+                    wins: 0,
+                    losses: 0,
+                    draws: 0,
+                    totalGames: 0,
+                    winRate: 0,
+                  });
+            const newStatsByMode: StatsByMode = {
+              solo: soloStats,
+              online: onlineStats,
+              overall: {
+                wins: soloStats.wins + onlineStats.wins,
+                losses: soloStats.losses + onlineStats.losses,
+                draws: soloStats.draws + onlineStats.draws,
+                totalGames: soloStats.totalGames + onlineStats.totalGames,
+                winRate: 0,
+              },
+            };
+            updateUser({
+              progression: update.progression,
+              currencies: update.currencies,
+              ranked: update.ranked,
+              unlocks: update.unlocks,
+              statsByMode: newStatsByMode,
+              wins: newStatsByMode.overall.wins,
+              losses: newStatsByMode.overall.losses,
+              draws: newStatsByMode.overall.draws,
+              totalGames: newStatsByMode.overall.totalGames,
+            });
+          }
+        }
         setSaveStatus("saved");
       })
       .catch((error) => {
@@ -129,7 +194,7 @@ export function GameOver() {
           "Falha ao computar recompensa. Tente novamente em instantes.",
         );
       });
-  }, [matchMode, result, user, rewardSnapshot]);
+  }, [matchMode, result, user, rewardSnapshot, updateUser]);
 
   const rewardSummary = rewardSnapshot.rewardSummary;
   const levelRewards = rewardSnapshot.levelRewards;
@@ -187,7 +252,6 @@ export function GameOver() {
       false,
       false,
       undefined,
-      botDifficulty || "medium",
       player.avatar,
       {},
       player.displayName,

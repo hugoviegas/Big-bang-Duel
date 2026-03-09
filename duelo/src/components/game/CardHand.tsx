@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "../../store/gameStore";
 import { CardItem } from "./CardItem";
-import { CARDS_BY_MODE, getAvailableCards, MAX_DOUBLE_SHOT_USES } from "../../lib/gameEngine";
+import {
+  CARDS_BY_MODE,
+  getAvailableCards,
+  MAX_DOUBLE_SHOT_USES,
+} from "../../lib/gameEngine";
 import type { CardType } from "../../types";
 
 const CARD_DETAILS: Record<
@@ -15,12 +19,14 @@ const CARD_DETAILS: Record<
   },
   double_shot: {
     label: "Tiro Duplo",
-    description: "Dispara 2 balas. Causa 2 de dano. Desvio não o bloqueia totalmente (1 de dano passa). Máx 3 usos por round.",
+    description:
+      "Dispara 2 balas. Causa 2 de dano. Desvio não o bloqueia totalmente (1 de dano passa). Máx 3 usos por round.",
     cost: 2,
   },
   dodge: {
     label: "Desvio",
-    description: "Desvia de tiros. AVISO: Tiro Duplo ainda causa 1 de dano mesmo ao desviar. Máx 3 esquivas consecutivas.",
+    description:
+      "Desvia de tiros. AVISO: Tiro Duplo ainda causa 1 de dano mesmo ao desviar. Máx 3 esquivas consecutivas.",
     cost: 0,
   },
   reload: {
@@ -87,7 +93,12 @@ export function CardHand() {
     autoFiredRef.current = true;
 
     const store = useGameStore.getState();
-    const available = getAvailableCards(store.mode, store.player.ammo, store.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES, store.player.dodgeStreak ?? 0);
+    const available = getAvailableCards(
+      store.mode,
+      store.player.ammo,
+      store.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES,
+      store.player.dodgeStreak ?? 0,
+    );
     const chosen =
       store.player.selectedCard ??
       available[Math.floor(Math.random() * available.length)];
@@ -149,7 +160,12 @@ export function CardHand() {
     }
   };
 
-  const availableCards = getAvailableCards(mode, player.ammo, player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES, player.dodgeStreak ?? 0);
+  const availableCards = getAvailableCards(
+    mode,
+    player.ammo,
+    player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES,
+    player.dodgeStreak ?? 0,
+  );
   const allCards = CARDS_BY_MODE[mode];
 
   if (phase === "game_over" || phase === "round_over") return null;
@@ -169,115 +185,150 @@ export function CardHand() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none">
-      <div className="bg-gradient-to-t from-black via-black/90 to-transparent pt-12 pb-6 px-3 pointer-events-auto">
-        <div className="max-w-5xl mx-auto flex flex-col items-center">
-          {/* ── phase / timer indicator row ── */}
-          <div className="flex items-center gap-3 mb-4">
-            {phase !== "selecting" && (
-              <span className="font-western text-sm text-gold/80 tracking-widest animate-pulse">
-                {phase === "revealing"
-                  ? "REVELANDO CARTAS..."
-                  : phase === "resolving"
-                    ? "RESOLVENDO..."
-                    : "AGUARDE..."}
-              </span>
-            )}
+      <div
+        className="bg-gradient-to-t from-black via-black/90 to-transparent pt-8 pb-3 sm:pb-4 px-2 sm:px-3 pointer-events-auto"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="max-w-5xl mx-auto">
+          {/* ── phase / timer indicator row (compact) ── */}
+          {(phase !== "selecting" || isTimerActive) && (
+            <div className="flex items-center justify-center gap-2 mb-2">
+              {phase !== "selecting" && (
+                <span className="font-western text-xs sm:text-sm text-gold/80 tracking-widest animate-pulse">
+                  {phase === "revealing"
+                    ? "REVELANDO..."
+                    : phase === "resolving"
+                      ? "RESOLVENDO..."
+                      : "AGUARDE..."}
+                </span>
+              )}
 
-            {isTimerActive && (
-              <div
-                className={`flex items-center gap-2 ${timerUrgent ? "animate-pulse" : ""}`}
-              >
-                {/* Circular countdown */}
-                <svg
-                  width="36"
-                  height="36"
-                  viewBox="0 0 36 36"
-                  className="drop-shadow-lg"
+              {isTimerActive && (
+                <div
+                  className={`flex items-center gap-1.5 ${timerUrgent ? "animate-pulse" : ""}`}
                 >
-                  {/* background ring */}
-                  <circle
-                    cx="18"
-                    cy="18"
-                    r="14"
-                    fill="black"
-                    fillOpacity="0.6"
-                    stroke="#ffffff10"
-                    strokeWidth="2"
-                  />
-                  {/* progress ring */}
-                  <circle
-                    cx="18"
-                    cy="18"
-                    r="14"
-                    fill="none"
-                    stroke={timerColor}
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={dashOffset}
-                    transform="rotate(-90 18 18)"
-                    style={{
-                      transition: "stroke-dashoffset 0.9s linear, stroke 0.3s",
-                    }}
-                  />
-                  <text
-                    x="18"
-                    y="22"
-                    textAnchor="middle"
-                    fontSize="11"
-                    fontWeight="bold"
-                    fill={timerColor}
-                    fontFamily="monospace"
+                  {/* Circular countdown (menor) */}
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 28 28"
+                    className="drop-shadow-lg"
                   >
-                    {timeLeft}
-                  </text>
-                </svg>
-                {timerUrgent && (
-                  <span
-                    className="font-western text-xs tracking-widest"
-                    style={{ color: timerColor }}
-                  >
-                    RÁPIDO!
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* ── cards row ── */}
-          <div className="flex justify-center items-center gap-2 sm:gap-6 md:gap-8 overflow-visible pb-2 w-full">
-            {allCards.map((cId) => {
-              const details = CARD_DETAILS[cId];
-              return (
-                <CardItem
-                  key={cId}
-                  id={cId}
-                  label={details.label}
-                  description={details.description}
-                  ammoCost={details.cost}
-                  isSelected={player.selectedCard === cId}
-                  isSelectable={
-                    phase === "selecting" && availableCards.includes(cId)
-                  }
-                  usesLeft={cId === "double_shot" ? (player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES) : undefined}
-                  dodgeStreakCount={cId === "dodge" ? (player.dodgeStreak ?? 0) : undefined}
-                  onClick={() => handleSelect(cId)}
-                />
-              );
-            })}
-          </div>
-
-          {/* ── confirm button ── */}
-          {phase === "selecting" && player.selectedCard && (
-            <div className="flex justify-center mt-6 w-full">
-              <button
-                onClick={handleConfirm}
-                className="w-full max-w-xs py-3 bg-gradient-to-r from-red-600 to-red-900 text-gold font-western text-xl tracking-widest border-2 border-gold/40 rounded-xl shadow-2xl animate-pulse-glow hover:scale-105 active:scale-95 transition-all"
-              >
-                CONFIRMAR
-              </button>
+                    {/* background ring */}
+                    <circle
+                      cx="14"
+                      cy="14"
+                      r="11"
+                      fill="black"
+                      fillOpacity="0.6"
+                      stroke="#ffffff10"
+                      strokeWidth="1.5"
+                    />
+                    {/* progress ring */}
+                    <circle
+                      cx="14"
+                      cy="14"
+                      r="11"
+                      fill="none"
+                      stroke={timerColor}
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={dashOffset}
+                      transform="rotate(-90 14 14)"
+                      style={{
+                        transition:
+                          "stroke-dashoffset 0.9s linear, stroke 0.3s",
+                      }}
+                    />
+                    <text
+                      x="14"
+                      y="17"
+                      textAnchor="middle"
+                      fontSize="9"
+                      fontWeight="bold"
+                      fill={timerColor}
+                      fontFamily="monospace"
+                    >
+                      {timeLeft}
+                    </text>
+                  </svg>
+                  {timerUrgent && (
+                    <span
+                      className="font-western text-[10px] tracking-widest"
+                      style={{ color: timerColor }}
+                    >
+                      RÁPIDO!
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           )}
+
+          {/* ── cards + confirm button layout (responsivo) ── */}
+          <div className="relative flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
+            {/* ── cards row (ajustado para mobile) ── */}
+            <div className="flex justify-center items-center gap-1.5 xs:gap-2 sm:gap-3 md:gap-4 overflow-visible w-full sm:flex-1">
+              {allCards.map((cId) => {
+                const details = CARD_DETAILS[cId];
+                return (
+                  <CardItem
+                    key={cId}
+                    id={cId}
+                    label={details.label}
+                    description={details.description}
+                    ammoCost={details.cost}
+                    isSelected={player.selectedCard === cId}
+                    isSelectable={
+                      phase === "selecting" && availableCards.includes(cId)
+                    }
+                    usesLeft={
+                      cId === "double_shot"
+                        ? (player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES)
+                        : undefined
+                    }
+                    dodgeStreakCount={
+                      cId === "dodge" ? (player.dodgeStreak ?? 0) : undefined
+                    }
+                    onClick={() => handleSelect(cId)}
+                  />
+                );
+              })}
+            </div>
+
+            {/* ── confirm button CIRCULAR (à direita em desktop, abaixo em mobile) ── */}
+            {phase === "selecting" && player.selectedCard && (
+              <button
+                onClick={handleConfirm}
+                className="
+                  shrink-0 w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18
+                  bg-gradient-to-br from-green-500 via-green-600 to-green-700 
+                  text-white font-bold rounded-full
+                  border-3 border-gold/60 
+                  shadow-[0_4px_16px_rgba(34,197,94,0.6),0_0_24px_rgba(34,197,94,0.4)]
+                  hover:scale-110 active:scale-95 
+                  transition-all duration-200
+                  animate-pulse-glow
+                  flex items-center justify-center
+                "
+                aria-label="Confirmar jogada"
+              >
+                {/* Ícone de check */}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-7 h-7 sm:w-8 sm:h-8"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

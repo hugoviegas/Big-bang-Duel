@@ -173,7 +173,11 @@ export interface MatchResultUpdate {
   currencies: Currencies;
   ranked: RankedStats;
   unlocks: Unlocks;
-  levelRewards: Array<{ level: number; gold: number; unlockedCharacterId?: string }>;
+  levelRewards: Array<{
+    level: number;
+    gold: number;
+    unlockedCharacterId?: string;
+  }>;
 }
 
 function createEmptyModeStats(): ModeStats {
@@ -310,13 +314,10 @@ export async function recordMatchResult(
     overall: nextOverall,
   };
 
-  const currentProgression = calculateProgression(data.progression?.xpTotal ?? 0);
-  const rewards =
-    rewardOverride ??
-    calculateMatchRewards(
-      mode,
-      result,
-    );
+  const currentProgression = calculateProgression(
+    data.progression?.xpTotal ?? 0,
+  );
+  const rewards = rewardOverride ?? calculateMatchRewards(mode, result);
 
   const nextProgression = calculateProgression(
     (data.progression?.xpTotal ?? 0) + rewards.xpGained,
@@ -509,16 +510,13 @@ export async function fetchLeaderboard(
   const leaderboardSnap = await getDocs(leaderboardQuery);
 
   const fromLeaderboard = leaderboardSnap.docs
-    .map((d) => profileWithNormalizedStats(d.data() as PlayerProfile))
-    .filter((p) => {
+    .reduce<LeaderboardEntry[]>((acc, d) => {
+      const raw = d.data();
+      const p = profileWithNormalizedStats(raw as PlayerProfile);
       const stats =
         mode === "overall" ? p.statsByMode?.overall : p.statsByMode?.[mode];
-      return (stats?.totalGames ?? 0) > 0;
-    })
-    .map((p) => {
-      const stats =
-        mode === "overall" ? p.statsByMode!.overall : p.statsByMode![mode];
-      return {
+      if (!stats || (stats.totalGames ?? 0) <= 0) return acc;
+      acc.push({
         uid: p.uid,
         displayName: p.displayName,
         playerCode: p.playerCode,
@@ -527,10 +525,14 @@ export async function fetchLeaderboard(
         losses: stats.losses,
         winRate: stats.winRate,
         totalGames: stats.totalGames,
-        trophies: p.ranked?.trophies ?? 0,
+        trophies:
+          typeof raw.trophies === "number"
+            ? raw.trophies
+            : (p.ranked?.trophies ?? 0),
         rank: 0,
-      } satisfies LeaderboardEntry;
-    })
+      });
+      return acc;
+    }, [])
     .sort((a, b) => {
       if (sortBy === "trophies") return (b.trophies ?? 0) - (a.trophies ?? 0);
       return b.wins - a.wins;

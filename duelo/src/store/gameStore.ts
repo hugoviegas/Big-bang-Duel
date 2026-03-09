@@ -5,9 +5,9 @@ import type {
   GameState,
   GameMode,
   CardType,
-  BotDifficulty,
   AttackTimer,
   RoomConfig,
+  TurnResult,
 } from "../types";
 import {
   LIFE_BY_MODE,
@@ -16,8 +16,82 @@ import {
   MAX_DODGE_STREAK,
   MAX_DOUBLE_SHOT_USES,
 } from "../lib/gameEngine";
-import { botChooseCard } from "../lib/botAI";
+import { botChooseCard, initBotPersona } from "../lib/botAI";
 import { CHARACTERS, getCharacter, getCharacterClass } from "../lib/characters";
+
+// ─── Solo Game Persistence (localStorage) ────────────────────────────────────
+const SOLO_MATCH_KEY = "bbd_active_solo_match";
+
+interface SavedSoloMatch {
+  mode: GameMode;
+  turn: number;
+  player: GameState["player"];
+  opponent: GameState["opponent"];
+  history: TurnResult[];
+  bestOf3: boolean;
+  currentRound: number;
+  playerStars: number;
+  opponentStars: number;
+  hideOpponentAmmo: boolean;
+  attackTimer: AttackTimer;
+  savedAt: number;
+}
+
+function _persistSoloState(state: GameState): void {
+  if (state.isOnline) return;
+  if (state.phase === "idle" || state.phase === "game_over") return;
+  try {
+    const saved: SavedSoloMatch = {
+      mode: state.mode,
+      turn: state.turn,
+      player: {
+        ...state.player,
+        selectedCard: null,
+        choiceRevealed: false,
+        isAnimating: false,
+        currentAnimation: "idle",
+      },
+      opponent: {
+        ...state.opponent,
+        selectedCard: null,
+        choiceRevealed: false,
+        isAnimating: false,
+        currentAnimation: "idle",
+      },
+      history: state.history,
+      bestOf3: state.bestOf3,
+      currentRound: state.currentRound,
+      playerStars: state.playerStars,
+      opponentStars: state.opponentStars,
+      hideOpponentAmmo: state.hideOpponentAmmo,
+      attackTimer: state.attackTimer,
+      savedAt: Date.now(),
+    };
+    localStorage.setItem(SOLO_MATCH_KEY, JSON.stringify(saved));
+  } catch {
+    /* quota exceeded — silently ignore */
+  }
+}
+
+export function getSavedSoloMatch(): SavedSoloMatch | null {
+  try {
+    const raw = localStorage.getItem(SOLO_MATCH_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as SavedSoloMatch;
+    if (Date.now() - saved.savedAt > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(SOLO_MATCH_KEY);
+      return null;
+    }
+    return saved;
+  } catch {
+    localStorage.removeItem(SOLO_MATCH_KEY);
+    return null;
+  }
+}
+
+export function clearSavedSoloMatch(): void {
+  localStorage.removeItem(SOLO_MATCH_KEY);
+}
 
 interface GameStore extends GameState {
   initializeGame: (
@@ -25,7 +99,6 @@ interface GameStore extends GameState {
     isOnline: boolean,
     isHost: boolean,
     roomId?: string,
-    botDifficulty?: BotDifficulty,
     playerAvatar?: string,
     config?: Partial<RoomConfig>,
     playerDisplayName?: string,
@@ -36,6 +109,7 @@ interface GameStore extends GameState {
   quitGame: () => void;
   syncFromFirebase: (roomData: any, isHost: boolean) => void;
   nextRound: () => void;
+  restoreSoloMatch: () => boolean;
 }
 
 const initialState: GameState = {
@@ -86,7 +160,6 @@ const initialState: GameState = {
   roomStatus: "waiting",
   winnerId: null,
   history: [],
-  botDifficulty: "medium",
   // Room config defaults
   attackTimer: 10,
   bestOf3: false,
@@ -100,6 +173,13 @@ const initialState: GameState = {
 // Flag para prevenir múltiplas resoluções simultâneas
 let _isResolving = false;
 
+// Host-authoritative TurnResult for the guest to consume instead of
+// resolving independently with its own Math.random() rolls.
+let _pendingHostResult: TurnResult | null = null;
+
+// When guest detects both choices but the host TurnResult hasn't arrived yet
+let _waitingForHostResult = false;
+
 export const useGameStore = create<GameStore>()((set, get) => ({
   ...initialState,
 
@@ -108,12 +188,13 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     isOnline,
     isHost,
     roomId,
-    botDifficulty = "medium",
     playerAvatar = "marshal",
     config = {},
     playerDisplayName = "Pistoleiro",
   ) => {
     _isResolving = false;
+    _pendingHostResult = null;
+    _waitingForHostResult = false;
     const life = LIFE_BY_MODE[mode];
     // Usar TODOS os personagens disponíveis, não apenas 3
     const allAvatarIds = CHARACTERS.map((c) => c.id);
@@ -121,25 +202,17 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const opponentAvatar =
       opponentAvatars[Math.floor(Math.random() * opponentAvatars.length)];
 
-    // Set attack timer based on difficulty (if not online or not provided in config)
-    let attackTimer: AttackTimer = 10;
-    if (!config.attackTimer) {
-      if (botDifficulty === "easy") {
-        attackTimer = 30 as AttackTimer;
-      } else if (botDifficulty === "medium") {
-        attackTimer = 10 as AttackTimer;
-      } else if (botDifficulty === "hard") {
-        attackTimer = 5 as AttackTimer;
-      }
-    }
+    // Fixed attack timer and ammo visibility for solo
+    const attackTimer: AttackTimer = (config.attackTimer ?? 10) as AttackTimer;
 
     const opponentCharDef = getCharacter(opponentAvatar);
 
-    // Determinar se deve ocultar munições do oponente
-    // Online: usa config (padrão false), Solo: médio/difícil ocultam, fácil mostra
-    const shouldHideAmmo = isOnline
-      ? (config.hideOpponentAmmo ?? false)
-      : botDifficulty !== "easy";
+    // Solo: always hide opponent ammo (matches hard-difficulty behaviour)
+    // Online: use room config (default false = visible)
+    const shouldHideAmmo = isOnline ? (config.hideOpponentAmmo ?? false) : true;
+
+    // Pick a random bot persona for this match (varies strategy each game)
+    if (!isOnline) initBotPersona(mode);
 
     set({
       ...initialState,
@@ -147,9 +220,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       isOnline,
       isHost: isOnline ? isHost : false,
       roomId: roomId || null,
-      botDifficulty: isOnline ? undefined : botDifficulty,
       phase: "selecting",
-      attackTimer: (config.attackTimer ?? attackTimer) as AttackTimer,
+      attackTimer,
       bestOf3: config.bestOf3 ?? false,
       hideOpponentAmmo: shouldHideAmmo,
       currentRound: 1,
@@ -175,6 +247,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         shieldUsesLeft: 2,
       },
     });
+
+    // Persist initial solo state so a brand-new game can be resumed after a reload
+    if (!isOnline) {
+      _persistSoloState(get());
+    }
   },
 
   selectCard: (card) => {
@@ -196,7 +273,6 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           currentState.opponent,
           pHistory,
           currentState.mode,
-          currentState.botDifficulty || "medium",
           currentState.player,
         );
         set({
@@ -215,6 +291,15 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
     _isResolving = true;
 
+    // ── Guest safety guard: never compute ability rolls independently ──
+    // The host is the single source of truth for random outcomes.
+    // If the host result hasn't arrived yet via RTDB, we'll be called again
+    // by syncFromFirebase once it does.
+    if (state.isOnline && !state.isHost && !_pendingHostResult) {
+      _isResolving = false;
+      return;
+    }
+
     // Capturar os valores ANTES de qualquer update
     const pCard = state.player.selectedCard;
     const oCard = state.opponent.selectedCard;
@@ -222,6 +307,54 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const oAmmo = state.opponent.ammo;
     const pLife = state.player.life;
     const oLife = state.opponent.life;
+
+    // ── Compute result NOW (before animations) ──
+    // Host uses resolveCards() with Math.random() ability rolls.
+    // Guest uses the host-authoritative result received via RTDB.
+    // Both clients are guaranteed the exact same outcome.
+    let result: TurnResult;
+    if (state.isOnline && !state.isHost && _pendingHostResult) {
+      result = _pendingHostResult;
+      _pendingHostResult = null;
+    } else {
+      result = resolveCards(
+        pCard,
+        oCard,
+        pAmmo,
+        oAmmo,
+        state.mode,
+        state.turn,
+        state.player.characterClass,
+        state.opponent.characterClass,
+        state.player.shieldUsesLeft,
+        state.opponent.shieldUsesLeft,
+      );
+    }
+
+    // ── Host broadcasts result to RTDB IMMEDIATELY ──
+    // Writing before animations means the guest receives the result and can
+    // start its own animation cycle at nearly the same time as the host.
+    if (state.isOnline && state.isHost && state.roomId) {
+      const roomRef = ref(rtdb, `rooms/${state.roomId}`);
+      update(roomRef, {
+        lastTurnResult: {
+          turn: result.turn,
+          hostCard: result.playerCard,
+          guestCard: result.opponentCard,
+          hostLifeLost: result.playerLifeLost,
+          guestLifeLost: result.opponentLifeLost,
+          hostAmmoChange: result.playerAmmoChange,
+          guestAmmoChange: result.opponentAmmoChange,
+          narrative: result.narrative,
+          hostAbilityTriggered: result.playerAbilityTriggered ?? null,
+          guestAbilityTriggered: result.opponentAbilityTriggered ?? null,
+          hostShieldUsed: result.playerShieldUsed ?? false,
+          guestShieldUsed: result.opponentShieldUsed ?? false,
+        },
+      }).catch((e) =>
+        console.error("[resolveTurn] RTDB lastTurnResult write error:", e),
+      );
+    }
 
     set({
       phase: "revealing",
@@ -243,18 +376,6 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       };
 
       const currentState = get();
-      const result = resolveCards(
-        pCard,
-        oCard,
-        pAmmo,
-        oAmmo,
-        currentState.mode,
-        currentState.turn,
-        currentState.player.characterClass,
-        currentState.opponent.characterClass,
-        currentState.player.shieldUsesLeft,
-        currentState.opponent.shieldUsesLeft,
-      );
 
       const pAnim = result.playerLifeLost > 0 ? "hit" : cardToAnim(pCard);
       const oAnim = result.opponentLifeLost > 0 ? "hit" : cardToAnim(oCard);
@@ -368,8 +489,19 @@ export const useGameStore = create<GameStore>()((set, get) => ({
                 guestLife: afterAnimState.opponent.life,
                 hostAmmo: afterAnimState.player.ammo,
                 guestAmmo: afterAnimState.opponent.ammo,
+                hostDodgeStreak: afterAnimState.player.dodgeStreak ?? 0,
+                guestDodgeStreak: afterAnimState.opponent.dodgeStreak ?? 0,
+                hostDoubleShotsLeft:
+                  afterAnimState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES,
+                guestDoubleShotsLeft:
+                  afterAnimState.opponent.doubleShotsLeft ??
+                  MAX_DOUBLE_SHOT_USES,
+                hostShieldUsesLeft: afterAnimState.player.shieldUsesLeft ?? 2,
+                guestShieldUsesLeft:
+                  afterAnimState.opponent.shieldUsesLeft ?? 2,
                 hostChoice: null,
                 guestChoice: null,
+                lastTurnResult: null,
                 turn: afterAnimState.turn + 1,
                 status: matchOver ? "finished" : "in_progress",
               });
@@ -386,6 +518,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               roundWinnerId: roundWinner,
               phase: "game_over",
             });
+            if (!afterAnimState.isOnline) clearSavedSoloMatch();
           } else {
             // Round over — show interstitial, then auto-start next round
             set({
@@ -394,6 +527,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               roundWinnerId: roundWinner,
               phase: "round_over",
             });
+            if (!afterAnimState.isOnline) _persistSoloState(get());
             setTimeout(() => {
               get().nextRound();
             }, 3500);
@@ -415,8 +549,17 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               guestLife: afterAnimState.opponent.life,
               hostAmmo: afterAnimState.player.ammo,
               guestAmmo: afterAnimState.opponent.ammo,
+              hostDodgeStreak: afterAnimState.player.dodgeStreak ?? 0,
+              guestDodgeStreak: afterAnimState.opponent.dodgeStreak ?? 0,
+              hostDoubleShotsLeft:
+                afterAnimState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES,
+              guestDoubleShotsLeft:
+                afterAnimState.opponent.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES,
+              hostShieldUsesLeft: afterAnimState.player.shieldUsesLeft ?? 2,
+              guestShieldUsesLeft: afterAnimState.opponent.shieldUsesLeft ?? 2,
               hostChoice: null,
               guestChoice: null,
+              lastTurnResult: null,
               turn: afterAnimState.turn + 1,
               status: afterAnimState.winnerId ? "finished" : "in_progress",
             });
@@ -427,6 +570,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
         if (afterAnimState.winnerId) {
           set({ phase: "game_over" });
+          if (!afterAnimState.isOnline) clearSavedSoloMatch();
         } else {
           set((curr) => ({
             phase: "selecting" as const,
@@ -446,6 +590,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               currentAnimation: "idle" as any,
             },
           }));
+          if (!afterAnimState.isOnline) _persistSoloState(get());
         }
       }, 3000);
     }, 1200);
@@ -466,7 +611,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
     // Se ambos escolheram e ainda estamos selecionando -> resolver
     if (state.phase === "selecting" && isBothChosen && !_isResolving) {
-      // Primeiro atualizar as cartas, depois resolver
+      // Atualizar as cartas e estado sincronizado antes de decidir quem resolve
       set({
         isHost: isHost,
         isOnline: true,
@@ -488,6 +633,16 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           ...state.player,
           life: roomData[`${myRole}Life`] ?? state.player.life,
           ammo: roomData[`${myRole}Ammo`] ?? state.player.ammo,
+          dodgeStreak:
+            roomData[`${myRole}DodgeStreak`] ?? state.player.dodgeStreak ?? 0,
+          doubleShotsLeft:
+            roomData[`${myRole}DoubleShotsLeft`] ??
+            state.player.doubleShotsLeft ??
+            MAX_DOUBLE_SHOT_USES,
+          shieldUsesLeft:
+            roomData[`${myRole}ShieldUsesLeft`] ??
+            state.player.shieldUsesLeft ??
+            2,
           displayName:
             (isHost ? roomData.hostName : roomData.guestName) ||
             state.player.displayName,
@@ -502,6 +657,18 @@ export const useGameStore = create<GameStore>()((set, get) => ({
             : roomData.hostName || "Host",
           life: roomData[`${otherRole}Life`] ?? state.opponent.life,
           ammo: roomData[`${otherRole}Ammo`] ?? state.opponent.ammo,
+          dodgeStreak:
+            roomData[`${otherRole}DodgeStreak`] ??
+            state.opponent.dodgeStreak ??
+            0,
+          doubleShotsLeft:
+            roomData[`${otherRole}DoubleShotsLeft`] ??
+            state.opponent.doubleShotsLeft ??
+            MAX_DOUBLE_SHOT_USES,
+          shieldUsesLeft:
+            roomData[`${otherRole}ShieldUsesLeft`] ??
+            state.opponent.shieldUsesLeft ??
+            2,
           selectedCard: roomData[`${otherRole}Choice`] as CardType,
           choiceRevealed: true,
           avatar: isHost
@@ -515,11 +682,80 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         },
       });
 
-      // Breve delay para garantir que o state foi aplicado antes de resolver
-      setTimeout(() => {
-        get().resolveTurn();
-      }, 100);
+      // ── Decide who triggers resolution ──
+      // Host always resolves (computes ability rolls with Math.random()).
+      // Guest resolves ONLY after receiving the host-authoritative result via
+      // RTDB — this ensures both clients apply the exact same outcome,
+      // regardless of which machine's RNG would have produced different rolls.
+      if (!isHost) {
+        if (roomData.lastTurnResult) {
+          const htr = roomData.lastTurnResult;
+          if (htr.turn === (roomData.turn ?? state.turn)) {
+            // Host result already in RTDB — map to guest perspective and resolve
+            _pendingHostResult = {
+              turn: htr.turn,
+              playerCard: htr.guestCard,
+              opponentCard: htr.hostCard,
+              playerLifeLost: htr.guestLifeLost,
+              opponentLifeLost: htr.hostLifeLost,
+              playerAmmoChange: htr.guestAmmoChange,
+              opponentAmmoChange: htr.hostAmmoChange,
+              narrative: htr.narrative,
+              playerAbilityTriggered: htr.guestAbilityTriggered || undefined,
+              opponentAbilityTriggered: htr.hostAbilityTriggered || undefined,
+              playerShieldUsed: htr.guestShieldUsed ?? false,
+              opponentShieldUsed: htr.hostShieldUsed ?? false,
+            };
+            _waitingForHostResult = false;
+            setTimeout(() => get().resolveTurn(), 100);
+          } else {
+            // Turn mismatch — wait for the correct turn's result
+            _waitingForHostResult = true;
+          }
+        } else {
+          // Host hasn't resolved yet — wait; syncFromFirebase will re-fire
+          // when lastTurnResult arrives in RTDB
+          _waitingForHostResult = true;
+        }
+      } else {
+        // Host resolves authoritatively
+        setTimeout(() => get().resolveTurn(), 100);
+      }
       return;
+    }
+
+    // ── Guest waiting for host result that arrived in a later sync event ──
+    if (
+      _waitingForHostResult &&
+      !isHost &&
+      !_isResolving &&
+      roomData.lastTurnResult
+    ) {
+      const htr = roomData.lastTurnResult;
+      const currentTurn = roomData.turn ?? state.turn;
+      if (htr.turn === currentTurn && isBothChosen) {
+        _pendingHostResult = {
+          turn: htr.turn,
+          playerCard: htr.guestCard,
+          opponentCard: htr.hostCard,
+          playerLifeLost: htr.guestLifeLost,
+          opponentLifeLost: htr.hostLifeLost,
+          playerAmmoChange: htr.guestAmmoChange,
+          opponentAmmoChange: htr.hostAmmoChange,
+          narrative: htr.narrative,
+          playerAbilityTriggered: htr.guestAbilityTriggered || undefined,
+          opponentAbilityTriggered: htr.hostAbilityTriggered || undefined,
+          playerShieldUsed: htr.guestShieldUsed ?? false,
+          opponentShieldUsed: htr.hostShieldUsed ?? false,
+        };
+        _waitingForHostResult = false;
+
+        // Now resolve with the host's result
+        setTimeout(() => {
+          get().resolveTurn();
+        }, 100);
+        return;
+      }
     }
 
     // Update normal de estado (sem resolução)
@@ -546,6 +782,16 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         ...curr.player,
         life: roomData[`${myRole}Life`] ?? curr.player.life,
         ammo: roomData[`${myRole}Ammo`] ?? curr.player.ammo,
+        dodgeStreak:
+          roomData[`${myRole}DodgeStreak`] ?? curr.player.dodgeStreak ?? 0,
+        doubleShotsLeft:
+          roomData[`${myRole}DoubleShotsLeft`] ??
+          curr.player.doubleShotsLeft ??
+          MAX_DOUBLE_SHOT_USES,
+        shieldUsesLeft:
+          roomData[`${myRole}ShieldUsesLeft`] ??
+          curr.player.shieldUsesLeft ??
+          2,
         displayName:
           (isHost ? roomData.hostName : roomData.guestName) ||
           curr.player.displayName,
@@ -571,6 +817,16 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         ),
         life: roomData[`${otherRole}Life`] ?? curr.opponent.life,
         ammo: roomData[`${otherRole}Ammo`] ?? curr.opponent.ammo,
+        dodgeStreak:
+          roomData[`${otherRole}DodgeStreak`] ?? curr.opponent.dodgeStreak ?? 0,
+        doubleShotsLeft:
+          roomData[`${otherRole}DoubleShotsLeft`] ??
+          curr.opponent.doubleShotsLeft ??
+          MAX_DOUBLE_SHOT_USES,
+        shieldUsesLeft:
+          roomData[`${otherRole}ShieldUsesLeft`] ??
+          curr.opponent.shieldUsesLeft ??
+          2,
         selectedCard: null,
         choiceRevealed: false,
       },
@@ -581,6 +837,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const state = get();
     const life = LIFE_BY_MODE[state.mode];
     _isResolving = false;
+    _pendingHostResult = null;
+    _waitingForHostResult = false;
     set((curr) => ({
       turn: 1,
       winnerId: null,
@@ -624,18 +882,72 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         currentRound: after.currentRound,
         hostChoice: null,
         guestChoice: null,
+        lastTurnResult: null,
         hostLife: life,
         guestLife: life,
         hostAmmo: 0,
         guestAmmo: 0,
+        hostDodgeStreak: 0,
+        guestDodgeStreak: 0,
+        hostDoubleShotsLeft: MAX_DOUBLE_SHOT_USES,
+        guestDoubleShotsLeft: MAX_DOUBLE_SHOT_USES,
+        hostShieldUsesLeft: after.player.shieldUsesLeft ?? 2,
+        guestShieldUsesLeft: after.opponent.shieldUsesLeft ?? 2,
         status: "in_progress",
       }).catch((e) => console.error("nextRound sync error:", e));
     }
+
+    // Solo: persist new round state
+    if (!after.isOnline) _persistSoloState(after);
   },
 
   setPhase: (phase) => set({ phase }),
+
+  restoreSoloMatch: () => {
+    const saved = getSavedSoloMatch();
+    if (!saved) return false;
+    _isResolving = false;
+    set({
+      ...initialState,
+      mode: saved.mode,
+      turn: saved.turn,
+      phase: "selecting",
+      isOnline: false,
+      isHost: false,
+      roomId: null,
+      attackTimer: saved.attackTimer,
+      bestOf3: saved.bestOf3,
+      hideOpponentAmmo: saved.hideOpponentAmmo,
+      currentRound: saved.currentRound,
+      playerStars: saved.playerStars,
+      opponentStars: saved.opponentStars,
+      player: {
+        ...saved.player,
+        selectedCard: null,
+        choiceRevealed: false,
+        isAnimating: false,
+        currentAnimation: "idle",
+      },
+      opponent: {
+        ...saved.opponent,
+        selectedCard: null,
+        choiceRevealed: false,
+        isAnimating: false,
+        currentAnimation: "idle",
+      },
+      history: saved.history,
+      winnerId: null,
+      roundWinnerId: null,
+      lastResult: null,
+    });
+    return true;
+  },
+
   quitGame: () => {
     _isResolving = false;
+    _pendingHostResult = null;
+    _waitingForHostResult = false;
+    clearSavedSoloMatch();
     set(initialState);
   },
 }));

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
 import { useGameStore } from "../../store/gameStore";
 import { useAuthStore } from "../../store/authStore";
-import { CHARACTERS } from "../../lib/characters";
 import { normalizeUnlocks } from "../../lib/progression";
 
 import type { AttackTimer, GameMode, Room, RoomConfig } from "../../types";
@@ -78,14 +77,6 @@ export function OnlineLobby() {
     return unlocks.charactersUnlocked[0] ?? "marshal";
   }, [unlocks.charactersUnlocked, user?.avatar]);
 
-  const unlockedCharacters = useMemo(
-    () =>
-      CHARACTERS.filter((c) => unlocks.charactersUnlocked.includes(c.id)).map(
-        (c) => c.id,
-      ),
-    [unlocks.charactersUnlocked],
-  );
-
   const launchIntoRoom = (
     roomId: string,
     mode: GameMode,
@@ -99,7 +90,6 @@ export function OnlineLobby() {
         true,
         asHost,
         roomId,
-        undefined,
         selectedCharacter,
         roomConfig,
         user?.displayName,
@@ -238,26 +228,6 @@ export function OnlineLobby() {
           <h2 className="font-western text-lg text-gold text-center tracking-widest">
             CRIAR SALA PERSONALIZADA
           </h2>
-
-          <div>
-            <p className="font-stats text-[10px] uppercase text-sand/60 mb-2">
-              Seu personagem
-            </p>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {unlockedCharacters.map((charId) => (
-                <div
-                  key={charId}
-                  className={`text-[9px] px-2 py-1 rounded border font-stats uppercase ${
-                    selectedCharacter === charId
-                      ? "border-gold/50 text-gold"
-                      : "border-sand/20 text-sand/50"
-                  }`}
-                >
-                  {charId}
-                </div>
-              ))}
-            </div>
-          </div>
 
           <div>
             <p className="font-stats text-[10px] uppercase text-sand/60 mb-2">

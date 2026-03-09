@@ -37,7 +37,7 @@ LIFE_BY_MODE: Dict[str, int] = {
 MAX_AMMO = 3
 MAX_TURNS = 50
 MAX_DODGE_STREAK = 3  # Sincronizado com TypeScript: máx 3 esquivas consecutivas
-MAX_DOUBLE_SHOT_USES = 3
+MAX_DOUBLE_SHOT_USES = 2
 
 
 def get_available_cards(
