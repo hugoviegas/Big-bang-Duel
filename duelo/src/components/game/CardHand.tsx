@@ -180,21 +180,54 @@ export function CardHand() {
       : timerFraction > 0.25
         ? "#facc15"
         : "#ef4444";
-  const circumference = 2 * Math.PI * 14; // r=14
+  const circumference = 2 * Math.PI * 12; // r=12
   const dashOffset = circumference * (1 - timerFraction);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none">
+      {/* ── Floating confirm button (top-right of card area) ── */}
+      {phase === "selecting" && player.selectedCard && (
+        <div className="flex justify-end px-4 sm:px-6 mb-1 pointer-events-auto">
+          <button
+            onClick={handleConfirm}
+            className="
+              w-14 h-14 sm:w-16 sm:h-16
+              bg-gradient-to-br from-green-400 via-green-600 to-green-800 
+              text-white rounded-full
+              border-[3px] border-gold/70 
+              shadow-[0_0_20px_rgba(34,197,94,0.5),0_4px_20px_rgba(0,0,0,0.5)]
+              hover:scale-110 active:scale-90 
+              transition-all duration-150
+              animate-pulse-glow
+              flex items-center justify-center
+            "
+            aria-label="Confirmar jogada"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-7 h-7 sm:w-8 sm:h-8 drop-shadow-md"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div
-        className="bg-gradient-to-t from-black via-black/90 to-transparent pt-8 pb-3 sm:pb-4 px-2 sm:px-3 pointer-events-auto"
-        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        className="bg-gradient-to-t from-black/95 via-black/85 to-transparent pt-4 pb-3 px-2 sm:px-3 pointer-events-auto"
+        style={{ paddingBottom: "max(0.6rem, env(safe-area-inset-bottom))" }}
       >
-        <div className="max-w-5xl mx-auto">
-          {/* ── phase / timer indicator row (compact) ── */}
+        <div className="max-w-xl mx-auto">
+          {/* ── Timer / phase indicator ── */}
           {(phase !== "selecting" || isTimerActive) && (
             <div className="flex items-center justify-center gap-2 mb-2">
               {phase !== "selecting" && (
-                <span className="font-western text-xs sm:text-sm text-gold/80 tracking-widest animate-pulse">
+                <span className="font-western text-xs text-gold/80 tracking-widest animate-pulse">
                   {phase === "revealing"
                     ? "REVELANDO..."
                     : phase === "resolving"
@@ -205,47 +238,44 @@ export function CardHand() {
 
               {isTimerActive && (
                 <div
-                  className={`flex items-center gap-1.5 ${timerUrgent ? "animate-pulse" : ""}`}
+                  className={`flex items-center gap-1 ${timerUrgent ? "animate-pulse" : ""}`}
                 >
-                  {/* Circular countdown (menor) */}
                   <svg
-                    width="28"
-                    height="28"
-                    viewBox="0 0 28 28"
+                    width="30"
+                    height="30"
+                    viewBox="0 0 30 30"
                     className="drop-shadow-lg"
                   >
-                    {/* background ring */}
                     <circle
-                      cx="14"
-                      cy="14"
-                      r="11"
+                      cx="15"
+                      cy="15"
+                      r="12"
                       fill="black"
-                      fillOpacity="0.6"
+                      fillOpacity="0.7"
                       stroke="#ffffff10"
                       strokeWidth="1.5"
                     />
-                    {/* progress ring */}
                     <circle
-                      cx="14"
-                      cy="14"
-                      r="11"
+                      cx="15"
+                      cy="15"
+                      r="12"
                       fill="none"
                       stroke={timerColor}
                       strokeWidth="2.5"
                       strokeLinecap="round"
                       strokeDasharray={circumference}
                       strokeDashoffset={dashOffset}
-                      transform="rotate(-90 14 14)"
+                      transform="rotate(-90 15 15)"
                       style={{
                         transition:
                           "stroke-dashoffset 0.9s linear, stroke 0.3s",
                       }}
                     />
                     <text
-                      x="14"
-                      y="17"
+                      x="15"
+                      y="19"
                       textAnchor="middle"
-                      fontSize="9"
+                      fontSize="10"
                       fontWeight="bold"
                       fill={timerColor}
                       fontFamily="monospace"
@@ -266,68 +296,33 @@ export function CardHand() {
             </div>
           )}
 
-          {/* ── cards + confirm button layout (responsivo) ── */}
-          <div className="relative flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
-            {/* ── cards row (ajustado para mobile) ── */}
-            <div className="flex justify-center items-center gap-1.5 xs:gap-2 sm:gap-3 md:gap-4 overflow-visible w-full sm:flex-1">
-              {allCards.map((cId) => {
-                const details = CARD_DETAILS[cId];
-                return (
-                  <CardItem
-                    key={cId}
-                    id={cId}
-                    label={details.label}
-                    description={details.description}
-                    ammoCost={details.cost}
-                    isSelected={player.selectedCard === cId}
-                    isSelectable={
-                      phase === "selecting" && availableCards.includes(cId)
-                    }
-                    usesLeft={
-                      cId === "double_shot"
-                        ? (player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES)
-                        : undefined
-                    }
-                    dodgeStreakCount={
-                      cId === "dodge" ? (player.dodgeStreak ?? 0) : undefined
-                    }
-                    onClick={() => handleSelect(cId)}
-                  />
-                );
-              })}
-            </div>
-
-            {/* ── confirm button CIRCULAR (à direita em desktop, abaixo em mobile) ── */}
-            {phase === "selecting" && player.selectedCard && (
-              <button
-                onClick={handleConfirm}
-                className="
-                  shrink-0 w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18
-                  bg-gradient-to-br from-green-500 via-green-600 to-green-700 
-                  text-white font-bold rounded-full
-                  border-3 border-gold/60 
-                  shadow-[0_4px_16px_rgba(34,197,94,0.6),0_0_24px_rgba(34,197,94,0.4)]
-                  hover:scale-110 active:scale-95 
-                  transition-all duration-200
-                  animate-pulse-glow
-                  flex items-center justify-center
-                "
-                aria-label="Confirmar jogada"
-              >
-                {/* Ícone de check */}
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-7 h-7 sm:w-8 sm:h-8"
-                >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </button>
-            )}
+          {/* ── Card hand ── */}
+          <div className="flex justify-center items-end gap-[2vw] sm:gap-3 md:gap-4">
+            {allCards.map((cId) => {
+              const details = CARD_DETAILS[cId];
+              return (
+                <CardItem
+                  key={cId}
+                  id={cId}
+                  label={details.label}
+                  description={details.description}
+                  ammoCost={details.cost}
+                  isSelected={player.selectedCard === cId}
+                  isSelectable={
+                    phase === "selecting" && availableCards.includes(cId)
+                  }
+                  usesLeft={
+                    cId === "double_shot"
+                      ? (player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES)
+                      : undefined
+                  }
+                  dodgeStreakCount={
+                    cId === "dodge" ? (player.dodgeStreak ?? 0) : undefined
+                  }
+                  onClick={() => handleSelect(cId)}
+                />
+              );
+            })}
           </div>
         </div>
       </div>

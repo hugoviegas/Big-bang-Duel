@@ -285,13 +285,13 @@ export function GameOver() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b ${bgGradient} p-4`}
+      className={`fixed inset-0 z-50 flex items-start justify-center bg-gradient-to-b ${bgGradient} overflow-y-auto`}
     >
       <motion.div
         initial={{ scale: 0.8, y: 30 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: "spring", damping: 15, stiffness: 200 }}
-        className="card-wood p-6 md:p-8 max-w-md w-full flex flex-col items-center"
+        className="card-wood p-5 md:p-8 max-w-md w-full flex flex-col items-center mt-4 mb-4 mx-4"
       >
         {/* Winner image */}
         <motion.img
@@ -300,7 +300,7 @@ export function GameOver() {
           initial={{ scale: 0, rotate: -10 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", delay: 0.2 }}
-          className="w-28 h-32 md:w-36 md:h-40 object-contain -mt-20 drop-shadow-2xl"
+          className="w-28 h-36 md:w-36 md:h-44 object-contain drop-shadow-2xl"
         />
 
         {/* Title */}

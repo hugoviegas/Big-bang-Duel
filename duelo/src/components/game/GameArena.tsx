@@ -201,7 +201,7 @@ export function GameArena() {
       ))}
 
       {/* Main Layout */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col min-h-[100svh]">
+      <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col h-[100svh] pb-[180px] sm:pb-[200px]">
         <WoodenBattleHeader
           player={player}
           opponent={opponent}
@@ -221,7 +221,7 @@ export function GameArena() {
         />
 
         {/* ===== ARENA — CHARACTERS ===== */}
-        <div className="flex-1 flex items-end justify-between px-4 xs:px-6 sm:px-8 md:px-12 lg:px-16 pb-40 xs:pb-44 sm:pb-48 md:pb-52 relative mt-1">
+        <div className="flex-1 flex items-center justify-between px-3 sm:px-6 md:px-12 lg:px-16 relative">
           <Character player={player} />
           <Character player={opponent} isRight />
         </div>
