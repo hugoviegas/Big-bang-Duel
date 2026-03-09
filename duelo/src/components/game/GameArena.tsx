@@ -7,6 +7,7 @@ import { GameOver } from "./GameOver";
 import { GamePauseMenu } from "./GamePauseMenu";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMatchSync } from "../../hooks/useFirebase";
+import { useFirebaseRoom } from "../../hooks/useFirebase";
 import { WoodenBattleHeader } from "./WoodenBattleHeader";
 
 export function GameArena() {
@@ -31,6 +32,29 @@ export function GameArena() {
   const [copied, setCopied] = useState(false);
   const [showJoinMessage, setShowJoinMessage] = useState(false);
   const [showPauseMenu, setShowPauseMenu] = useState(false);
+  const { joinRoom } = useMatchSync(roomId || null);
+  const { markPlayerReturnedToMenu, cancelWaitingRoom } = useFirebaseRoom();
+
+  const handleBackToMenuOnline = async () => {
+    if (!roomId) {
+      useGameStore.getState().quitGame();
+      navigate("/menu");
+      return;
+    }
+
+    try {
+      if (roomStatus === "waiting") {
+        await cancelWaitingRoom(roomId);
+      } else {
+        await markPlayerReturnedToMenu(roomId);
+      }
+    } catch (error) {
+      console.error("[GameArena] online exit cleanup failed:", error);
+    }
+
+    useGameStore.getState().quitGame();
+    navigate("/menu");
+  };
 
   // Track previous room status to detect entry
   useEffect(() => {
@@ -41,9 +65,6 @@ export function GameArena() {
       return () => clearTimeout(t);
     }
   }, [roomStatus, opponent.displayName]);
-
-  // Sync with Firebase if online
-  useMatchSync(roomId || null);
 
   const copyRoomCode = () => {
     if (roomId) {
@@ -77,9 +98,6 @@ export function GameArena() {
       }
     }
   };
-
-  // Sync and expose joinRoom
-  const { joinRoom } = useMatchSync(roomId || null);
 
   useEffect(() => {
     const checkAndJoin = async () => {
@@ -151,8 +169,7 @@ export function GameArena() {
             if (!isOnline) {
               setShowPauseMenu(true);
             } else {
-              useGameStore.getState().quitGame();
-              navigate("/menu");
+              void handleBackToMenuOnline();
             }
           }}
         />
@@ -316,12 +333,11 @@ export function GameArena() {
 
           <button
             onClick={() => {
-              useGameStore.getState().quitGame();
-              navigate("/online");
+              void handleBackToMenuOnline();
             }}
             className="font-western text-sm md:text-base text-red-west hover:text-red-400 transition-colors uppercase tracking-widest border border-red-west/30 px-6 py-2 rounded-lg hover:bg-red-west/10"
           >
-            DESISTIR E VOLTAR
+            CANCELAR E VOLTAR AO MENU
           </button>
         </div>
       )}

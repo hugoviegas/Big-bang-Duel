@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../../store/gameStore";
 import { useAuthStore } from "../../store/authStore";
 import { recordMatchResult } from "../../lib/firebaseService";
 import { getCharacter } from "../../lib/characters";
+import { useFirebaseRoom } from "../../hooks/useFirebase";
 import type { MatchResult } from "../../lib/firebaseService";
 import type { MatchMode } from "../../types";
 import {
@@ -55,12 +56,18 @@ export function GameOver() {
     initializeGame,
     botDifficulty,
     isOnline,
+    roomId,
     bestOf3,
     playerStars,
     opponentStars,
   } = useGameStore();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const { markPlayerReturnedToMenu } = useFirebaseRoom();
+  const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">(
+    () => (user ? "saving" : "saved"),
+  );
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   let result: MatchResult;
   if (winnerId === player.id) {
@@ -102,16 +109,26 @@ export function GameOver() {
   // Record stats only once per game-over render
   const statsRecorded = useRef(false);
   useEffect(() => {
-    if (statsRecorded.current || !user) return;
+    if (statsRecorded.current) return;
     statsRecorded.current = true;
+
+    if (!user) return;
 
     const reward = rewardSnapshot.rewardSummary;
 
     // Persist to Firestore - Firebase is the source of truth
     // The real-time listener will automatically update local state when saved
-    recordMatchResult(user.uid, result, matchMode, reward).catch((error) => {
-      console.error("[GameOver] Failed to save match result:", error);
-    });
+    recordMatchResult(user.uid, result, matchMode, reward)
+      .then(() => {
+        setSaveStatus("saved");
+      })
+      .catch((error) => {
+        console.error("[GameOver] Failed to save match result:", error);
+        setSaveStatus("error");
+        setSaveError(
+          "Falha ao computar recompensa. Tente novamente em instantes.",
+        );
+      });
   }, [matchMode, result, user, rewardSnapshot]);
 
   const rewardSummary = rewardSnapshot.rewardSummary;
@@ -177,7 +194,17 @@ export function GameOver() {
     );
   };
 
-  const handleMenu = () => {
+  const handleMenu = async () => {
+    if (saveStatus !== "saved") return;
+
+    if (isOnline && roomId) {
+      try {
+        await markPlayerReturnedToMenu(roomId);
+      } catch (error) {
+        console.error("[GameOver] Failed to mark room return:", error);
+      }
+    }
+
     quitGame();
     navigate("/menu");
   };
@@ -395,9 +422,25 @@ export function GameOver() {
 
         {/* Buttons */}
         <div className="w-full space-y-3">
+          {(saveStatus !== "saved" || saveError) && (
+            <div className="w-full bg-black/40 border border-sand/20 rounded-xl p-3 text-center">
+              {saveStatus === "saving" && (
+                <span className="font-stats text-[10px] text-sand/70 uppercase tracking-widest">
+                  Computando resultado da partida...
+                </span>
+              )}
+              {saveError && (
+                <span className="font-stats text-[10px] text-red-300 uppercase tracking-widest">
+                  {saveError}
+                </span>
+              )}
+            </div>
+          )}
+
           {!isOnline && (
             <button
               onClick={handleRematch}
+              disabled={saveStatus !== "saved"}
               className="btn-western animate-pulse-glow"
             >
               REVANCHE
@@ -405,16 +448,18 @@ export function GameOver() {
           )}
           {isOnline && (
             <button
-              onClick={() => {
-                quitGame();
-                navigate("/online");
-              }}
+              onClick={handleMenu}
+              disabled={saveStatus !== "saved"}
               className="btn-western btn-sky"
             >
-              JOGAR NOVAMENTE
+              VOLTAR AO MENU
             </button>
           )}
-          <button onClick={handleMenu} className="btn-western btn-danger">
+          <button
+            onClick={handleMenu}
+            disabled={saveStatus !== "saved"}
+            className="btn-western btn-danger"
+          >
             MENU PRINCIPAL
           </button>
         </div>

@@ -14,12 +14,31 @@ import { useGameStore } from "../store/gameStore";
 import { LIFE_BY_MODE } from "../lib/gameEngine";
 import type { Room, GameMode, RoomConfig } from "../types";
 
+const QUICK_MATCH_MODE: GameMode = "advanced";
+const QUICK_MATCH_CONFIG: RoomConfig = {
+  isPublic: true,
+  attackTimer: 10,
+  bestOf3: false,
+  hideOpponentAmmo: true,
+};
+
+export type QuickMatchResult = {
+  roomId: string;
+  mode: GameMode;
+  config: RoomConfig;
+  isHost: boolean;
+};
+
 export function useFirebaseRoom() {
   const { user } = useAuthStore();
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 
   // Creates a room and sets host
-  const createRoom = async (mode: GameMode, config: RoomConfig, playerAvatar: string = "marshal") => {
+  const createRoom = async (
+    mode: GameMode,
+    config: RoomConfig,
+    playerAvatar: string = "marshal",
+  ) => {
     if (!user) return null;
 
     // Generate simple 6-char code
@@ -61,7 +80,10 @@ export function useFirebaseRoom() {
   };
 
   // Joins an existing room — returns the Room on success or null on failure
-  const joinRoom = async (roomId: string, playerAvatar: string = "marshal"): Promise<Room | null> => {
+  const joinRoom = async (
+    roomId: string,
+    playerAvatar: string = "marshal",
+  ): Promise<Room | null> => {
     if (!user) return null;
 
     const roomRef = ref(rtdb, `rooms/${roomId}`);
@@ -155,12 +177,142 @@ export function useFirebaseRoom() {
     return publicRooms;
   };
 
+  const quickMatch = async (
+    playerAvatar: string = "marshal",
+  ): Promise<QuickMatchResult | null> => {
+    if (!user) return null;
+
+    const roomsRef = ref(rtdb, "rooms");
+    const snapshot = await get(roomsRef);
+    const now = Date.now();
+    const THIRTY_MINS = 30 * 60 * 1000;
+
+    const candidates: Room[] = [];
+    if (snapshot.exists()) {
+      const roomsData = snapshot.val();
+      for (const room of Object.values(roomsData) as any[]) {
+        const cfg = room.config as RoomConfig | undefined;
+        const isQuickRoom =
+          room.mode === QUICK_MATCH_MODE &&
+          room.status === "waiting" &&
+          !room.guestId &&
+          room.hostId !== user.uid &&
+          cfg?.isPublic === QUICK_MATCH_CONFIG.isPublic &&
+          cfg?.attackTimer === QUICK_MATCH_CONFIG.attackTimer &&
+          cfg?.bestOf3 === QUICK_MATCH_CONFIG.bestOf3 &&
+          (cfg?.hideOpponentAmmo ?? false) ===
+            (QUICK_MATCH_CONFIG.hideOpponentAmmo ?? false) &&
+          room.createdAt &&
+          now - room.createdAt < THIRTY_MINS;
+
+        if (isQuickRoom) {
+          candidates.push(room as Room);
+        }
+      }
+    }
+
+    // FIFO entry into the oldest available quick room.
+    candidates.sort((a, b) => a.createdAt - b.createdAt);
+    for (const room of candidates) {
+      const joined = await joinRoom(room.id, playerAvatar);
+      if (joined) {
+        return {
+          roomId: room.id,
+          mode: room.mode,
+          config: {
+            isPublic: room.config?.isPublic ?? true,
+            attackTimer: room.config?.attackTimer ?? 10,
+            bestOf3: room.config?.bestOf3 ?? false,
+            hideOpponentAmmo: room.config?.hideOpponentAmmo ?? true,
+          },
+          isHost: false,
+        };
+      }
+    }
+
+    const roomId = await createRoom(
+      QUICK_MATCH_MODE,
+      QUICK_MATCH_CONFIG,
+      playerAvatar,
+    );
+
+    if (!roomId) return null;
+    return {
+      roomId,
+      mode: QUICK_MATCH_MODE,
+      config: QUICK_MATCH_CONFIG,
+      isHost: true,
+    };
+  };
+
+  const markPlayerReturnedToMenu = async (
+    roomId: string,
+  ): Promise<"pending" | "deleted" | "not_found"> => {
+    if (!user) return "pending";
+
+    const roomRef = ref(rtdb, `rooms/${roomId}`);
+    const snapshot = await get(roomRef);
+    if (!snapshot.exists()) return "not_found";
+
+    const room = snapshot.val() as Room & {
+      hostReturnedToMenuAt?: number;
+      guestReturnedToMenuAt?: number;
+    };
+
+    const isHost = room.hostId === user.uid;
+    const isGuest = room.guestId === user.uid;
+    if (!isHost && !isGuest) return "pending";
+
+    const rolePrefix = isHost ? "host" : "guest";
+    await update(roomRef, {
+      [`${rolePrefix}ReturnedToMenuAt`]: Date.now(),
+      status: "finished",
+    });
+
+    const latestSnap = await get(roomRef);
+    if (!latestSnap.exists()) return "deleted";
+
+    const latest = latestSnap.val() as {
+      status?: string;
+      hostReturnedToMenuAt?: number;
+      guestReturnedToMenuAt?: number;
+    };
+
+    const bothReturned =
+      !!latest.hostReturnedToMenuAt && !!latest.guestReturnedToMenuAt;
+    if (latest.status === "finished" && bothReturned) {
+      await set(roomRef, null);
+      return "deleted";
+    }
+
+    return "pending";
+  };
+
+  const cancelWaitingRoom = async (roomId: string): Promise<void> => {
+    if (!user) return;
+    const roomRef = ref(rtdb, `rooms/${roomId}`);
+    const snap = await get(roomRef);
+    if (!snap.exists()) return;
+    const room = snap.val() as Room;
+
+    if (
+      room.hostId === user.uid &&
+      room.status === "waiting" &&
+      !room.guestId
+    ) {
+      await set(roomRef, null);
+    }
+  };
+
   return {
     createRoom,
     joinRoom,
     submitChoice,
     getUserRooms,
     getPublicRooms,
+    quickMatch,
+    markPlayerReturnedToMenu,
+    cancelWaitingRoom,
     currentRoomId,
   };
 }
