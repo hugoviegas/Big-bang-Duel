@@ -9,13 +9,20 @@ export function botChooseCard(
   difficulty: BotDifficulty,
   playerState?: PlayerState,
 ): CardType {
-  const available = getAvailableCards(mode, botState.ammo, botState.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES, botState.dodgeStreak ?? 0);
+  const available = getAvailableCards(
+    mode,
+    botState.ammo,
+    botState.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES,
+    botState.dodgeStreak ?? 0,
+  );
 
-  // ─── Estratégia treinada (Q-Learning) ────────────────────────────────
-  // Se os arquivos de estratégia estão carregados, usá-los para todos os níveis
+  // ─── Estratégia treinada (Q-Learning v2 — pattern-aware) ────────────
+  // Usa os 2 últimos turnos do jogador para detectar padrões
   if (hasStrategy(mode) && playerState) {
     const lastPlayerCard =
       playerHistory.length > 0 ? playerHistory[playerHistory.length - 1] : null;
+    const prevPlayerCard =
+      playerHistory.length > 1 ? playerHistory[playerHistory.length - 2] : null;
 
     const smartCard = getSmartBotCard(
       mode,
@@ -26,6 +33,7 @@ export function botChooseCard(
       botState.dodgeStreak ?? 0,
       botState.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES,
       lastPlayerCard,
+      prevPlayerCard,
       available,
     );
 
@@ -60,9 +68,23 @@ export function botChooseCard(
     }
   }
 
-  // Hard Logic
+  // Hard Logic — fallback com leitura de padrão de 2 turnos
   const lastPlayerCard =
     playerHistory.length > 0 ? playerHistory[playerHistory.length - 1] : null;
+  const prevPlayerCard =
+    playerHistory.length > 1 ? playerHistory[playerHistory.length - 2] : null;
+
+  // Padrão detectado: oponente repetindo dodge → atacar
+  if (lastPlayerCard === "dodge" && prevPlayerCard === "dodge") {
+    if (available.includes("double_shot")) return "double_shot";
+    if (available.includes("shot")) return "shot";
+  }
+
+  // Padrão: oponente recarregando repetidamente → atirar
+  if (lastPlayerCard === "reload" && prevPlayerCard === "reload") {
+    if (available.includes("double_shot") && rand < 75) return "double_shot";
+    if (available.includes("shot")) return "shot";
+  }
 
   if (botState.ammo === 0) {
     if (lastPlayerCard === "reload" || lastPlayerCard === "counter") {

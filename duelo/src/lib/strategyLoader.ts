@@ -2,10 +2,14 @@
  * Strategy Loader — Carrega e usa estratégias treinadas por Q-Learning.
  *
  * Os arquivos JSON são gerados pelo sistema de treinamento Python
- * (training/trainer_ultra.py) e devem ser copiados para public/data/.
+ * (training/trainer_v2.py) e devem ser copiados para public/data/.
  *
- * Formato do state key: "{myLife}_{myAmmo}_{oppLife}_{lastOppCard}_{myDodgeStreak}_{myDoubleShotsLeft}"
- * Exemplo: "3_1_2_reload_0_3"
+ * Formato do state key v3.0 (7 partes):
+ * "{myLife}_{myAmmo}_{oppLife}_{lastOppCard}_{prevOppCard}_{myDodgeStreak}_{myDoubleShotsLeft}"
+ * Exemplo: "3_1_2_reload_shot_0_3"
+ *
+ * O campo prevOppCard (penúltima carta do oponente) permite que o bot
+ * detecte e reaja a padrões de 2 turnos do jogador.
  */
 
 import type { CardType, GameMode, BotDifficulty } from "../types";
@@ -90,17 +94,19 @@ export function hasStrategy(mode: GameMode): boolean {
 
 /**
  * Gera o state key para lookup na tabela de estratégia.
- * Novo formato (sem munição do oponente, com dodge streak e double_shot usos).
+ * Formato v3.0 — inclui prevOppCard (penúltima carta do oponente)
+ * para detecção de padrões de 2 turnos.
  */
 export function getStateKey(
   myLife: number,
   myAmmo: number,
   oppLife: number,
   lastOppCard: string | null,
+  prevOppCard: string | null,
   myDodgeStreak: number,
   myDoubleShotsLeft: number,
 ): string {
-  return `${myLife}_${myAmmo}_${oppLife}_${lastOppCard || "none"}_${myDodgeStreak}_${myDoubleShotsLeft}`;
+  return `${myLife}_${myAmmo}_${oppLife}_${lastOppCard || "none"}_${prevOppCard || "none"}_${myDodgeStreak}_${myDoubleShotsLeft}`;
 }
 
 /**
@@ -116,6 +122,7 @@ export function getSmartBotCard(
   botDodgeStreak: number,
   botDoubleShotsLeft: number,
   lastPlayerCard: string | null,
+  prevPlayerCard: string | null,
   availableCards: CardType[],
 ): CardType | null {
   const strategy = strategyCache[mode];
@@ -127,6 +134,7 @@ export function getSmartBotCard(
     botAmmo,
     playerLife,
     lastPlayerCard,
+    prevPlayerCard,
     botDodgeStreak,
     botDoubleShotsLeft,
   );

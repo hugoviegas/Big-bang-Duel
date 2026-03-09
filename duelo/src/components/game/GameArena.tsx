@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGameStore } from "../../store/gameStore";
 import { Character } from "./Character";
 import { CardHand } from "./CardHand";
@@ -132,6 +132,19 @@ export function GameArena() {
     lastResult &&
     (lastResult.playerLifeLost > 0 || lastResult.opponentLifeLost > 0);
 
+  const dustParticles = useMemo(
+    () =>
+      Array.from({ length: 6 }).map((_, i) => ({
+        id: i,
+        width: `${2 + Math.random() * 4}px`,
+        height: `${2 + Math.random() * 4}px`,
+        left: `${10 + Math.random() * 80}%`,
+        bottom: `${Math.random() * 20}%`,
+        animationDelay: `${Math.random() * 5}s`,
+      })),
+    [],
+  );
+
   return (
     <div
       className={`relative w-full min-h-[100svh] bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center overflow-hidden ${isShaking ? "screen-shake" : ""}`}
@@ -140,16 +153,16 @@ export function GameArena() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none" />
 
       {/* Dust particles */}
-      {Array.from({ length: 6 }).map((_, i) => (
+      {dustParticles.map((p) => (
         <div
-          key={i}
+          key={p.id}
           className="dust-particle absolute rounded-full bg-sand/40 pointer-events-none z-0"
           style={{
-            width: `${2 + Math.random() * 4}px`,
-            height: `${2 + Math.random() * 4}px`,
-            left: `${10 + Math.random() * 80}%`,
-            bottom: `${Math.random() * 20}%`,
-            animationDelay: `${Math.random() * 5}s`,
+            width: p.width,
+            height: p.height,
+            left: p.left,
+            bottom: p.bottom,
+            animationDelay: p.animationDelay,
           }}
         />
       ))}
