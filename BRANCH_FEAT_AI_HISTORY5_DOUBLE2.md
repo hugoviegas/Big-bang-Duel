@@ -2,8 +2,7 @@ Branch: feat/ai-history5-double2
 Base: main
 Date: 2026-03-09
 
-Resumo das mudanças nesta branch
---------------------------------
+## Resumo das mudanças nesta branch
 
 - Redesign mobile-first completo da tela de batalha:
   - Cards agora dimensionam por viewport (`w-[calc(18vw-4px)]`, `max-w-[88px]`, `aspect-[5/7]`) para responsividade melhor em telas pequenas.
@@ -30,13 +29,13 @@ Resumo das mudanças nesta branch
   - `npx vite build` executado com sucesso no ambiente local; artefatos gerados em `dist/`.
   - Aviso de tamanho de chunk (>500KB) gerado pelo Vite/Rollup — recomendação: code-split se necessário.
 
-Notas de implantação
--------------------
+## Notas de implantação
+
 - Branch atual: `feat/ai-history5-double2` (a ação de push criará o branch remoto se ainda não existir).
 - PR será aberto contra `main` com este arquivo como corpo da descrição.
 
-Testes recomendados após merge
------------------------------
+## Testes recomendados após merge
+
 - Abrir a tela de batalha em mobile (375x812) e validar: cards, botão confirmar, personagens centrados.
 - Testar revanche/local e rematch online (garantir que personagem remonta corretamente).
 - Validar GameOver scroll e imagem do vencedor.
