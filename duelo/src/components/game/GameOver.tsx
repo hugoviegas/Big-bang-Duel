@@ -3,7 +3,10 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../../store/gameStore";
 import { useAuthStore } from "../../store/authStore";
-import { recordMatchResult, type MatchContext } from "../../lib/firebaseService";
+import {
+  recordMatchResult,
+  type MatchContext,
+} from "../../lib/firebaseService";
 import { getCharacter } from "../../lib/characters";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
 import type { MatchResult } from "../../lib/firebaseService";
