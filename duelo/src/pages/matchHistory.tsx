@@ -1,10 +1,16 @@
 /**
  * Match History Page – Displays player's last 10 matches with detailed statistics
- * and charts showing performance trends and achievements unlocked.
  */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Flame, Target, Shield } from "lucide-react";
+import {
+  ChevronLeft,
+  Flame,
+  Target,
+  Shield,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import type { MatchSummary } from "../types";
 import { getPlayerMatchHistory } from "../lib/firebaseService";
 import { useAuthStore } from "../store/authStore";
@@ -16,6 +22,7 @@ export default function MatchHistoryPage() {
   const [matches, setMatches] = useState<MatchSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
 
   // Load match history on mount
   useEffect(() => {
@@ -131,103 +138,151 @@ export default function MatchHistoryPage() {
                     ).toFixed(1)
                   : "0";
 
+              const isExpanded = expandedMatchId === match.matchId;
+
               return (
-                <div key={match.matchId} className="match-card">
-                  {/* Match Header */}
-                  <div className="match-header">
-                    <div className="match-result">
+                <div
+                  key={match.matchId}
+                  className={`match-card ${isExpanded ? "expanded" : ""}`}
+                >
+                  {/* Match Summary - Always Visible */}
+                  <button
+                    onClick={() =>
+                      setExpandedMatchId(isExpanded ? null : match.matchId)
+                    }
+                    className="match-summary"
+                  >
+                    {/* Result Badge */}
+                    <div className="summary-result">
                       <span className={`result-badge ${resultBadge.className}`}>
-                        {resultBadge.icon} {resultBadge.text}
+                        {resultBadge.icon}
                       </span>
                     </div>
-                    <div className="match-mode">
-                      <span className="mode-tag">
-                        {match.mode === "online" ? "🌐 Online" : "⚔️ Solo"}
+
+                    {/* Match Info */}
+                    <div className="summary-info">
+                      <div className="summary-mode">
+                        {match.mode === "online" ? "🌐" : "⚔️"}
+                      </div>
+                      <div className="summary-date">
+                        {formatDate(match.timestamp)}
+                      </div>
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="summary-stats">
+                      <span className="quick-stat" title="Tiros">
+                        🎯 {match.shots}
+                      </span>
+                      <span className="quick-stat" title="Desvios">
+                        🛡️ {match.successfulDodges}
+                      </span>
+                      <span
+                        className="quick-stat"
+                        title={`${match.damageDealt} dano / ${match.damageTaken} recebido`}
+                      >
+                        ⚔️ {match.damageDealt}/{match.damageTaken}
                       </span>
                     </div>
-                    <div className="match-date">
-                      <time>{formatDate(match.timestamp)}</time>
-                    </div>
-                  </div>
 
-                  {/* Match Stats Grid */}
-                  <div className="match-stats-grid">
-                    {/* Offensive Stats */}
-                    <div className="stat-group">
-                      <div className="stat-title">
-                        <Target size={16} />
-                        Ofensiva
-                      </div>
-                      <div className="stat-row">
-                        <span className="stat-label">Tiros:</span>
-                        <span className="stat-value">{match.shots}</span>
-                      </div>
-                      <div className="stat-row">
-                        <span className="stat-label">Tiros Duplos:</span>
-                        <span className="stat-value">{match.doubleShots}</span>
-                      </div>
-                      <div className="stat-row">
-                        <span className="stat-label">Dano Causado:</span>
-                        <span className="stat-value">{match.damageDealt}</span>
-                      </div>
+                    {/* Expand Toggle */}
+                    <div className="expand-toggle">
+                      {isExpanded ? (
+                        <ChevronUp size={18} />
+                      ) : (
+                        <ChevronDown size={18} />
+                      )}
                     </div>
+                  </button>
 
-                    {/* Defensive Stats */}
-                    <div className="stat-group">
-                      <div className="stat-title">
-                        <Shield size={16} />
-                        Defesa
+                  {/* Expanded Details */}
+                  {isExpanded && (
+                    <div className="match-details">
+                      <div className="details-grid">
+                        {/* Offensive Stats */}
+                        <div className="detail-section">
+                          <div className="detail-title">
+                            <Target size={14} />
+                            Ofensiva
+                          </div>
+                          <div className="detail-row">
+                            <span>Tiros</span>
+                            <span className="detail-value">{match.shots}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Tiros Duplos</span>
+                            <span className="detail-value">
+                              {match.doubleShots}
+                            </span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Dano Causado</span>
+                            <span className="detail-value">
+                              {match.damageDealt}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Defensive Stats */}
+                        <div className="detail-section">
+                          <div className="detail-title">
+                            <Shield size={14} />
+                            Defesa
+                          </div>
+                          <div className="detail-row">
+                            <span>Desvios</span>
+                            <span className="detail-value">
+                              {match.successfulDodges}
+                            </span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Contra-Golpes</span>
+                            <span className="detail-value">
+                              {match.successfulCounters}
+                            </span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Dano Recebido</span>
+                            <span className="detail-value">
+                              {match.damageTaken}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Performance Stats */}
+                        <div className="detail-section">
+                          <div className="detail-title">
+                            <Flame size={14} />
+                            Performance
+                          </div>
+                          <div className="detail-row">
+                            <span>Turnos</span>
+                            <span className="detail-value">{match.turns}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Taxa Desvio</span>
+                            <span className="detail-value">{dodgeRate}%</span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Vida Restante</span>
+                            <span className="detail-value">
+                              {match.remainingLife}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="stat-row">
-                        <span className="stat-label">Desvios:</span>
-                        <span className="stat-value">
-                          {match.successfulDodges}
+
+                      {/* Match Footer Info */}
+                      <div className="details-footer">
+                        <span className="match-count">
+                          Partida #{matches.length - idx}
+                        </span>
+                        <span className="match-id" title={match.matchId}>
+                          {match.matchId}
                         </span>
                       </div>
-                      <div className="stat-row">
-                        <span className="stat-label">Contra-Golpes:</span>
-                        <span className="stat-value">
-                          {match.successfulCounters}
-                        </span>
-                      </div>
-                      <div className="stat-row">
-                        <span className="stat-label">Dano Recebido:</span>
-                        <span className="stat-value">{match.damageTaken}</span>
-                      </div>
                     </div>
-
-                    {/* Performance Metrics */}
-                    <div className="stat-group">
-                      <div className="stat-title">
-                        <Flame size={16} />
-                        Performance
-                      </div>
-                      <div className="stat-row">
-                        <span className="stat-label">Turnos:</span>
-                        <span className="stat-value">{match.turns}</span>
-                      </div>
-                      <div className="stat-row">
-                        <span className="stat-label">Taxa Desvio:</span>
-                        <span className="stat-value">{dodgeRate}%</span>
-                      </div>
-                      <div className="stat-row">
-                        <span className="stat-label">Vida Restante:</span>
-                        <span className="stat-value">
-                          {match.remainingLife}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Match Footer */}
-                  <div className="match-footer">
-                    <span className="match-count">
-                      Partida #{matches.length - idx}
-                    </span>
-                    <span className="match-id" title={match.matchId}>
-                      ID: {match.matchId.substring(0, 8)}...
-                    </span>
-                  </div>
+                  )}
                 </div>
               );
             })}

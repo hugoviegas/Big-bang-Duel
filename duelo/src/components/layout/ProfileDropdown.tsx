@@ -84,7 +84,10 @@ export function ProfileDropdown({
           )}
         </span>
       </div>
-      <div className="dropdown-item" onClick={() => handleNav("/match-history")}>
+      <div
+        className="dropdown-item"
+        onClick={() => handleNav("/match-history")}
+      >
         <History size={20} className="dropdown-item-icon" />
         <span className="dropdown-item-text">Histórico de Partidas</span>
       </div>
