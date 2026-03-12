@@ -8,7 +8,10 @@ import {
 } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { useAuthStore } from "../../store/authStore";
-import { createPlayerProfile, generateUniquePlayerCode } from "../../lib/firebaseService";
+import {
+  createPlayerProfile,
+  generateUniquePlayerCode,
+} from "../../lib/firebaseService";
 
 export function LoginScreen() {
   const [email, setEmail] = useState("");

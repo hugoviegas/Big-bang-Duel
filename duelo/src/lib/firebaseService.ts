@@ -1150,6 +1150,107 @@ export function subscribeToPlayerProfile(
   });
 }
 
+// ─── Migration Helpers ──────────────────────────────────────────────────────
+
+/**
+ * Migrates all existing players to have characterStats and other fields.
+ * Runs automatically on first login to ensure legacy accounts have stats initialized.
+ * Safe to run multiple times - only updates profiles missing these fields.
+ */
+export async function migrateCharacterStatsForAllPlayers(): Promise<{
+  migratedCount: number;
+  totalScanned: number;
+}> {
+  try {
+    const snap = await getDocs(collection(db, "players"));
+    let migratedCount = 0;
+    const totalScanned = snap.docs.length;
+
+    if (totalScanned === 0) {
+      console.log("[Migration] No players found");
+      return { migratedCount: 0, totalScanned: 0 };
+    }
+
+    console.log(
+      `[Migration] Scanning ${totalScanned} players for characterStats...`,
+    );
+
+    for (const doc of snap.docs) {
+      const profileData = doc.data() as PlayerProfile;
+      const needsMigration =
+        !profileData.characterStats ||
+        !profileData.achievements ||
+        profileData.winStreak === undefined;
+
+      if (needsMigration) {
+        await updateDoc(doc.ref, {
+          characterStats: profileData.characterStats ?? {},
+          achievements: profileData.achievements ?? {},
+          favoriteCharacter: profileData.favoriteCharacter ?? undefined,
+          winStreak: profileData.winStreak ?? 0,
+          perfectWins: profileData.perfectWins ?? 0,
+          highLifeWins: profileData.highLifeWins ?? 0,
+          opponentsFaced: profileData.opponentsFaced ?? [],
+          onlinePlayersDefeated: profileData.onlinePlayersDefeated ?? [],
+        });
+        migratedCount++;
+
+        // Log every 10 migrations to avoid spam
+        if (migratedCount % 10 === 0) {
+          console.log(`[Migration] Migrated ${migratedCount}/${totalScanned}`);
+        }
+      }
+    }
+
+    console.log(
+      `[Migration] ✅ Complete: ${migratedCount} profiles migrated, ${totalScanned} scanned`,
+    );
+    invalidateCache("players:all");
+    return { migratedCount, totalScanned };
+  } catch (error) {
+    console.error("[Migration] ❌ Failed:", error);
+    return { migratedCount: 0, totalScanned: 0 };
+  }
+}
+
+/**
+ * Check if a single player needs migration.
+ * Used to ensure profile has all required fields.
+ */
+export async function ensurePlayerHasStats(uid: string): Promise<boolean> {
+  try {
+    const snap = await getDoc(doc(db, "players", uid));
+    if (!snap.exists()) return false;
+
+    const profileData = snap.data() as PlayerProfile;
+    const needsMigration =
+      !profileData.characterStats ||
+      !profileData.achievements ||
+      profileData.winStreak === undefined;
+
+    if (needsMigration) {
+      await updateDoc(snap.ref, {
+        characterStats: profileData.characterStats ?? {},
+        achievements: profileData.achievements ?? {},
+        favoriteCharacter: profileData.favoriteCharacter ?? undefined,
+        winStreak: profileData.winStreak ?? 0,
+        perfectWins: profileData.perfectWins ?? 0,
+        highLifeWins: profileData.highLifeWins ?? 0,
+        opponentsFaced: profileData.opponentsFaced ?? [],
+        onlinePlayersDefeated: profileData.onlinePlayersDefeated ?? [],
+      });
+      console.log(`[Migration] ✅ Migrated ${uid}`);
+      invalidateCache(`profile:${uid}`);
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error(`[Migration] ❌ Failed for ${uid}:`, error);
+    return false;
+  }
+}
+
 /** Subscribe to pending friend requests for a user. Returns unsubscribe fn. */
 export function subscribeToPendingRequests(
   uid: string,

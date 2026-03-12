@@ -14,6 +14,8 @@ import {
   generateUniquePlayerCode,
   setOnlinePresence,
   subscribeToPlayerProfile,
+  migrateCharacterStatsForAllPlayers,
+  ensurePlayerHasStats,
 } from "../lib/firebaseService";
 import {
   calculateProgression,
@@ -24,6 +26,7 @@ import {
 
 type GlobalWithProfileUnsub = typeof globalThis & {
   __bbd_profile_unsub?: (() => void) | null;
+  __bbd_migration_done?: boolean;
 };
 
 function emptyStatsByMode(): StatsByMode {
@@ -237,6 +240,9 @@ export const useAuthStore = create<AuthState>()(
         if (Date.now() - get()._profileEnsuredAt < FIVE_MIN) return;
 
         try {
+          // Ensure current player has all stats fields
+          await ensurePlayerHasStats(current.uid);
+
           // Check if profile already exists in Firestore
           const existing = await getPlayerProfile(current.uid);
           if (existing) {
@@ -272,6 +278,24 @@ export const useAuthStore = create<AuthState>()(
             set({ _profileEnsuredAt: Date.now() });
             // Update presence
             setOnlinePresence(current.uid, "online");
+
+            // Run migration in background (non-blocking) only once per session
+            const anyWindow = globalThis as GlobalWithProfileUnsub;
+            if (!anyWindow.__bbd_migration_done) {
+              anyWindow.__bbd_migration_done = true;
+              migrateCharacterStatsForAllPlayers()
+                .then((result) => {
+                  if (result.migratedCount > 0) {
+                    console.log(
+                      `[Boot] Migration complete: ${result.migratedCount}/${result.totalScanned} profiles updated`,
+                    );
+                  }
+                })
+                .catch((err) => {
+                  console.error("[Boot] Migration error:", err);
+                });
+            }
+
             return;
           }
 
@@ -312,6 +336,23 @@ export const useAuthStore = create<AuthState>()(
           get().setUser({ ...current, playerCode });
           set({ _profileEnsuredAt: Date.now() });
           setOnlinePresence(current.uid, "online");
+
+          // Run migration in background (non-blocking) only once per session
+          const anyWindow = globalThis as GlobalWithProfileUnsub;
+          if (!anyWindow.__bbd_migration_done) {
+            anyWindow.__bbd_migration_done = true;
+            migrateCharacterStatsForAllPlayers()
+              .then((result) => {
+                if (result.migratedCount > 0) {
+                  console.log(
+                    `[Boot] Migration complete: ${result.migratedCount}/${result.totalScanned} profiles updated`,
+                  );
+                }
+              })
+              .catch((err) => {
+                console.error("[Boot] Migration error:", err);
+              });
+          }
         } catch (err) {
           // Silently handle Firebase errors (permission denied, offline, etc.)
           console.warn("[authStore] ensureProfile failed:", err);
