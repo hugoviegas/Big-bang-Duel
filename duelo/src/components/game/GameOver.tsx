@@ -125,9 +125,7 @@ export function GameOver() {
     recordMatchResult(user.uid, result, matchMode, reward)
       .then((matchResultUpdate) => {
         if (matchResultUpdate?.achievementEval?.newlyUnlocked?.length) {
-          setNewAchievements(
-            matchResultUpdate.achievementEval.newlyUnlocked,
-          );
+          setNewAchievements(matchResultUpdate.achievementEval.newlyUnlocked);
         }
         setSaveStatus("saved");
       })
@@ -498,9 +496,7 @@ export function GameOver() {
                   transition={{ delay: 0.6 + idx * 0.1 }}
                   className="bg-black/40 border border-gold/30 rounded-lg px-3 py-2 text-center"
                 >
-                  <p className="font-western text-sm text-gold">
-                    {ach.label}
-                  </p>
+                  <p className="font-western text-sm text-gold">{ach.label}</p>
                   <p className="font-stats text-[10px] text-sand/60">
                     Nível {ach.tierIndex + 1} desbloqueado
                   </p>

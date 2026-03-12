@@ -9,7 +9,11 @@ import {
   RARITY_STYLES,
   RARITY_LABELS,
 } from "../lib/characters";
-import { updatePlayerProfile, getPlayerProfile } from "../lib/firebaseService";
+import {
+  updatePlayerProfile,
+  getPlayerProfile,
+  subscribeToPlayerProfile,
+} from "../lib/firebaseService";
 import {
   calculateProgression,
   normalizeCurrencies,
@@ -25,18 +29,31 @@ export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
   const isOwnProfile = !routeUid || routeUid === user?.uid;
 
-  // Public profile data
+  // Public profile data (for other profiles)
   const [publicProfile, setPublicProfile] = useState<PlayerProfile | null>(
     null,
   );
   const [loadingPublic, setLoadingPublic] = useState(false);
 
+  // Subscribe to public profile with real-time updates (including characterStats and favoriteCharacter)
   useEffect(() => {
     if (!routeUid || routeUid === user?.uid) return;
+    
     setLoadingPublic(true);
+    
+    // First load the profile
     getPlayerProfile(routeUid)
       .then((p) => setPublicProfile(p))
       .finally(() => setLoadingPublic(false));
+
+    // Then subscribe to real-time updates
+    const unsubscribe = subscribeToPlayerProfile(routeUid, (profile) => {
+      if (profile) {
+        setPublicProfile(profile);
+      }
+    });
+
+    return () => unsubscribe();
   }, [routeUid, user?.uid]);
 
   // The profile data to display

@@ -11,6 +11,7 @@ import {
   syncAchievementsRetroactively,
   subscribeToPlayerProfile,
 } from "../lib/firebaseService";
+import type { PlayerProfile } from "../types";
 
 function AchievementCard({
   def,
@@ -142,7 +143,7 @@ export default function AchievementsPage() {
     text: string;
     type: "success" | "error";
   } | null>(null);
-  const [localUser, setLocalUser] = useState(user);
+  const [profileData, setProfileData] = useState<PlayerProfile | null>(null);
 
   // Retroactively evaluate achievements on mount and subscribe to profile updates
   useEffect(() => {
@@ -153,13 +154,12 @@ export default function AchievementsPage() {
       console.warn("[AchievementsPage] Retroactive sync failed:", err);
     });
 
-    // Subscribe to profile updates for real-time sync of achievements ONLY
+    // Subscribe to FULL profile updates for real-time sync of ALL data
+    // This ensures achievements, characterStats, favoriteCharacter, etc. are all up-to-date
     const unsubscribe = subscribeToPlayerProfile(user.uid, (profile) => {
-      if (profile && profile.achievements) {
-        // Update local achievements state
-        setLocalUser((prev) =>
-          prev ? { ...prev, achievements: profile.achievements } : prev
-        );
+      if (profile) {
+        // Update with full profile data to keep everything in sync
+        setProfileData(profile);
       }
     });
 
@@ -168,8 +168,8 @@ export default function AchievementsPage() {
 
   if (!user) return null;
 
-  // Use localUser if available, fallback to global user
-  const displayUser = localUser || user;
+  // Use profileData if available (real-time sync), fallback to global user
+  const displayUser = profileData || user;
   const allProgress = normalizeAchievements(displayUser.achievements);
 
   const handleClaim = async (achievementId: string, tierIndex: number) => {

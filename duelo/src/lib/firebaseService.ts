@@ -838,25 +838,40 @@ export async function fetchLeaderboard(
 
 // ─── Presence (RTDB) ─────────────────────────────────────────────────────────
 
-/** Sets the user's online status in RTDB and Firestore. */
+/** Sets the user's online status in RTDB and Firestore with retry logic. */
 export function setOnlinePresence(uid: string, status: OnlineStatus): void {
+  if (!uid) {
+    console.warn("⚠️ setOnlinePresence: uid is empty");
+    return;
+  }
+
   try {
     const presenceRef = ref(rtdb, `presence/${uid}`);
-    set(presenceRef, { status, lastSeen: Date.now() }).catch((err) => {
-      console.warn(
-        "⚠️ Could not set presence in RTDB (permission/network):",
-        err,
-      );
-    });
+    set(presenceRef, { status, lastSeen: Date.now() })
+      .then(() => {
+        console.log(`✅ Presence set for ${uid}: ${status}`);
+      })
+      .catch((err: unknown) => {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.error(
+          `❌ Could not set presence in RTDB for ${uid}: ${errorMsg}`,
+        );
+        // Log the specific error code for debugging
+        if (err instanceof Object && "code" in err) {
+          console.error(`Error code: ${(err as Record<string, unknown>).code}`);
+        }
+      });
   } catch (error) {
-    console.warn("⚠️ Could not set presence in RTDB (sync error):", error);
+    console.error("⚠️ Could not set presence in RTDB (sync error):", error);
   }
+
   // Also update Firestore async
   updateDoc(doc(db, "players", uid), {
     onlineStatus: status,
     lastSeen: Date.now(),
-  }).catch((err) => {
-    console.warn("⚠️ Could not update presence in Firestore:", err);
+  }).catch((err: unknown) => {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.warn(`⚠️ Could not update presence in Firestore: ${errorMsg}`);
   });
 }
 
