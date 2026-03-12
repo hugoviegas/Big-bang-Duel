@@ -265,6 +265,18 @@ function profileWithNormalizedStats(profile: PlayerProfile): PlayerProfile {
     draws: statsByMode.overall.draws,
     totalGames: statsByMode.overall.totalGames,
     winRate: statsByMode.overall.winRate,
+    // Ensure characterStats exists (initialize empty if not present)
+    characterStats: profile.characterStats ?? {},
+    // Ensure achievements exists
+    achievements: profile.achievements ?? {},
+    // Ensure favoriteCharacter is present
+    favoriteCharacter: profile.favoriteCharacter ?? undefined,
+    // Ensure other stat fields are present
+    winStreak: profile.winStreak ?? 0,
+    perfectWins: profile.perfectWins ?? 0,
+    highLifeWins: profile.highLifeWins ?? 0,
+    opponentsFaced: profile.opponentsFaced ?? [],
+    onlinePlayersDefeated: profile.onlinePlayersDefeated ?? [],
   };
 }
 
@@ -985,6 +997,15 @@ export async function acceptFriendRequest(
           online: createEmptyModeStats(),
           overall: createEmptyModeStats(),
         },
+        // Initialize stats fields with empty/default values
+        characterStats: {},
+        achievements: {},
+        favoriteCharacter: undefined,
+        winStreak: 0,
+        perfectWins: 0,
+        highLifeWins: 0,
+        opponentsFaced: [],
+        onlinePlayersDefeated: [],
         createdAt: Date.now(),
         lastSeen: Date.now(),
         onlineStatus: "offline",

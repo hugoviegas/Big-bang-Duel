@@ -29,18 +29,33 @@ export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
   const isOwnProfile = !routeUid || routeUid === user?.uid;
 
-  // Public profile data (for other profiles)
+  // Profile data from Firestore (always has latest data from DB)
+  const [ownProfileFromDb, setOwnProfileFromDb] =
+    useState<PlayerProfile | null>(null);
   const [publicProfile, setPublicProfile] = useState<PlayerProfile | null>(
     null,
   );
   const [loadingPublic, setLoadingPublic] = useState(false);
 
+  // Subscribe to own profile with real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = subscribeToPlayerProfile(user.uid, (profile) => {
+      if (profile) {
+        setOwnProfileFromDb(profile);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
   // Subscribe to public profile with real-time updates (including characterStats and favoriteCharacter)
   useEffect(() => {
     if (!routeUid || routeUid === user?.uid) return;
-    
+
     setLoadingPublic(true);
-    
+
     // First load the profile
     getPlayerProfile(routeUid)
       .then((p) => setPublicProfile(p))
@@ -57,41 +72,44 @@ export default function ProfilePage() {
   }, [routeUid, user?.uid]);
 
   // The profile data to display
+  // For own profile: always use data from Firestore listener (most up-to-date)
+  // For public profile: use data from Firestore listener
   const profile: PlayerProfile | null = isOwnProfile
-    ? user
-      ? {
-          uid: user.uid,
-          displayName: user.displayName,
-          playerCode: user.playerCode,
-          avatar: user.avatar,
-          avatarPicture: user.avatarPicture,
-          wins: user.wins,
-          losses: user.losses,
-          draws: user.draws,
-          totalGames: user.totalGames,
-          winRate: user.winRate,
-          createdAt: user.createdAt
-            ? new Date(user.createdAt).getTime()
-            : Date.now(),
-          lastSeen: user.lastSeen
-            ? new Date(user.lastSeen).getTime()
-            : Date.now(),
-          onlineStatus: user.onlineStatus ?? "offline",
-          statsByMode: user.statsByMode,
-          progression: user.progression,
-          currencies: user.currencies,
-          ranked: user.ranked,
-          unlocks: user.unlocks,
-          characterStats: user.characterStats,
-          achievements: user.achievements,
-          favoriteCharacter: user.favoriteCharacter,
-          winStreak: user.winStreak,
-          opponentsFaced: user.opponentsFaced,
-          onlinePlayersDefeated: user.onlinePlayersDefeated,
-          perfectWins: user.perfectWins,
-          highLifeWins: user.highLifeWins,
-        }
-      : null
+    ? ownProfileFromDb ||
+      (user
+        ? {
+            uid: user.uid,
+            displayName: user.displayName,
+            playerCode: user.playerCode,
+            avatar: user.avatar,
+            avatarPicture: user.avatarPicture,
+            wins: user.wins,
+            losses: user.losses,
+            draws: user.draws,
+            totalGames: user.totalGames,
+            winRate: user.winRate,
+            createdAt: user.createdAt
+              ? new Date(user.createdAt).getTime()
+              : Date.now(),
+            lastSeen: user.lastSeen
+              ? new Date(user.lastSeen).getTime()
+              : Date.now(),
+            onlineStatus: user.onlineStatus ?? "offline",
+            statsByMode: user.statsByMode,
+            progression: user.progression,
+            currencies: user.currencies,
+            ranked: user.ranked,
+            unlocks: user.unlocks,
+            characterStats: user.characterStats,
+            achievements: user.achievements,
+            favoriteCharacter: user.favoriteCharacter,
+            winStreak: user.winStreak,
+            opponentsFaced: user.opponentsFaced,
+            onlinePlayersDefeated: user.onlinePlayersDefeated,
+            perfectWins: user.perfectWins,
+            highLifeWins: user.highLifeWins,
+          }
+        : null)
     : publicProfile;
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
