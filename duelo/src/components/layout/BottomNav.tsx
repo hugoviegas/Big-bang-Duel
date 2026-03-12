@@ -1,11 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Wand2, Users, Store, Trophy } from "lucide-react";
+import { Home, Wand2, Users, Store, Trophy, History } from "lucide-react";
 
 const NAV_ITEMS = [
   { path: "/menu", icon: "home", label: "Home" },
   { path: "/characters", icon: "cards", label: "Cards" },
   { path: "/online", icon: "users", label: "Online" },
-  { path: "/shop", icon: "shop", label: "Loja" },
+  { path: "/match-history", icon: "history", label: "Histórico" },
   { path: "/leaderboard", icon: "trophy", label: "Ranking" },
 ];
 
@@ -16,6 +16,7 @@ const getIconComponent = (iconName: string) => {
     users: Users,
     shop: Store,
     trophy: Trophy,
+    history: History,
   };
   return iconMap[iconName as keyof typeof iconMap] || Home;
 };
