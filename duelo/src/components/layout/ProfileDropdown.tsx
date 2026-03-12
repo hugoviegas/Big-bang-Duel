@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { resolveAvatarPicture } from "../../lib/characters";
-import { Edit, Settings, LogOut, Heart, Trophy } from "lucide-react";
+import { Edit, Settings, LogOut, Heart, Trophy, History } from "lucide-react";
 import { useFriendsStore } from "../../store/friendsStore";
 import { ACHIEVEMENTS, normalizeAchievements } from "../../lib/achievements";
 
@@ -83,6 +83,10 @@ export function ProfileDropdown({
             </span>
           )}
         </span>
+      </div>
+      <div className="dropdown-item" onClick={() => handleNav("/match-history")}>
+        <History size={20} className="dropdown-item-icon" />
+        <span className="dropdown-item-text">Histórico de Partidas</span>
       </div>
       <div className="dropdown-item danger" onClick={handleLogout}>
         <LogOut size={20} className="dropdown-item-icon" />
