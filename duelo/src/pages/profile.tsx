@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import {
   CHARACTERS,
@@ -8,16 +9,73 @@ import {
   RARITY_STYLES,
   RARITY_LABELS,
 } from "../lib/characters";
-import { updatePlayerProfile } from "../lib/firebaseService";
+import { updatePlayerProfile, getPlayerProfile } from "../lib/firebaseService";
 import {
   calculateProgression,
   normalizeCurrencies,
   normalizeRanked,
   normalizeUnlocks,
 } from "../lib/progression";
+import { ACHIEVEMENTS, normalizeAchievements } from "../lib/achievements";
+import type { PlayerProfile } from "../types";
 
 export default function ProfilePage() {
+  const { uid: routeUid } = useParams<{ uid?: string }>();
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const isOwnProfile = !routeUid || routeUid === user?.uid;
+
+  // Public profile data
+  const [publicProfile, setPublicProfile] = useState<PlayerProfile | null>(
+    null,
+  );
+  const [loadingPublic, setLoadingPublic] = useState(false);
+
+  useEffect(() => {
+    if (!routeUid || routeUid === user?.uid) return;
+    setLoadingPublic(true);
+    getPlayerProfile(routeUid)
+      .then((p) => setPublicProfile(p))
+      .finally(() => setLoadingPublic(false));
+  }, [routeUid, user?.uid]);
+
+  // The profile data to display
+  const profile: PlayerProfile | null = isOwnProfile
+    ? user
+      ? {
+          uid: user.uid,
+          displayName: user.displayName,
+          playerCode: user.playerCode,
+          avatar: user.avatar,
+          avatarPicture: user.avatarPicture,
+          wins: user.wins,
+          losses: user.losses,
+          draws: user.draws,
+          totalGames: user.totalGames,
+          winRate: user.winRate,
+          createdAt: user.createdAt
+            ? new Date(user.createdAt).getTime()
+            : Date.now(),
+          lastSeen: user.lastSeen
+            ? new Date(user.lastSeen).getTime()
+            : Date.now(),
+          onlineStatus: user.onlineStatus ?? "offline",
+          statsByMode: user.statsByMode,
+          progression: user.progression,
+          currencies: user.currencies,
+          ranked: user.ranked,
+          unlocks: user.unlocks,
+          characterStats: user.characterStats,
+          achievements: user.achievements,
+          favoriteCharacter: user.favoriteCharacter,
+          winStreak: user.winStreak,
+          opponentsFaced: user.opponentsFaced,
+          onlinePlayersDefeated: user.onlinePlayersDefeated,
+          perfectWins: user.perfectWins,
+          highLifeWins: user.highLifeWins,
+        }
+      : null
+    : publicProfile;
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [selectedAvatar, setSelectedAvatar] = useState(
@@ -30,26 +88,40 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  const activeChar = getCharacter(selectedAvatar);
+  if (!isOwnProfile && loadingPublic) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gold font-western text-lg animate-pulse">
+          Carregando perfil...
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) return null;
+
+  const activeChar = getCharacter(
+    isOwnProfile ? selectedAvatar : profile.avatar,
+  );
   const currentAvatarPic = resolveAvatarPicture(
-    selectedAvatar,
-    selectedAvatarPicture,
+    isOwnProfile ? selectedAvatar : profile.avatar,
+    isOwnProfile ? selectedAvatarPicture : profile.avatarPicture,
   );
   const allAvatarOptions = getAllAvatarOptions();
-  const playerCode = user?.playerCode ?? "";
-  const progression = calculateProgression(user?.progression?.xpTotal ?? 0);
-  const currencies = normalizeCurrencies(user?.currencies);
-  const ranked = normalizeRanked(user?.ranked);
-  const unlocks = normalizeUnlocks(user?.unlocks);
-  const statsByMode = user?.statsByMode ?? {
+  const playerCode = profile.playerCode ?? "";
+  const progression = calculateProgression(profile.progression?.xpTotal ?? 0);
+  const currencies = normalizeCurrencies(profile.currencies);
+  const ranked = normalizeRanked(profile.ranked);
+  const unlocks = normalizeUnlocks(profile.unlocks);
+  const statsByMode = profile.statsByMode ?? {
     solo: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
     online: { wins: 0, losses: 0, draws: 0, totalGames: 0, winRate: 0 },
     overall: {
-      wins: user?.wins ?? 0,
-      losses: user?.losses ?? 0,
-      draws: user?.draws ?? 0,
-      totalGames: user?.totalGames ?? 0,
-      winRate: user?.winRate ?? 0,
+      wins: profile.wins ?? 0,
+      losses: profile.losses ?? 0,
+      draws: profile.draws ?? 0,
+      totalGames: profile.totalGames ?? 0,
+      winRate: profile.winRate ?? 0,
     },
   };
 
@@ -88,8 +160,6 @@ export default function ProfilePage() {
     });
   };
 
-  if (!user) return null;
-
   return (
     <div className="w-full max-w-lg mx-auto px-4 py-6">
       {/* Header */}
@@ -97,7 +167,7 @@ export default function ProfilePage() {
         PERFIL
       </h1>
       <p className="text-center font-stats text-sm text-sand/50 mb-6">
-        Personalize seu pistoleiro
+        {isOwnProfile ? "Personalize seu pistoleiro" : profile.displayName}
       </p>
 
       {/* Profile Card */}
@@ -120,7 +190,9 @@ export default function ProfilePage() {
           </div>
           <div className="text-center">
             <div className="font-western text-xl text-gold tracking-wider">
-              {displayName || "Pistoleiro"}
+              {isOwnProfile
+                ? displayName || "Pistoleiro"
+                : profile.displayName || "Pistoleiro"}
             </div>
             <div className="font-stats text-xs text-sand/50 mt-0.5">
               {activeChar.name}
@@ -150,119 +222,125 @@ export default function ProfilePage() {
         </div>
 
         {/* Display Name */}
-        <div>
-          <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest block mb-2">
-            Nome de Pistoleiro
-          </label>
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={20}
-            placeholder="Seu nome..."
-            className="w-full px-4 py-3 rounded-xl bg-black/40 border-2 border-sand/20 focus:border-gold/60 text-sand-light font-western text-sm tracking-wider outline-none transition-colors"
-          />
-          <p className="font-stats text-[10px] text-sand/40 mt-1 text-right">
-            {displayName.length}/20
-          </p>
-        </div>
+        {isOwnProfile && (
+          <div>
+            <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest block mb-2">
+              Nome de Pistoleiro
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={20}
+              placeholder="Seu nome..."
+              className="w-full px-4 py-3 rounded-xl bg-black/40 border-2 border-sand/20 focus:border-gold/60 text-sand-light font-western text-sm tracking-wider outline-none transition-colors"
+            />
+            <p className="font-stats text-[10px] text-sand/40 mt-1 text-right">
+              {displayName.length}/20
+            </p>
+          </div>
+        )}
 
         {/* Avatar Picture Selection */}
-        <div>
-          <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest block mb-3">
-            Escolha sua Foto de Perfil
-          </label>
-          <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
-            {allAvatarOptions.map((opt) => (
-              <button
-                key={opt.image}
-                onClick={() => handleSelectAvatarPicture(opt.image)}
-                className={`relative group rounded-full overflow-hidden border-2 transition-all aspect-square ${
-                  currentAvatarPic === opt.image
-                    ? "border-gold ring-2 ring-gold/40 scale-105"
-                    : `${RARITY_STYLES[getCharacter(opt.characterId).rarity]} opacity-70 hover:opacity-100 hover:scale-105`
-                }`}
-              >
-                <img
-                  src={opt.image}
-                  alt={opt.characterName}
-                  className="w-full h-full object-cover"
-                />
-                {currentAvatarPic === opt.image && (
-                  <div className="absolute inset-0 bg-gold/10 flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-gold drop-shadow-lg"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </button>
-            ))}
+        {isOwnProfile && (
+          <div>
+            <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest block mb-3">
+              Escolha sua Foto de Perfil
+            </label>
+            <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
+              {allAvatarOptions.map((opt) => (
+                <button
+                  key={opt.image}
+                  onClick={() => handleSelectAvatarPicture(opt.image)}
+                  className={`relative group rounded-full overflow-hidden border-2 transition-all aspect-square ${
+                    currentAvatarPic === opt.image
+                      ? "border-gold ring-2 ring-gold/40 scale-105"
+                      : `${RARITY_STYLES[getCharacter(opt.characterId).rarity]} opacity-70 hover:opacity-100 hover:scale-105`
+                  }`}
+                >
+                  <img
+                    src={opt.image}
+                    alt={opt.characterName}
+                    className="w-full h-full object-cover"
+                  />
+                  {currentAvatarPic === opt.image && (
+                    <div className="absolute inset-0 bg-gold/10 flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5 text-gold drop-shadow-lg"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Character Selection (for gameplay) */}
-        <div>
-          <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest block mb-3">
-            Personagem Ativo
-          </label>
-          <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
-            {CHARACTERS.map((char) => (
-              <button
-                key={char.id}
-                disabled={!unlocks.charactersUnlocked.includes(char.id)}
-                onClick={() => {
-                  if (!unlocks.charactersUnlocked.includes(char.id)) return;
-                  setSelectedAvatar(char.id);
-                  // If user hasn't explicitly picked a picture yet, auto-follow character
-                  if (!user?.avatarPicture && !selectedAvatarPicture) {
-                    setSelectedAvatarPicture(null);
-                  }
-                }}
-                className={`relative group rounded-xl overflow-hidden border-2 transition-all aspect-square ${
-                  selectedAvatar === char.id
-                    ? "border-gold ring-2 ring-gold/40 scale-105"
-                    : unlocks.charactersUnlocked.includes(char.id)
-                      ? `${RARITY_STYLES[char.rarity]} opacity-70 hover:opacity-100 hover:scale-105`
-                      : "border-sand/20 opacity-40 cursor-not-allowed"
-                }`}
-              >
-                <img
-                  src={char.profileImage}
-                  alt={char.name}
-                  className="w-full h-full object-cover"
-                />
-                {!unlocks.charactersUnlocked.includes(char.id) && (
-                  <div className="absolute inset-0 bg-black/65 flex items-center justify-center">
-                    <span className="text-base">🔒</span>
-                  </div>
-                )}
-                {selectedAvatar === char.id && (
-                  <div className="absolute inset-0 bg-gold/10 flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-gold drop-shadow-lg"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </button>
-            ))}
+        {isOwnProfile && (
+          <div>
+            <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest block mb-3">
+              Personagem Ativo
+            </label>
+            <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+              {CHARACTERS.map((char) => (
+                <button
+                  key={char.id}
+                  disabled={!unlocks.charactersUnlocked.includes(char.id)}
+                  onClick={() => {
+                    if (!unlocks.charactersUnlocked.includes(char.id)) return;
+                    setSelectedAvatar(char.id);
+                    // If user hasn't explicitly picked a picture yet, auto-follow character
+                    if (!profile.avatarPicture && !selectedAvatarPicture) {
+                      setSelectedAvatarPicture(null);
+                    }
+                  }}
+                  className={`relative group rounded-xl overflow-hidden border-2 transition-all aspect-square ${
+                    selectedAvatar === char.id
+                      ? "border-gold ring-2 ring-gold/40 scale-105"
+                      : unlocks.charactersUnlocked.includes(char.id)
+                        ? `${RARITY_STYLES[char.rarity]} opacity-70 hover:opacity-100 hover:scale-105`
+                        : "border-sand/20 opacity-40 cursor-not-allowed"
+                  }`}
+                >
+                  <img
+                    src={char.profileImage}
+                    alt={char.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {!unlocks.charactersUnlocked.includes(char.id) && (
+                    <div className="absolute inset-0 bg-black/65 flex items-center justify-center">
+                      <span className="text-base">🔒</span>
+                    </div>
+                  )}
+                  {selectedAvatar === char.id && (
+                    <div className="absolute inset-0 bg-gold/10 flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5 text-gold drop-shadow-lg"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Stats Summary */}
         <div className="bg-black/30 rounded-xl p-4">
@@ -431,14 +509,134 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Per-Character Stats */}
+        {profile.characterStats &&
+          Object.keys(profile.characterStats).length > 0 && (
+            <div className="bg-black/30 rounded-xl p-4">
+              <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest block mb-3">
+                Estatísticas por Personagem
+              </label>
+              {profile.favoriteCharacter && (
+                <div className="flex items-center gap-3 mb-4 p-2 rounded-lg border border-gold/30 bg-gold/5">
+                  <img
+                    src={getCharacter(profile.favoriteCharacter).profileImage}
+                    alt=""
+                    className="w-10 h-10 rounded-full border-2 border-gold/50"
+                  />
+                  <div>
+                    <div className="font-stats text-[10px] text-sand/50 uppercase">
+                      Favorito
+                    </div>
+                    <div className="font-western text-gold text-sm">
+                      {getCharacter(profile.favoriteCharacter).name}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
+                {Object.entries(profile.characterStats)
+                  .sort(([, a], [, b]) => (b.partidas ?? 0) - (a.partidas ?? 0))
+                  .map(([charId, stats]) => {
+                    const char = getCharacter(charId);
+                    return (
+                      <div
+                        key={charId}
+                        className="flex items-center gap-2 p-2 rounded-lg border border-sand/15 bg-black/20"
+                      >
+                        <img
+                          src={char.profileImage}
+                          alt={char.name}
+                          className="w-8 h-8 rounded-full border border-sand/30"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-stats text-[10px] text-sand/70 truncate">
+                            {char.name}
+                          </div>
+                          <div className="flex gap-2 font-stats text-[9px]">
+                            <span className="text-green-400">
+                              {stats.vitorias ?? 0}V
+                            </span>
+                            <span className="text-red-400">
+                              {stats.derrotas ?? 0}D
+                            </span>
+                            <span className="text-sand/50">
+                              {stats.partidas ?? 0}P
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+        {/* Achievement Summary */}
+        {(() => {
+          const achMap = normalizeAchievements(profile.achievements);
+          const achEntries = Object.values(achMap);
+          const totalUnlocked = achEntries.reduce((n, p) => n + p.level, 0);
+          if (totalUnlocked === 0 && !isOwnProfile) return null;
+          return (
+            <div className="bg-black/30 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <label className="font-stats text-[10px] text-sand/50 uppercase tracking-widest">
+                  Conquistas
+                </label>
+                {isOwnProfile && (
+                  <button
+                    onClick={() => navigate("/achievements")}
+                    className="font-stats text-[10px] text-sky-400 hover:text-sky-300 transition-colors"
+                  >
+                    Ver Todas →
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-6 gap-2">
+                {ACHIEVEMENTS.slice(0, 12).map((def) => {
+                  const prog = achMap[def.id];
+                  const level = prog?.level ?? 0;
+                  return (
+                    <div
+                      key={def.id}
+                      title={def.name}
+                      className={`flex flex-col items-center gap-1 p-1.5 rounded-lg border ${level > 0 ? "border-gold/30 bg-gold/5" : "border-sand/10 bg-black/20 opacity-50"}`}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className={`w-5 h-5 ${level > 0 ? "text-yellow-400" : "text-gray-500"}`}
+                      >
+                        <path fill="currentColor" d={def.icon} />
+                      </svg>
+                      {level > 0 && (
+                        <span className="font-stats text-[8px] text-gold">
+                          Nv{level}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {totalUnlocked > 0 && (
+                <div className="mt-2 text-right font-stats text-[10px] text-sand/50">
+                  {totalUnlocked} nível{totalUnlocked !== 1 ? "is" : ""}{" "}
+                  desbloqueado{totalUnlocked !== 1 ? "s" : ""}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={saving || !displayName.trim()}
-          className={`btn-western w-full ${saved ? "btn-sky" : ""}`}
-        >
-          {saving ? "SALVANDO..." : saved ? "✓ SALVO!" : "SALVAR PERFIL"}
-        </button>
+        {isOwnProfile && (
+          <button
+            onClick={handleSave}
+            disabled={saving || !displayName.trim()}
+            className={`btn-western w-full ${saved ? "btn-sky" : ""}`}
+          >
+            {saving ? "SALVANDO..." : saved ? "✓ SALVO!" : "SALVAR PERFIL"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -674,6 +674,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           avatar: isHost
             ? (roomData.guestAvatar ?? state.opponent.avatar)
             : (roomData.hostAvatar ?? state.opponent.avatar),
+          avatarPicture: isHost
+            ? (roomData.guestAvatarPicture ?? state.opponent.avatarPicture)
+            : (roomData.hostAvatarPicture ?? state.opponent.avatarPicture),
           characterClass: getCharacterClass(
             isHost
               ? (roomData.guestAvatar ?? state.opponent.avatar)
@@ -810,6 +813,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         avatar: isHost
           ? (roomData.guestAvatar ?? curr.opponent.avatar)
           : (roomData.hostAvatar ?? curr.opponent.avatar),
+        avatarPicture: isHost
+          ? (roomData.guestAvatarPicture ?? curr.opponent.avatarPicture)
+          : (roomData.hostAvatarPicture ?? curr.opponent.avatarPicture),
         characterClass: getCharacterClass(
           isHost
             ? (roomData.guestAvatar ?? curr.opponent.avatar)

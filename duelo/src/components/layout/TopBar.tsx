@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { getCharacter, resolveAvatarPicture } from "../../lib/characters";
 import { SettingsModal } from "../common/SettingsModal";
@@ -13,6 +14,7 @@ export function TopBar() {
   const user = useAuthStore((s) => s.user);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const navigate = useNavigate();
 
   if (!user) return null;
 
@@ -46,7 +48,12 @@ export function TopBar() {
         {/* Profile Info */}
         <div className="profile-info">
           <div className="profile-name-row">
-            <span className="profile-name">{user.displayName}</span>
+            <span
+              className="profile-name cursor-pointer hover:text-gold transition-colors"
+              onClick={() => navigate("/profile")}
+            >
+              {user.displayName}
+            </span>
             <span className="level-badge">Nv {level}</span>
           </div>
         </div>
@@ -55,7 +62,11 @@ export function TopBar() {
         <div className="coins-pill">
           <picture className="inline-block align-middle">
             <source srcSet="/assets/ui/gold_coin.webp" type="image/webp" />
-            <img src="/assets/ui/gold_coin.png" alt="gold" className="w-6 h-6 inline-block" />
+            <img
+              src="/assets/ui/gold_coin.png"
+              alt="gold"
+              className="w-6 h-6 inline-block"
+            />
           </picture>
           <span className="coins-amount">{coins.toLocaleString("pt-BR")}</span>
         </div>
@@ -64,7 +75,11 @@ export function TopBar() {
         <div className="coins-pill">
           <picture className="inline-block align-middle">
             <source srcSet="/assets/ui/ruby_coin.webp" type="image/webp" />
-            <img src="/assets/ui/ruby_coin.png" alt="ruby" className="w-6 h-6 inline-block" />
+            <img
+              src="/assets/ui/ruby_coin.png"
+              alt="ruby"
+              className="w-6 h-6 inline-block"
+            />
           </picture>
           <span className="coins-amount">{rubies.toLocaleString("pt-BR")}</span>
         </div>
@@ -73,11 +88,16 @@ export function TopBar() {
         <div className="coins-pill" title="Troféus online">
           <picture className="inline-block align-middle">
             <source srcSet="/assets/ui/trophie_icon.webp" type="image/webp" />
-            <img src="/assets/ui/trophie_icon.png" alt="trophy" className="w-6 h-6 inline-block" />
+            <img
+              src="/assets/ui/trophie_icon.png"
+              alt="trophy"
+              className="w-6 h-6 inline-block"
+            />
           </picture>
-          <span className="coins-amount">{ranked.trophies.toLocaleString("pt-BR")}</span>
+          <span className="coins-amount">
+            {ranked.trophies.toLocaleString("pt-BR")}
+          </span>
         </div>
-
       </div>
 
       {/* Dropdown */}

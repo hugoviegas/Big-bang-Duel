@@ -137,7 +137,12 @@ export function OnlineLobby() {
       hideOpponentAmmo,
     };
 
-    const roomId = await createRoom(selectedMode, config, selectedCharacter);
+    const roomId = await createRoom(
+      selectedMode,
+      config,
+      selectedCharacter,
+      user?.avatarPicture,
+    );
     if (!roomId) {
       setCustomError("Nao foi possivel criar a sala.");
       return;
@@ -155,7 +160,11 @@ export function OnlineLobby() {
       return;
     }
 
-    const room = await joinRoom(joinCode.toUpperCase(), selectedCharacter);
+    const room = await joinRoom(
+      joinCode.toUpperCase(),
+      selectedCharacter,
+      user?.avatarPicture,
+    );
     if (!room) {
       setCustomError("Sala nao encontrada ou cheia.");
       return;
@@ -175,7 +184,11 @@ export function OnlineLobby() {
   };
 
   const handleJoinPublic = async (room: Room) => {
-    const joined = await joinRoom(room.id, selectedCharacter);
+    const joined = await joinRoom(
+      room.id,
+      selectedCharacter,
+      user?.avatarPicture,
+    );
     if (!joined) {
       setCustomError("Sala publica indisponivel.");
       return;

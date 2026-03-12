@@ -14,7 +14,7 @@ export function StatusBar({
 }: StatusBarProps) {
   const alignClass = isRight ? "items-end text-right" : "items-start text-left";
   const flexDir = isRight ? "flex-row-reverse" : "flex-row";
-  const thumbSrc = resolveAvatarPicture(player.avatar);
+  const thumbSrc = resolveAvatarPicture(player.avatar, player.avatarPicture);
 
   return (
     <div className={`flex ${flexDir} items-center gap-2 md:gap-3`}>
