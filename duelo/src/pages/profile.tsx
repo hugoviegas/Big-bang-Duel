@@ -576,6 +576,12 @@ export default function ProfilePage() {
           const achMap = normalizeAchievements(profile.achievements);
           const achEntries = Object.values(achMap);
           const totalUnlocked = achEntries.reduce((n, p) => n + p.level, 0);
+          const unclaimedCount = isOwnProfile
+            ? ACHIEVEMENTS.reduce((n, def) => {
+                const p = achMap[def.id];
+                return n + (p && p.level > p.claimedLevel ? 1 : 0);
+              }, 0)
+            : 0;
           if (totalUnlocked === 0 && !isOwnProfile) return null;
           return (
             <div className="bg-black/30 rounded-xl p-4">
@@ -586,9 +592,14 @@ export default function ProfilePage() {
                 {isOwnProfile && (
                   <button
                     onClick={() => navigate("/achievements")}
-                    className="font-stats text-[10px] text-sky-400 hover:text-sky-300 transition-colors"
+                    className="font-stats text-[10px] text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-2"
                   >
                     Ver Todas →
+                    {unclaimedCount > 0 && (
+                      <span className="inline-flex bg-red-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 ml-1">
+                        {unclaimedCount}
+                      </span>
+                    )}
                   </button>
                 )}
               </div>

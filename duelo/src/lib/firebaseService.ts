@@ -617,6 +617,43 @@ export async function claimAchievementReward(
   return { ok: true, message: claimResult.message, reward: claimResult.reward };
 }
 
+/**
+ * Retroactively evaluate achievements based on current profile progress.
+ * Call this once per session when the user enters the achievements page
+ * to ensure all unlocked achievements are visible even for existing users.
+ */
+export async function syncAchievementsRetroactively(
+  uid: string,
+): Promise<{ updated: boolean; count: number }> {
+  const { retroactivelyEvaluateAchievements, normalizeAchievements: normAch } =
+    await import("./achievements");
+  const playerRef = doc(db, "players", uid);
+  const snap = await getDoc(playerRef);
+  if (!snap.exists()) {
+    return { updated: false, count: 0 };
+  }
+
+  const profile = snap.data() as PlayerProfile;
+  const currentProgress = normAch(profile.achievements);
+  const newProgress = retroactivelyEvaluateAchievements(profile);
+
+  // Count changes
+  let changedCount = 0;
+  for (const [id, newProg] of Object.entries(newProgress)) {
+    const oldProg = currentProgress[id];
+    if (newProg.level > oldProg.level) {
+      changedCount++;
+    }
+  }
+
+  if (changedCount > 0) {
+    await updateDoc(playerRef, { achievements: newProgress });
+    invalidateCache(`profile:${uid}`);
+  }
+
+  return { updated: changedCount > 0, count: changedCount };
+}
+
 const CHARACTER_PRICE_GOLD = 1000;
 
 export async function buyCharacterInShop(

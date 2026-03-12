@@ -1020,3 +1020,71 @@ export function computeClaimReward(
     updatedCurrencies,
   };
 }
+
+// ─── Retroactive Evaluation ─────────────────────────────────────────────────
+
+/**
+ * Evaluate achievements retroactively based on current profile progress.
+ * Useful when a user hasn't played yet but has old profile data.
+ * Does NOT return newly unlocked list; use only for syncing to Firestore.
+ */
+export function retroactivelyEvaluateAchievements(
+  profile: PlayerProfile,
+): Record<string, AchievementProgress> {
+  const currentProgress = normalizeAchievements(profile.achievements);
+  const metrics: AchievementMetrics = {
+    level: profile.progression?.level ?? 1,
+    opponentsFacedCount: (profile.opponentsFaced ?? []).length,
+    singleMatchDodges: 0, // No single-match data for retroactive eval
+    perfectWins: profile.perfectWins ?? 0,
+    totalSuccessfulDodges: sumCharacterField(profile.characterStats, "desvios"),
+    totalSuccessfulCounters: sumCharacterField(
+      profile.characterStats,
+      "contraGolpes",
+    ),
+    totalWins: profile.statsByMode?.overall?.wins ?? profile.wins ?? 0,
+    totalMatches:
+      profile.statsByMode?.overall?.totalGames ?? profile.totalGames ?? 0,
+    totalShots: sumCharacterField(profile.characterStats, "tirosDisparados"),
+    totalReloads: sumCharacterField(profile.characterStats, "recargas"),
+    totalDoubleShots: sumDoubleShots(profile.characterStats),
+    winStreak: profile.winStreak ?? 0,
+    onlineMatches: profile.statsByMode?.online?.totalGames ?? 0,
+    trophies: profile.ranked?.trophies ?? 0,
+    maxCharacterMatches: maxCharacterField(profile.characterStats, "partidas"),
+    highLifeWins: profile.highLifeWins ?? 0,
+    onlineRivalsCount: (profile.onlinePlayersDefeated ?? []).length,
+  };
+
+  // Evaluate each achievement
+  for (const def of ACHIEVEMENTS) {
+    const prog = { ...currentProgress[def.id] };
+    const metricValue = getMetricForAchievement(def.id, metrics);
+
+    // Update progress value
+    if (def.group === "single_match") {
+      prog.progress = Math.max(prog.progress, metricValue);
+    } else {
+      prog.progress = metricValue;
+    }
+
+    // Determine new level
+    let newLevel = prog.level;
+    for (let i = prog.level; i < def.tiers.length; i++) {
+      if (prog.progress >= def.tiers[i].threshold) {
+        newLevel = i + 1;
+      } else {
+        break;
+      }
+    }
+
+    if (newLevel > prog.level) {
+      prog.level = newLevel;
+      prog.unlockedAt = Date.now();
+    }
+
+    currentProgress[def.id] = prog;
+  }
+
+  return currentProgress;
+}

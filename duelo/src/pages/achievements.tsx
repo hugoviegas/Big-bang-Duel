@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import {
@@ -6,7 +6,11 @@ import {
   normalizeAchievements,
   type AchievementDef,
 } from "../lib/achievements";
-import { claimAchievementReward } from "../lib/firebaseService";
+import {
+  claimAchievementReward,
+  syncAchievementsRetroactively,
+  subscribeToPlayerProfile,
+} from "../lib/firebaseService";
 
 function AchievementCard({
   def,
@@ -138,10 +142,35 @@ export default function AchievementsPage() {
     text: string;
     type: "success" | "error";
   } | null>(null);
+  const [localUser, setLocalUser] = useState(user);
+
+  // Retroactively evaluate achievements on mount and subscribe to profile updates
+  useEffect(() => {
+    if (!user) return;
+
+    // Sync retroactively first
+    syncAchievementsRetroactively(user.uid).catch((err) => {
+      console.warn("[AchievementsPage] Retroactive sync failed:", err);
+    });
+
+    // Subscribe to profile updates for real-time sync of achievements ONLY
+    const unsubscribe = subscribeToPlayerProfile(user.uid, (profile) => {
+      if (profile && profile.achievements) {
+        // Update local achievements state
+        setLocalUser((prev) =>
+          prev ? { ...prev, achievements: profile.achievements } : prev
+        );
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   if (!user) return null;
 
-  const allProgress = normalizeAchievements(user.achievements);
+  // Use localUser if available, fallback to global user
+  const displayUser = localUser || user;
+  const allProgress = normalizeAchievements(displayUser.achievements);
 
   const handleClaim = async (achievementId: string, tierIndex: number) => {
     setClaiming(achievementId);

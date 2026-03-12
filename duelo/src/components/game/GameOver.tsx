@@ -4,11 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../../store/gameStore";
 import { useAuthStore } from "../../store/authStore";
 import { recordMatchResult } from "../../lib/firebaseService";
-import type { MatchContext } from "../../lib/firebaseService";
 import { getCharacter } from "../../lib/characters";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
 import type { MatchResult } from "../../lib/firebaseService";
-import type { MatchMode, StatsByMode } from "../../types";
+import type { MatchMode } from "../../types";
 import {
   calculateMatchRewards,
   calculateProgression,
@@ -63,12 +62,14 @@ export function GameOver() {
   } = useGameStore();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const updateUser = useAuthStore((s) => s.updateUser);
   const { markPlayerReturnedToMenu } = useFirebaseRoom();
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">(
     () => (user ? "saving" : "saved"),
   );
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [newAchievements, setNewAchievements] = useState<
+    { achievementId: string; tierIndex: number; label: string }[]
+  >([]);
 
   let result: MatchResult;
   if (winnerId === player.id) {
@@ -122,7 +123,12 @@ export function GameOver() {
     // Persist to Firestore - Firebase is the source of truth
     // The real-time listener will automatically update local state when saved
     recordMatchResult(user.uid, result, matchMode, reward)
-      .then(() => {
+      .then((matchResultUpdate) => {
+        if (matchResultUpdate?.achievementEval?.newlyUnlocked?.length) {
+          setNewAchievements(
+            matchResultUpdate.achievementEval.newlyUnlocked,
+          );
+        }
         setSaveStatus("saved");
       })
       .catch((error) => {
@@ -465,6 +471,54 @@ export function GameOver() {
             MENU PRINCIPAL
           </button>
         </div>
+
+        {/* New Achievements Popup */}
+        {newAchievements.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", delay: 0.5 }}
+            className="card-wood p-6 mt-6 border-2 border-gold/50 bg-gradient-to-br from-yellow-900/20 to-transparent"
+          >
+            <div className="text-center mb-4">
+              <h3 className="font-western text-lg text-gold mb-1">
+                🏆 CONQUISTA DESBLOQUEADA!
+              </h3>
+              <p className="text-xs text-sand/70 uppercase tracking-widest">
+                Clique em "Conquistas" para reclamar sua recompensa
+              </p>
+            </div>
+
+            <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
+              {newAchievements.map((ach, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 + idx * 0.1 }}
+                  className="bg-black/40 border border-gold/30 rounded-lg px-3 py-2 text-center"
+                >
+                  <p className="font-western text-sm text-gold">
+                    {ach.label}
+                  </p>
+                  <p className="font-stats text-[10px] text-sand/60">
+                    Nível {ach.tierIndex + 1} desbloqueado
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                quitGame();
+                navigate("/achievements");
+              }}
+              className="btn-western w-full bg-gradient-to-r from-yellow-700 to-yellow-900 text-gold"
+            >
+              IR PARA CONQUISTAS
+            </button>
+          </motion.div>
+        )}
       </motion.div>
     </motion.div>
   );

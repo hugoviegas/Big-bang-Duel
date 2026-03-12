@@ -3,6 +3,7 @@ import { useAuthStore } from "../../store/authStore";
 import { resolveAvatarPicture } from "../../lib/characters";
 import { Edit, Settings, LogOut, Heart, Trophy } from "lucide-react";
 import { useFriendsStore } from "../../store/friendsStore";
+import { ACHIEVEMENTS, normalizeAchievements } from "../../lib/achievements";
 
 interface ProfileDropdownProps {
   isOpen: boolean;
@@ -27,6 +28,13 @@ export function ProfileDropdown({
     user.avatarPicture,
   );
   const playerCode = user.playerCode ?? "";
+
+  // Count unclaimed achievement rewards
+  const allProgress = normalizeAchievements(user.achievements);
+  const unclaimedCount = ACHIEVEMENTS.reduce((n, def) => {
+    const p = allProgress[def.id];
+    return n + (p && p.level > p.claimedLevel ? 1 : 0);
+  }, 0);
 
   const handleNav = (path: string) => {
     onClose();
@@ -67,7 +75,14 @@ export function ProfileDropdown({
       </div>
       <div className="dropdown-item" onClick={() => handleNav("/achievements")}>
         <Trophy size={20} className="dropdown-item-icon" />
-        <span className="dropdown-item-text">Conquistas</span>
+        <span className="dropdown-item-text">
+          Conquistas
+          {unclaimedCount > 0 && (
+            <span className="inline-flex ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5">
+              {unclaimedCount}
+            </span>
+          )}
+        </span>
       </div>
       <div className="dropdown-item danger" onClick={handleLogout}>
         <LogOut size={20} className="dropdown-item-icon" />

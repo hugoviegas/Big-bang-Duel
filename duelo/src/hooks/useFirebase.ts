@@ -53,7 +53,7 @@ export function useFirebaseRoom() {
       hostId: user.uid,
       hostName: user.displayName || "Pistoleiro",
       hostAvatar: playerAvatar,
-      hostAvatarPicture: playerAvatarPicture ?? null,
+      hostAvatarPicture: playerAvatarPicture,
       guestId: null,
       mode,
       status: "waiting",
