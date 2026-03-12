@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { resolveAvatarPicture } from "../../lib/characters";
-import { Edit, Settings, LogOut, Heart } from "lucide-react";
+import { Edit, Settings, LogOut, Heart, Trophy } from "lucide-react";
 import { useFriendsStore } from "../../store/friendsStore";
 
 interface ProfileDropdownProps {
@@ -47,9 +47,7 @@ export function ProfileDropdown({
         </div>
         <div>
           <div className="dropdown-name">{user.displayName}</div>
-          <div className="dropdown-id">
-            {playerCode || ""}
-          </div>
+          <div className="dropdown-id">{playerCode || ""}</div>
         </div>
       </div>
       <div className="dropdown-item" onClick={() => handleNav("/profile")}>
@@ -60,11 +58,16 @@ export function ProfileDropdown({
         <Settings size={20} className="dropdown-item-icon" />
         <span className="dropdown-item-text">Configurações</span>
       </div>
-      <div className="dropdown-item" onClick={() => handleNav("/friends") }>
+      <div className="dropdown-item" onClick={() => handleNav("/friends")}>
         <Heart size={20} className="dropdown-item-icon" />
         <span className="dropdown-item-text">
-          Amigos{pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ""}
+          Amigos
+          {pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ""}
         </span>
+      </div>
+      <div className="dropdown-item" onClick={() => handleNav("/achievements")}>
+        <Trophy size={20} className="dropdown-item-icon" />
+        <span className="dropdown-item-text">Conquistas</span>
       </div>
       <div className="dropdown-item danger" onClick={handleLogout}>
         <LogOut size={20} className="dropdown-item-icon" />

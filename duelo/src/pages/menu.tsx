@@ -114,7 +114,7 @@ export default function MenuPage() {
     setMessageIndex(0);
 
     try {
-      const result = await quickMatch(selectedCharacter);
+      const result = await quickMatch(selectedCharacter, user?.avatarPicture);
       if (!result) {
         setQuickMatchStatus("error");
         setQuickError("Não foi possível iniciar a busca de partida.");

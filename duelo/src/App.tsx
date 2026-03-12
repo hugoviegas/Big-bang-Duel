@@ -10,6 +10,7 @@ import OnlinePage from "./pages/online";
 import LeaderboardPage from "./pages/leaderboard";
 import CharactersPage from "./pages/characters";
 import ProfilePage from "./pages/profile";
+import AchievementsPage from "./pages/achievements";
 import FriendsPage from "./pages/friends";
 import ShopPage from "./pages/shop";
 import DesignSystemPage from "./pages/design-system";
@@ -157,6 +158,22 @@ function App() {
           element={
             <MobilePage>
               <ProfilePage />
+            </MobilePage>
+          }
+        />
+        <Route
+          path="/profile/:uid"
+          element={
+            <MobilePage>
+              <ProfilePage />
+            </MobilePage>
+          }
+        />
+        <Route
+          path="/achievements"
+          element={
+            <MobilePage>
+              <AchievementsPage />
             </MobilePage>
           }
         />

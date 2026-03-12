@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { fetchLeaderboard } from "../../lib/firebaseService";
 import { resolveAvatarPicture } from "../../lib/characters";
@@ -20,6 +21,7 @@ const RANK_BADGES: Record<number, string> = {
 };
 
 export function Leaderboard() {
+  const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,7 +167,10 @@ export function Leaderboard() {
             return (
               <div
                 key={entry.uid}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 backdrop-blur-sm transition-all animate-fade-up ${
+                onClick={() =>
+                  navigate(isMe ? "/profile" : `/profile/${entry.uid}`)
+                }
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 backdrop-blur-sm transition-all animate-fade-up cursor-pointer hover:brightness-110 ${
                   isMe
                     ? "border-gold/60 bg-gold/10 ring-1 ring-gold/30"
                     : RANK_STYLES[entry.rank] || "border-sand/10 bg-black/30"

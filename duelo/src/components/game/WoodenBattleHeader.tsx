@@ -42,7 +42,7 @@ function PlayerPanel({
   isRight?: boolean;
   hideAmmo?: boolean;
 }) {
-  const avatarPic = resolveAvatarPicture(player.avatar);
+  const avatarPic = resolveAvatarPicture(player.avatar, player.avatarPicture);
 
   return (
     <div className={`battle-player-panel${isRight ? " is-right" : ""}`}>

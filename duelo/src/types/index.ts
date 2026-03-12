@@ -78,6 +78,7 @@ export interface PlayerState {
   doubleShotsLeft: number; // remaining double_shot uses this round (max 3)
   characterClass: CharacterClass; // passive ability class
   shieldUsesLeft: number; // Suporte class: remaining shield activations this match (max 2)
+  avatarPicture?: string; // custom profile picture (independent of character)
 }
 
 export interface GameState {
@@ -171,6 +172,58 @@ export interface Unlocks {
   claimedLevelRewards: number[];
 }
 
+/** Per-character career statistics. */
+export interface CharacterStats {
+  partidas: number;
+  vitorias: number;
+  derrotas: number;
+  tirosDisparados: number;
+  recargas: number;
+  desvios: number;
+  contraGolpes: number;
+  tirosDuplos: number;
+}
+
+/** Progress state for a single achievement. */
+export interface AchievementProgress {
+  id: string;
+  /** Current unlocked tier (0 = none, 1-5 = tier). */
+  level: number;
+  /** Accumulated counter towards next tier. */
+  progress: number;
+  /** Timestamp when the current level was unlocked. */
+  unlockedAt?: number;
+  /** Highest tier whose reward has been manually claimed. */
+  claimedLevel: number;
+}
+
+/** Lightweight summary persisted per match for achievement evaluation. */
+export interface MatchSummary {
+  matchId: string;
+  uid: string;
+  opponentUid?: string;
+  characterId: string;
+  opponentCharacterId: string;
+  mode: MatchMode;
+  result: "win" | "loss" | "draw";
+  turns: number;
+  /** Player stats in this match */
+  shots: number;
+  doubleShots: number;
+  dodges: number;
+  reloads: number;
+  counters: number;
+  /** Successful dodges (opponent shot but player dodged). */
+  successfulDodges: number;
+  /** Successful counters (opponent shot but player countered). */
+  successfulCounters: number;
+  damageTaken: number;
+  damageDealt: number;
+  /** Player remaining life when match ended. */
+  remainingLife: number;
+  timestamp: number;
+}
+
 export interface User {
   uid: string;
   email: string;
@@ -201,6 +254,22 @@ export interface User {
   currencies?: Currencies;
   ranked?: RankedStats;
   unlocks?: Unlocks;
+  /** Per-character career stats. Key = character id. */
+  characterStats?: Record<string, CharacterStats>;
+  /** Achievement progress. Key = achievement id. */
+  achievements?: Record<string, AchievementProgress>;
+  /** Character with most matches played. Computed on save. */
+  favoriteCharacter?: string;
+  /** Win streak (consecutive wins, reset on loss/draw). */
+  winStreak?: number;
+  /** Distinct opponent character ids faced. */
+  opponentsFaced?: string[];
+  /** Distinct online player uids defeated. */
+  onlinePlayersDefeated?: string[];
+  /** Count of perfect wins (no damage taken). */
+  perfectWins?: number;
+  /** Count of wins with 2+ remaining life. */
+  highLifeWins?: number;
 }
 
 export interface PlayerProfile {
@@ -224,6 +293,14 @@ export interface PlayerProfile {
   currencies?: Currencies;
   ranked?: RankedStats;
   unlocks?: Unlocks;
+  characterStats?: Record<string, CharacterStats>;
+  achievements?: Record<string, AchievementProgress>;
+  favoriteCharacter?: string;
+  winStreak?: number;
+  opponentsFaced?: string[];
+  onlinePlayersDefeated?: string[];
+  perfectWins?: number;
+  highLifeWins?: number;
 }
 
 export interface LeaderboardEntry {
@@ -271,9 +348,11 @@ export interface Room {
   hostId: string;
   hostName: string;
   hostAvatar?: string;
+  hostAvatarPicture?: string;
   guestId: string | null;
   guestName: string | null;
   guestAvatar?: string;
+  guestAvatarPicture?: string;
   hostChoice: string | null;
   guestChoice: string | null;
   mode: GameMode;

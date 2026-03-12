@@ -38,6 +38,7 @@ export function useFirebaseRoom() {
     mode: GameMode,
     config: RoomConfig,
     playerAvatar: string = "marshal",
+    playerAvatarPicture?: string,
   ) => {
     if (!user) return null;
 
@@ -51,6 +52,7 @@ export function useFirebaseRoom() {
       hostId: user.uid,
       hostName: user.displayName || "Pistoleiro",
       hostAvatar: playerAvatar,
+      hostAvatarPicture: playerAvatarPicture ?? null,
       guestId: null,
       mode,
       status: "waiting",
@@ -83,6 +85,7 @@ export function useFirebaseRoom() {
   const joinRoom = async (
     roomId: string,
     playerAvatar: string = "marshal",
+    playerAvatarPicture?: string,
   ): Promise<Room | null> => {
     if (!user) return null;
 
@@ -96,6 +99,7 @@ export function useFirebaseRoom() {
           guestId: user.uid,
           guestName: user.displayName || "Pistoleiro",
           guestAvatar: playerAvatar,
+          guestAvatarPicture: playerAvatarPicture ?? null,
           status: "in_progress",
         });
         setCurrentRoomId(roomId);
@@ -179,6 +183,7 @@ export function useFirebaseRoom() {
 
   const quickMatch = async (
     playerAvatar: string = "marshal",
+    playerAvatarPicture?: string,
   ): Promise<QuickMatchResult | null> => {
     if (!user) return null;
 
@@ -214,7 +219,7 @@ export function useFirebaseRoom() {
     // FIFO entry into the oldest available quick room.
     candidates.sort((a, b) => a.createdAt - b.createdAt);
     for (const room of candidates) {
-      const joined = await joinRoom(room.id, playerAvatar);
+      const joined = await joinRoom(room.id, playerAvatar, playerAvatarPicture);
       if (joined) {
         return {
           roomId: room.id,
@@ -234,6 +239,7 @@ export function useFirebaseRoom() {
       QUICK_MATCH_MODE,
       QUICK_MATCH_CONFIG,
       playerAvatar,
+      playerAvatarPicture,
     );
 
     if (!roomId) return null;
@@ -333,6 +339,7 @@ export function useMatchSync(roomId: string | null) {
         await update(roomRef, {
           guestId: user.uid,
           guestName: user.displayName || "Pistoleiro",
+          guestAvatarPicture: user.avatarPicture ?? null,
           status: "in_progress",
         });
         return true;

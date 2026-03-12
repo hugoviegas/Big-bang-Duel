@@ -34,7 +34,11 @@ import type {
   Currencies,
   RankedStats,
   Unlocks,
+  TurnResult,
+  CharacterStats,
+  MatchSummary,
 } from "../types";
+import { evaluateAchievements, type EvaluationResult } from "./achievements";
 import {
   calculateProgression,
   calculateMatchRewards,
@@ -165,6 +169,15 @@ export async function findPlayerByCode(
 
 export type MatchResult = "win" | "loss" | "draw";
 
+/** Context passed from GameOver so recordMatchResult can build MatchSummary & update achievements. */
+export interface MatchContext {
+  history: TurnResult[];
+  playerCharacterId: string;
+  opponentCharacterId: string;
+  opponentUid?: string;
+  remainingLife: number;
+}
+
 export interface MatchResultUpdate {
   result: MatchResult;
   mode: MatchMode;
@@ -173,7 +186,12 @@ export interface MatchResultUpdate {
   currencies: Currencies;
   ranked: RankedStats;
   unlocks: Unlocks;
-  levelRewards: Array<{ level: number; gold: number; unlockedCharacterId?: string }>;
+  levelRewards: Array<{
+    level: number;
+    gold: number;
+    unlockedCharacterId?: string;
+  }>;
+  achievementEval?: EvaluationResult;
 }
 
 function createEmptyModeStats(): ModeStats {
@@ -272,12 +290,14 @@ async function upsertLeaderboardEntry(profile: PlayerProfile): Promise<void> {
   );
 }
 
-/** Records a match result: increments wins/losses/draws + totalGames, recalculates winRate. */
+/** Records a match result: increments wins/losses/draws + totalGames, recalculates winRate,
+ *  updates characterStats and evaluates achievements. */
 export async function recordMatchResult(
   uid: string,
   result: MatchResult,
   mode: MatchMode = "solo",
   rewardOverride?: MatchRewardSummary,
+  matchCtx?: MatchContext,
 ): Promise<MatchResultUpdate | null> {
   const playerRef = doc(db, "players", uid);
   const snap = await getDoc(playerRef);
@@ -310,13 +330,10 @@ export async function recordMatchResult(
     overall: nextOverall,
   };
 
-  const currentProgression = calculateProgression(data.progression?.xpTotal ?? 0);
-  const rewards =
-    rewardOverride ??
-    calculateMatchRewards(
-      mode,
-      result,
-    );
+  const currentProgression = calculateProgression(
+    data.progression?.xpTotal ?? 0,
+  );
+  const rewards = rewardOverride ?? calculateMatchRewards(mode, result);
 
   const nextProgression = calculateProgression(
     (data.progression?.xpTotal ?? 0) + rewards.xpGained,
@@ -348,7 +365,142 @@ export async function recordMatchResult(
     trophyPeak: Math.max(baseRanked.trophyPeak, nextTrophies),
   };
 
-  await updateDoc(playerRef, {
+  // ── Character stats & achievements (only when match context provided) ──
+  let matchSummary: MatchSummary | undefined;
+  let achievementEval: EvaluationResult | undefined;
+  const updatedCharacterStats = { ...(data.characterStats ?? {}) };
+  let winStreak = data.winStreak ?? 0;
+  const opponentsFaced = [...(data.opponentsFaced ?? [])];
+  const onlinePlayersDefeated = [...(data.onlinePlayersDefeated ?? [])];
+  let perfectWins = data.perfectWins ?? 0;
+  let highLifeWins = data.highLifeWins ?? 0;
+  let favoriteCharacter = data.favoriteCharacter;
+
+  if (matchCtx) {
+    const h = matchCtx.history;
+    const shots = h.filter((t) => t.playerCard === "shot").length;
+    const doubleShots = h.filter((t) => t.playerCard === "double_shot").length;
+    const dodges = h.filter((t) => t.playerCard === "dodge").length;
+    const reloads = h.filter((t) => t.playerCard === "reload").length;
+    const counters = h.filter((t) => t.playerCard === "counter").length;
+    const successfulDodges = h.filter(
+      (t) =>
+        t.playerCard === "dodge" &&
+        (t.opponentCard === "shot" || t.opponentCard === "double_shot"),
+    ).length;
+    const successfulCounters = h.filter(
+      (t) =>
+        t.playerCard === "counter" &&
+        (t.opponentCard === "shot" || t.opponentCard === "double_shot"),
+    ).length;
+    const damageTaken = h.reduce((s, t) => s + t.playerLifeLost, 0);
+    const damageDealt = h.reduce((s, t) => s + t.opponentLifeLost, 0);
+
+    matchSummary = {
+      matchId: `${uid}_${Date.now()}`,
+      uid,
+      opponentUid: matchCtx.opponentUid,
+      characterId: matchCtx.playerCharacterId,
+      opponentCharacterId: matchCtx.opponentCharacterId,
+      mode,
+      result,
+      turns: h.length,
+      shots,
+      doubleShots,
+      dodges,
+      reloads,
+      counters,
+      successfulDodges,
+      successfulCounters,
+      damageTaken,
+      damageDealt,
+      remainingLife: matchCtx.remainingLife,
+      timestamp: Date.now(),
+    };
+
+    // Update per-character stats
+    const charId = matchCtx.playerCharacterId;
+    const prev: CharacterStats = updatedCharacterStats[charId] ?? {
+      partidas: 0,
+      vitorias: 0,
+      derrotas: 0,
+      tirosDisparados: 0,
+      recargas: 0,
+      desvios: 0,
+      contraGolpes: 0,
+      tirosDuplos: 0,
+    };
+    updatedCharacterStats[charId] = {
+      partidas: prev.partidas + 1,
+      vitorias: prev.vitorias + (result === "win" ? 1 : 0),
+      derrotas: prev.derrotas + (result === "loss" ? 1 : 0),
+      tirosDisparados: prev.tirosDisparados + shots,
+      recargas: prev.recargas + reloads,
+      desvios: prev.desvios + successfulDodges,
+      contraGolpes: prev.contraGolpes + successfulCounters,
+      tirosDuplos: (prev.tirosDuplos ?? 0) + doubleShots,
+    };
+
+    // Win streak
+    if (result === "win") {
+      winStreak += 1;
+    } else {
+      winStreak = 0;
+    }
+
+    // Opponents faced (character discovery)
+    if (!opponentsFaced.includes(matchCtx.opponentCharacterId)) {
+      opponentsFaced.push(matchCtx.opponentCharacterId);
+    }
+
+    // Online players defeated (unique)
+    if (
+      mode === "online" &&
+      result === "win" &&
+      matchCtx.opponentUid &&
+      !onlinePlayersDefeated.includes(matchCtx.opponentUid)
+    ) {
+      onlinePlayersDefeated.push(matchCtx.opponentUid);
+    }
+
+    // Perfect wins (no damage taken)
+    if (result === "win" && damageTaken === 0) {
+      perfectWins += 1;
+    }
+
+    // High life wins (2+ remaining life)
+    if (result === "win" && matchCtx.remainingLife >= 2) {
+      highLifeWins += 1;
+    }
+
+    // Favorite character = one with most matches
+    let maxMatches = 0;
+    for (const [cid, cs] of Object.entries(updatedCharacterStats)) {
+      if (cs.partidas > maxMatches) {
+        maxMatches = cs.partidas;
+        favoriteCharacter = cid;
+      }
+    }
+
+    // Evaluate achievements
+    const profileForEval: PlayerProfile = {
+      ...data,
+      statsByMode,
+      progression: nextProgression,
+      currencies: afterLevelRewards.currencies,
+      ranked,
+      unlocks: afterLevelRewards.unlocks,
+      characterStats: updatedCharacterStats,
+      winStreak,
+      opponentsFaced,
+      onlinePlayersDefeated,
+      perfectWins,
+      highLifeWins,
+    };
+    achievementEval = evaluateAchievements(profileForEval, matchSummary);
+  }
+
+  const updatePayload: Record<string, unknown> = {
     wins: nextOverall.wins,
     losses: nextOverall.losses,
     draws: nextOverall.draws,
@@ -360,7 +512,22 @@ export async function recordMatchResult(
     ranked,
     unlocks: afterLevelRewards.unlocks,
     lastSeen: Date.now(),
-  });
+  };
+
+  if (matchCtx) {
+    updatePayload.characterStats = updatedCharacterStats;
+    updatePayload.winStreak = winStreak;
+    updatePayload.opponentsFaced = opponentsFaced;
+    updatePayload.onlinePlayersDefeated = onlinePlayersDefeated;
+    updatePayload.perfectWins = perfectWins;
+    updatePayload.highLifeWins = highLifeWins;
+    updatePayload.favoriteCharacter = favoriteCharacter;
+    if (achievementEval) {
+      updatePayload.achievements = achievementEval.updatedProgress;
+    }
+  }
+
+  await updateDoc(playerRef, updatePayload);
 
   await upsertLeaderboardEntry({
     ...data,
@@ -391,6 +558,7 @@ export async function recordMatchResult(
     ranked,
     unlocks: afterLevelRewards.unlocks,
     levelRewards,
+    achievementEval,
   };
 }
 
@@ -399,6 +567,54 @@ export interface ShopPurchaseResult {
   message: string;
   currencies: Currencies;
   unlocks: Unlocks;
+}
+
+// ─── Achievement Claim ──────────────────────────────────────────────────────
+
+export async function claimAchievementReward(
+  uid: string,
+  achievementId: string,
+  tierIndex: number,
+): Promise<{
+  ok: boolean;
+  message: string;
+  reward?: { gold: number; ruby: number };
+}> {
+  const { computeClaimReward, normalizeAchievements: normAch } =
+    await import("./achievements");
+  const playerRef = doc(db, "players", uid);
+  const snap = await getDoc(playerRef);
+  if (!snap.exists()) return { ok: false, message: "Perfil não encontrado." };
+
+  const profile = snap.data() as PlayerProfile;
+  const allProgress = normAch(profile.achievements);
+  const progress = allProgress[achievementId];
+  if (!progress) return { ok: false, message: "Conquista não encontrada." };
+
+  const currencies = normalizeCurrencies(profile.currencies);
+  const claimResult = computeClaimReward(
+    achievementId,
+    tierIndex,
+    progress,
+    currencies,
+  );
+  if (
+    !claimResult.ok ||
+    !claimResult.updatedProgress ||
+    !claimResult.updatedCurrencies
+  ) {
+    return { ok: false, message: claimResult.message };
+  }
+
+  allProgress[achievementId] = claimResult.updatedProgress;
+  await updateDoc(playerRef, {
+    achievements: allProgress,
+    currencies: claimResult.updatedCurrencies,
+  });
+
+  invalidateCache(`profile:${uid}`);
+
+  return { ok: true, message: claimResult.message, reward: claimResult.reward };
 }
 
 const CHARACTER_PRICE_GOLD = 1000;

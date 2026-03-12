@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../../store/gameStore";
 import { useAuthStore } from "../../store/authStore";
 import { recordMatchResult } from "../../lib/firebaseService";
+import type { MatchContext } from "../../lib/firebaseService";
 import { getCharacter } from "../../lib/characters";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
 import type { MatchResult } from "../../lib/firebaseService";
@@ -116,9 +117,17 @@ export function GameOver() {
 
     const reward = rewardSnapshot.rewardSummary;
 
+    const matchCtx: MatchContext = {
+      history,
+      playerCharacterId: player.avatar,
+      opponentCharacterId: opponent.avatar,
+      opponentUid: isOnline ? opponent.id : undefined,
+      remainingLife: player.life,
+    };
+
     // Persist to Firestore - Firebase is the source of truth
     // The real-time listener will automatically update local state when saved
-    recordMatchResult(user.uid, result, matchMode, reward)
+    recordMatchResult(user.uid, result, matchMode, reward, matchCtx)
       .then(() => {
         setSaveStatus("saved");
       })
@@ -129,7 +138,18 @@ export function GameOver() {
           "Falha ao computar recompensa. Tente novamente em instantes.",
         );
       });
-  }, [matchMode, result, user, rewardSnapshot]);
+  }, [
+    matchMode,
+    result,
+    user,
+    rewardSnapshot,
+    history,
+    isOnline,
+    opponent.avatar,
+    opponent.id,
+    player.avatar,
+    player.life,
+  ]);
 
   const rewardSummary = rewardSnapshot.rewardSummary;
   const levelRewards = rewardSnapshot.levelRewards;
