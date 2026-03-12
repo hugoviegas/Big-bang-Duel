@@ -14,6 +14,7 @@ import AchievementsPage from "./pages/achievements";
 import FriendsPage from "./pages/friends";
 import ShopPage from "./pages/shop";
 import DesignSystemPage from "./pages/design-system";
+import MatchHistoryPage from "./pages/matchHistory";
 import { AssetPreloader } from "./components/common/AssetPreloader";
 import { MobileLayout } from "./components/layout/MobileLayout";
 import { useAuthStore } from "./store/authStore";
@@ -182,6 +183,14 @@ function App() {
           element={
             <MobilePage>
               <FriendsPage />
+            </MobilePage>
+          }
+        />
+        <Route
+          path="/match-history"
+          element={
+            <MobilePage>
+              <MatchHistoryPage />
             </MobilePage>
           }
         />

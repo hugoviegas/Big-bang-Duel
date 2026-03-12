@@ -541,6 +541,16 @@ export async function recordMatchResult(
 
   await updateDoc(playerRef, updatePayload);
 
+  // Save to match history if there was a match context
+  if (matchCtx && matchSummary) {
+    try {
+      await saveMatchToHistory(uid, matchSummary);
+    } catch (error) {
+      console.error("[recordMatchResult] Error saving to match history:", error);
+      // Don't throw - match recording should succeed even if history save fails
+    }
+  }
+
   await upsertLeaderboardEntry({
     ...data,
     statsByMode,
@@ -1263,5 +1273,134 @@ export function subscribeToPendingRequests(
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => d.data() as FriendRequest));
+  });
+}
+
+// ─── Match History Persistence ─────────────────────────────────────────────
+
+/**
+ * Saves a match summary to the player's match history.
+ * Automatically maintains only the 10 most recent matches.
+ * Called after every match completion in recordMatchResult().
+ *
+ * @param uid - Player's UID
+ * @param matchSummary - Completed match statistics and results
+ * @returns The saved match ID for reference
+ */
+export async function saveMatchToHistory(
+  uid: string,
+  matchSummary: MatchSummary,
+): Promise<string> {
+  try {
+    const matchDocRef = doc(
+      db,
+      "players",
+      uid,
+      "matchHistory",
+      matchSummary.matchId,
+    );
+
+    await setDoc(matchDocRef, {
+      ...matchSummary,
+      savedAt: Date.now(),
+    });
+
+    console.log(`[Match History] Saved match ${matchSummary.matchId} for ${uid}`);
+
+    // Clean up old matches (keep only 10 most recent)
+    await cleanupOldMatches(uid);
+
+    return matchSummary.matchId;
+  } catch (error) {
+    console.error("[Match History] Error saving match:", error);
+    throw error;
+  }
+}
+
+/**
+ * Removes old matches, keeping only the 10 most recent ones.
+ * Called automatically after each match save.
+ *
+ * @param uid - Player's UID
+ */
+export async function cleanupOldMatches(uid: string): Promise<void> {
+  try {
+    // Query all matches ordered by timestamp descending
+    const q = query(
+      collection(db, "players", uid, "matchHistory"),
+      orderBy("timestamp", "desc"),
+    );
+
+    const snap = await getDocs(q);
+    const allMatches = snap.docs;
+
+    // If we have more than 10, delete the older ones
+    if (allMatches.length > 10) {
+      const matchesToDelete = allMatches.slice(10); // Keep first 10, delete the rest
+
+      console.log(
+        `[Match History] Cleaning up ${matchesToDelete.length} old matches for ${uid}`,
+      );
+
+      for (const docToDelete of matchesToDelete) {
+        await deleteDoc(docToDelete.ref);
+      }
+    }
+  } catch (error) {
+    console.error("[Match History] Error cleaning up old matches:", error);
+    // Don't throw - this is a background operation and shouldn't block match recording
+  }
+}
+
+/**
+ * Retrieves a player's match history, limited to the most recent matches.
+ * Ordered by timestamp (newest first).
+ *
+ * @param uid - Player's UID
+ * @param limitCount - Max number of matches to return (default: 10)
+ * @returns Array of match summaries ordered by recency
+ */
+export async function getPlayerMatchHistory(
+  uid: string,
+  limitCount: number = 10,
+): Promise<MatchSummary[]> {
+  try {
+    const q = query(
+      collection(db, "players", uid, "matchHistory"),
+      orderBy("timestamp", "desc"),
+      limit(limitCount),
+    );
+
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => d.data() as MatchSummary);
+  } catch (error) {
+    console.error("[Match History] Error fetching match history:", error);
+    return [];
+  }
+}
+
+/**
+ * Subscribe to a player's match history with real-time updates.
+ * Automatically maintains max 10 most recent matches.
+ *
+ * @param uid - Player's UID
+ * @param callback - Called whenever match history changes
+ * @param limitCount - Max matches to track (default: 10)
+ * @returns Unsubscribe function
+ */
+export function subscribeToMatchHistory(
+  uid: string,
+  callback: (matches: MatchSummary[]) => void,
+  limitCount: number = 10,
+): Unsubscribe {
+  const q = query(
+    collection(db, "players", uid, "matchHistory"),
+    orderBy("timestamp", "desc"),
+    limit(limitCount),
+  );
+
+  return onSnapshot(q, (snap) => {
+    const matches = snap.docs.map((d) => d.data() as MatchSummary);
+    callback(matches);
   });
 }
