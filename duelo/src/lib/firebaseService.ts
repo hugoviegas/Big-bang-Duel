@@ -546,7 +546,10 @@ export async function recordMatchResult(
     try {
       await saveMatchToHistory(uid, matchSummary);
     } catch (error) {
-      console.error("[recordMatchResult] Error saving to match history:", error);
+      console.error(
+        "[recordMatchResult] Error saving to match history:",
+        error,
+      );
       // Don't throw - match recording should succeed even if history save fails
     }
   }
@@ -1305,7 +1308,9 @@ export async function saveMatchToHistory(
       savedAt: Date.now(),
     });
 
-    console.log(`[Match History] Saved match ${matchSummary.matchId} for ${uid}`);
+    console.log(
+      `[Match History] Saved match ${matchSummary.matchId} for ${uid}`,
+    );
 
     // Clean up old matches (keep only 10 most recent)
     await cleanupOldMatches(uid);

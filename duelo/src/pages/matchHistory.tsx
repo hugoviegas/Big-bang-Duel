@@ -123,9 +123,11 @@ export default function MatchHistoryPage() {
               const dodgeRate =
                 match.successfulDodges + (match.shots + match.doubleShots) > 0
                   ? (
-                      ((match.successfulDodges /
-                        (match.successfulDodges + match.shots + match.doubleShots)) *
-                        100)
+                      (match.successfulDodges /
+                        (match.successfulDodges +
+                          match.shots +
+                          match.doubleShots)) *
+                      100
                     ).toFixed(1)
                   : "0";
 
@@ -222,10 +224,7 @@ export default function MatchHistoryPage() {
                     <span className="match-count">
                       Partida #{matches.length - idx}
                     </span>
-                    <span
-                      className="match-id"
-                      title={match.matchId}
-                    >
+                    <span className="match-id" title={match.matchId}>
                       ID: {match.matchId.substring(0, 8)}...
                     </span>
                   </div>
