@@ -12,6 +12,12 @@ import {
   createPlayerProfile,
   generateUniquePlayerCode,
 } from "../../lib/firebaseService";
+import {
+  calculateProgression,
+  normalizeCurrencies,
+  normalizeRanked,
+  normalizeUnlocks,
+} from "../../lib/progression";
 
 export function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -53,7 +59,10 @@ export function LoginScreen() {
             draws: 0,
             totalGames: 0,
             winRate: 0,
-            // Initialize stats fields with empty/default values
+            progression: calculateProgression(0),
+            currencies: normalizeCurrencies({}),
+            ranked: normalizeRanked({}),
+            unlocks: normalizeUnlocks({}),
             characterStats: {},
             achievements: {},
             favoriteCharacter: undefined,

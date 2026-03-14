@@ -51,7 +51,16 @@ function App() {
         return;
       }
 
-      if (!store.user || store.user.uid !== firebaseUser.uid) {
+      // Always call setUser to ensure the real-time Firestore listener is
+      // (re)started. On page refresh the zustand/persist middleware restores
+      // user from localStorage, so store.user.uid === firebaseUser.uid, but
+      // the listener was lost when the page unloaded — we must restart it.
+      // When the user already exists in the store we pass the preserved data
+      // so the UI doesn't flash zeroed stats while Firebase loads.
+      const existingUser = store.user;
+      if (existingUser?.uid === firebaseUser.uid) {
+        store.setUser(existingUser);
+      } else {
         store.setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email || "",
@@ -88,6 +97,11 @@ function App() {
           isGuest: firebaseUser.isAnonymous,
         });
       }
+
+      // Ensure the player has a Firestore profile document. Creates it for
+      // new users and validates fields for existing ones. Runs at most once
+      // every 5 minutes per session (guarded inside ensureProfile).
+      store.ensureProfile().catch(() => {});
     });
     return unsub;
   }, []);
