@@ -191,7 +191,10 @@ export function Leaderboard() {
                 {/* Avatar */}
                 <div className="w-10 h-10 rounded-full border-2 border-sand/30 overflow-hidden shrink-0">
                   <img
-                    src={resolveAvatarPicture(entry.avatar)}
+                    src={resolveAvatarPicture(
+                      entry.avatar,
+                      entry.avatarPicture,
+                    )}
                     alt=""
                     className="w-full h-full object-cover"
                   />

@@ -307,6 +307,8 @@ export interface LeaderboardEntry {
   displayName: string;
   playerCode: PlayerCode;
   avatar: string;
+  /** Custom profile picture — same as PlayerProfile.avatarPicture. */
+  avatarPicture?: string;
   wins: number;
   losses: number;
   winRate: number;

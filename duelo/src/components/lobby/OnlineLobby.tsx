@@ -93,6 +93,7 @@ export function OnlineLobby() {
         selectedCharacter,
         roomConfig,
         user?.displayName,
+        user?.avatarPicture,
       );
     navigate(`/game/${roomId}`);
   };

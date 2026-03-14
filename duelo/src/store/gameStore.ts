@@ -102,6 +102,7 @@ interface GameStore extends GameState {
     playerAvatar?: string,
     config?: Partial<RoomConfig>,
     playerDisplayName?: string,
+    playerAvatarPicture?: string,
   ) => void;
   selectCard: (card: CardType) => void;
   resolveTurn: () => void;
@@ -191,6 +192,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     playerAvatar = "marshal",
     config = {},
     playerDisplayName = "Pistoleiro",
+    playerAvatarPicture = undefined,
   ) => {
     _isResolving = false;
     _pendingHostResult = null;
@@ -233,6 +235,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         life,
         maxLife: life,
         avatar: playerAvatar,
+        avatarPicture: playerAvatarPicture,
         displayName: playerDisplayName,
         characterClass: getCharacterClass(playerAvatar),
         shieldUsesLeft: 2,

@@ -99,6 +99,7 @@ export default function MenuPage() {
       isHost ? room.hostAvatar : (room.guestAvatar ?? "marshal"),
       room.config,
       user.displayName,
+      user.avatarPicture,
     );
     navigate(`/game/${room.id}`);
   }, [activeOnlineRoom, user, initializeGame, navigate]);
@@ -129,6 +130,7 @@ export default function MenuPage() {
       isHost ? room.hostAvatar : (room.guestAvatar ?? "marshal"),
       room.config,
       user?.displayName,
+      user?.avatarPicture,
     );
     navigate(`/game/${room.id}`);
   };
@@ -210,6 +212,7 @@ export default function MenuPage() {
           selectedCharacter,
           result.config,
           user?.displayName,
+          user?.avatarPicture,
         );
         navigate(`/game/${result.roomId}`);
         return;
@@ -237,6 +240,7 @@ export default function MenuPage() {
             selectedCharacter,
             result.config,
             user?.displayName,
+            user?.avatarPicture,
           );
           navigate(`/game/${result.roomId}`);
         }
@@ -254,7 +258,16 @@ export default function MenuPage() {
   };
 
   const handleStartSolo = (character: string, mode: GameMode) => {
-    initializeGame(mode, false, false, undefined, character);
+    initializeGame(
+      mode,
+      false,
+      false,
+      undefined,
+      character,
+      {},
+      user?.displayName || "Pistoleiro",
+      user?.avatarPicture,
+    );
     navigate("/game");
   };
 
