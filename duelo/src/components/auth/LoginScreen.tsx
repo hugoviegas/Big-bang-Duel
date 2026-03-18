@@ -131,9 +131,13 @@ export function LoginScreen() {
       console.error("Login error:", error);
       if (typeof error === "object" && error !== null && "code" in error) {
         // @ts-expect-error - error.code comes from FirebaseError shape
+<<<<<<< HEAD
         setErrorMsg(
           getAuthErrorMessage((error as { code?: string }).code ?? ""),
         );
+=======
+        setErrorMsg(getAuthErrorMessage((error as { code?: string }).code ?? ""));
+>>>>>>> 41e740c8f294772767d7dc9cbce9a61a6149bb0d
       } else {
         setErrorMsg("Erro ao autenticar. Tente novamente.");
       }
