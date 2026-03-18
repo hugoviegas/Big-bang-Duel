@@ -72,6 +72,16 @@ function cacheSet(key: string, data: unknown, ttlMs: number): void {
   _cache.set(key, { data, expiresAt: Date.now() + ttlMs });
 }
 
+/** Remove keys with `undefined` values from a shallow object to make it Firestore-safe. */
+function stripUndefinedShallow<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const out: Partial<T> = {};
+  for (const k of Object.keys(obj) as Array<keyof T>) {
+    const v = obj[k];
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
 export function invalidateCache(key: string): void {
   _cache.delete(key);
 }
@@ -108,11 +118,13 @@ export async function createPlayerProfile(
   while (true) {
     try {
       attempt++;
-      await setDoc(doc(db, "players", profile.uid), {
+      // Strip undefined values (Firestore rejects `undefined` fields)
+      const payload = stripUndefinedShallow({
         ...normalized,
         createdAt: profile.createdAt || Date.now(),
         lastSeen: Date.now(),
       });
+      await setDoc(doc(db, "players", profile.uid), payload as Record<string, unknown>);
       await upsertLeaderboardEntry(normalized);
       // Populate cache immediately so the next read is instant
       cacheSet(`profile:${profile.uid}`, normalized, 5 * 60_000);
@@ -163,7 +175,7 @@ async function ensurePlayerProfileForMatch(uid: string): Promise<void> {
     unlocks: normalizeUnlocks(undefined),
     characterStats: {},
     achievements: {},
-    favoriteCharacter: undefined,
+    // omit favoriteCharacter when unknown to avoid Firestore `undefined` errors
     winStreak: 0,
     perfectWins: 0,
     highLifeWins: 0,
@@ -202,7 +214,9 @@ export async function updatePlayerProfile(
   uid: string,
   data: Partial<PlayerProfile>,
 ): Promise<void> {
-  await updateDoc(doc(db, "players", uid), { ...data, lastSeen: Date.now() });
+  // Strip undefined fields from the partial update to avoid Firestore errors
+  const payload = stripUndefinedShallow({ ...data, lastSeen: Date.now() });
+  await updateDoc(doc(db, "players", uid), payload as Record<string, unknown>);
   invalidateCache(`profile:${uid}`);
   const latest = await getPlayerProfile(uid);
   if (latest) {
@@ -598,7 +612,9 @@ export async function recordMatchResult(
     updatePayload.onlinePlayersDefeated = onlinePlayersDefeated;
     updatePayload.perfectWins = perfectWins;
     updatePayload.highLifeWins = highLifeWins;
-    updatePayload.favoriteCharacter = favoriteCharacter;
+    if (favoriteCharacter !== undefined) {
+      updatePayload.favoriteCharacter = favoriteCharacter;
+    }
     if (achievementEval) {
       updatePayload.achievements = achievementEval.updatedProgress;
     }
