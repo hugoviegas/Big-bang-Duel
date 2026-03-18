@@ -354,8 +354,8 @@ export const useAuthStore = create<AuthState>()(
               });
           }
         } catch (err) {
-          // Silently handle Firebase errors (permission denied, offline, etc.)
-          console.warn("[authStore] ensureProfile failed:", err);
+          // Surface errors so developers can see why profile creation failed
+          console.error("[authStore] ensureProfile failed:", err);
         }
       },
 
