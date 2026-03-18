@@ -106,6 +106,17 @@ function App() {
     return unsub;
   }, []);
 
+  useEffect(() => {
+    const syncOnReconnect = () => {
+      const store = useAuthStore.getState();
+      if (!store.user) return;
+      store.ensureProfile().catch(() => {});
+    };
+
+    window.addEventListener("online", syncOnReconnect);
+    return () => window.removeEventListener("online", syncOnReconnect);
+  }, []);
+
   // Load AI strategy files (non-blocking)
   useEffect(() => {
     loadStrategies();

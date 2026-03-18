@@ -19,7 +19,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { ref, onValue, off, set } from "firebase/database";
-import { db, rtdb } from "./firebase";
+import { auth, db, rtdb } from "./firebase";
 import type {
   PlayerProfile,
   LeaderboardEntry,
@@ -102,8 +102,8 @@ export async function generateUniquePlayerCode(): Promise<PlayerCode> {
 export async function createPlayerProfile(
   profile: PlayerProfile,
 ): Promise<void> {
+  const normalized = profileWithNormalizedStats(profile);
   try {
-    const normalized = profileWithNormalizedStats(profile);
     await setDoc(doc(db, "players", profile.uid), {
       ...normalized,
       createdAt: profile.createdAt || Date.now(),
@@ -115,10 +115,51 @@ export async function createPlayerProfile(
     console.log("\u2713 Player profile created:", profile.uid);
   } catch (error) {
     console.warn(
-      "\u26a0\ufe0f Could not create player profile (Firestore unavailable):",
+      "\u26a0\ufe0f Could not create player profile in Firestore:",
       error,
     );
+    throw error;
   }
+}
+
+async function ensurePlayerProfileForMatch(uid: string): Promise<void> {
+  const existing = await getDoc(doc(db, "players", uid));
+  if (existing.exists()) return;
+
+  const authUser = auth.currentUser;
+  const fallbackProfile: PlayerProfile = {
+    uid,
+    displayName: authUser?.displayName?.trim() || "Pistoleiro",
+    playerCode: await generateUniquePlayerCode(),
+    avatar: "marshal",
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    totalGames: 0,
+    winRate: 0,
+    statsByMode: {
+      solo: createEmptyModeStats(),
+      online: createEmptyModeStats(),
+      overall: createEmptyModeStats(),
+    },
+    progression: calculateProgression(0),
+    currencies: normalizeCurrencies(undefined),
+    ranked: normalizeRanked(undefined),
+    unlocks: normalizeUnlocks(undefined),
+    characterStats: {},
+    achievements: {},
+    favoriteCharacter: undefined,
+    winStreak: 0,
+    perfectWins: 0,
+    highLifeWins: 0,
+    opponentsFaced: [],
+    onlinePlayersDefeated: [],
+    createdAt: Date.now(),
+    lastSeen: Date.now(),
+    onlineStatus: "online",
+  };
+
+  await createPlayerProfile(fallbackProfile);
 }
 
 /** Fetches a player profile by UID. Returns null if not found. */
@@ -313,8 +354,16 @@ export async function recordMatchResult(
   matchCtx?: MatchContext,
 ): Promise<MatchResultUpdate | null> {
   const playerRef = doc(db, "players", uid);
-  const snap = await getDoc(playerRef);
-  if (!snap.exists()) return null;
+  let snap = await getDoc(playerRef);
+  if (!snap.exists()) {
+    await ensurePlayerProfileForMatch(uid);
+    snap = await getDoc(playerRef);
+    if (!snap.exists()) {
+      throw new Error(
+        `Profile for uid ${uid} was not found and could not be created.`,
+      );
+    }
+  }
 
   const data = profileWithNormalizedStats(snap.data() as PlayerProfile);
   const modeStats = data.statsByMode![mode];

@@ -2,3 +2,8 @@ duelo/.env
 .vercel
 duelo/realtime.rules.json
 duelo/firestore.rules
+/dataconnect
+/.firebase
+duelo/src/dataconnect-generated
+duelo/src/firebase
+duelo/src/firebaseConfig
