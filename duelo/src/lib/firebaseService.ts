@@ -73,7 +73,9 @@ function cacheSet(key: string, data: unknown, ttlMs: number): void {
 }
 
 /** Remove keys with `undefined` values from a shallow object to make it Firestore-safe. */
-function stripUndefinedShallow<T extends Record<string, unknown>>(obj: T): Partial<T> {
+function stripUndefinedShallow<T extends Record<string, unknown>>(
+  obj: T,
+): Partial<T> {
   const out: Partial<T> = {};
   for (const k of Object.keys(obj) as Array<keyof T>) {
     const v = obj[k];
@@ -124,7 +126,10 @@ export async function createPlayerProfile(
         createdAt: profile.createdAt || Date.now(),
         lastSeen: Date.now(),
       });
-      await setDoc(doc(db, "players", profile.uid), payload as Record<string, unknown>);
+      await setDoc(
+        doc(db, "players", profile.uid),
+        payload as Record<string, unknown>,
+      );
       await upsertLeaderboardEntry(normalized);
       // Populate cache immediately so the next read is instant
       cacheSet(`profile:${profile.uid}`, normalized, 5 * 60_000);
