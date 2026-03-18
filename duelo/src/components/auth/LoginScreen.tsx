@@ -18,6 +18,7 @@ import {
   normalizeRanked,
   normalizeUnlocks,
 } from "../../lib/progression";
+import type { PlayerProfile } from "../../types";
 
 export function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -49,7 +50,7 @@ export function LoginScreen() {
         // Create Firestore player profile immediately for newly registered users
         try {
           const playerCode = await generateUniquePlayerCode();
-          const profile = {
+          const profile: PlayerProfile = {
             uid: firebaseUser.uid,
             displayName: name,
             playerCode,
@@ -75,9 +76,13 @@ export function LoginScreen() {
             lastSeen: Date.now(),
             onlineStatus: "online",
           };
-          await createPlayerProfile(profile as any);
-        } catch (err) {
-          console.warn("Could not create player profile immediately:", err);
+          await createPlayerProfile(profile);
+        } catch (err: unknown) {
+          console.error("Could not create player profile immediately:", err);
+          // Surface a user-friendly message for immediate troubleshooting
+          setErrorMsg(
+            "Não foi possível criar o perfil no servidor — sua conta pode não sincronizar até reconectar.",
+          );
         }
       } else {
         const credential = await signInWithEmailAndPassword(
@@ -124,7 +129,12 @@ export function LoginScreen() {
       navigate("/menu", { replace: true });
     } catch (error: any) {
       console.error("Login error:", error);
-      setErrorMsg(getAuthErrorMessage(error.code));
+      if (typeof error === "object" && error !== null && "code" in error) {
+        // @ts-expect-error - error.code comes from FirebaseError shape
+        setErrorMsg(getAuthErrorMessage((error as { code?: string }).code ?? ""));
+      } else {
+        setErrorMsg("Erro ao autenticar. Tente novamente.");
+      }
     } finally {
       setIsSubmitting(false);
     }

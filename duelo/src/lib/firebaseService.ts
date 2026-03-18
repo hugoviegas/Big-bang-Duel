@@ -103,22 +103,37 @@ export async function createPlayerProfile(
   profile: PlayerProfile,
 ): Promise<void> {
   const normalized = profileWithNormalizedStats(profile);
-  try {
-    await setDoc(doc(db, "players", profile.uid), {
-      ...normalized,
-      createdAt: profile.createdAt || Date.now(),
-      lastSeen: Date.now(),
-    });
-    await upsertLeaderboardEntry(normalized);
-    // Populate cache immediately so the next read is instant
-    cacheSet(`profile:${profile.uid}`, normalized, 5 * 60_000);
-    console.log("\u2713 Player profile created:", profile.uid);
-  } catch (error) {
-    console.warn(
-      "\u26a0\ufe0f Could not create player profile in Firestore:",
-      error,
-    );
-    throw error;
+  const MAX_RETRIES = 3;
+  let attempt = 0;
+  while (true) {
+    try {
+      attempt++;
+      await setDoc(doc(db, "players", profile.uid), {
+        ...normalized,
+        createdAt: profile.createdAt || Date.now(),
+        lastSeen: Date.now(),
+      });
+      await upsertLeaderboardEntry(normalized);
+      // Populate cache immediately so the next read is instant
+      cacheSet(`profile:${profile.uid}`, normalized, 5 * 60_000);
+      console.log("\u2713 Player profile created:", profile.uid);
+      return;
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error(
+        `\u26a0\ufe0f createPlayerProfile attempt ${attempt} failed: ${errMsg}`,
+      );
+      // Retry on transient errors
+      if (attempt >= MAX_RETRIES) {
+        console.error(
+          `\u26a0\ufe0f createPlayerProfile: giving up after ${attempt} attempts`,
+          error,
+        );
+        throw error;
+      }
+      // small backoff
+      await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
   }
 }
 
