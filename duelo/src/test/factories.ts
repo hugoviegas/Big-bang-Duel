@@ -46,11 +46,18 @@ export const createTestUser = (overrides?: Partial<User>): User => ({
 export const createTestPlayerState = (
   overrides?: Partial<PlayerState>,
 ): PlayerState => ({
+  id: "player-" + Math.random().toString(36).slice(7),
+  character: "marshal",
   life: 4,
+  maxLife: 4,
   ammo: 3,
+  maxAmmo: 3,
   dodgeStreak: 0,
   selectedCard: null,
-  animationState: "idle",
+  choiceRevealed: false,
+  isAnimating: false,
+  currentAnimation: "idle",
+  doubleShotsLeft: 2,
   ...overrides,
 });
 

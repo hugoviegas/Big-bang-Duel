@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
-  calculateLevelFromXP,
-  getRewardForLevel,
-  calculateXPToNextLevel,
   calculateProgression,
+  calculateMatchRewards,
   clampTrophies,
+  LEVEL_CAP,
+  LEVEL_XP_THRESHOLDS,
 } from "./progression";
 
 /**
@@ -13,207 +13,107 @@ import {
 
 describe("progression - XP to Level conversion", () => {
   it("should start at level 1 with 0 XP", () => {
-    const level = calculateLevelFromXP(0);
-    expect(level).toBe(1);
+    const progression = calculateProgression(0);
+    expect(progression.level).toBe(1);
   });
 
   it("should progress through levels at correct XP thresholds", () => {
-    expect(calculateLevelFromXP(0)).toBe(1);
-    expect(calculateLevelFromXP(99)).toBe(1);
-    expect(calculateLevelFromXP(100)).toBe(2);
-    expect(calculateLevelFromXP(299)).toBe(2);
-    expect(calculateLevelFromXP(300)).toBe(3);
-    // Assuming exponential or linear growth pattern
+    expect(calculateProgression(0).level).toBe(1);
+    expect(calculateProgression(99).level).toBe(1);
+    expect(calculateProgression(120).level).toBe(2);
+    expect(calculateProgression(419).level).toBe(2);
+    expect(calculateProgression(420).level).toBe(3);
   });
 
   it("should handle very high XP values", () => {
-    const highXP = 1000000;
-    const level = calculateLevelFromXP(highXP);
-    expect(level).toBeGreaterThan(0);
-    expect(Number.isNaN(level)).toBe(false);
+    const progression = calculateProgression(1000000);
+    expect(progression.level).toBeGreaterThan(0);
+    expect(progression.level).toBeLessThanOrEqual(LEVEL_CAP);
+    expect(Number.isNaN(progression.level)).toBe(false);
   });
 
   it("should be monotonic (higher XP = higher or equal level)", () => {
-    const xpValues = [0, 50, 100, 200, 500, 1000, 5000];
-    const levels = xpValues.map(calculateLevelFromXP);
+    const xpValues = [0, 50, 120, 200, 500, 1000, 5000];
+    const levels = xpValues.map((xp) => calculateProgression(xp).level);
 
     for (let i = 1; i < levels.length; i++) {
       expect(levels[i]).toBeGreaterThanOrEqual(levels[i - 1]);
     }
   });
+
+  it("should track XP within current level", () => {
+    const prog = calculateProgression(200);
+    expect(prog.xpCurrentLevel).toBeGreaterThanOrEqual(0);
+    expect(prog.xpTotal).toBe(200);
+  });
+
+  it("should respect level cap", () => {
+    const prog = calculateProgression(30000000);
+    expect(prog.level).toBeLessThanOrEqual(LEVEL_CAP);
+    expect(prog.levelCap).toBe(LEVEL_CAP);
+  });
 });
 
-describe("progression - Level rewards", () => {
-  it("should return valid reward structure", () => {
-    const reward = getRewardForLevel(1);
+describe("progression - Match rewards", () => {
+  it("should return valid reward structure for win", () => {
+    const reward = calculateMatchRewards("solo", "win");
 
     expect(reward).toBeDefined();
-    expect(reward.gold).toBeGreaterThanOrEqual(0);
-    expect(reward.gems).toBeGreaterThanOrEqual(0);
-    expect(Number.isNaN(reward.gold)).toBe(false);
-    expect(Number.isNaN(reward.gems)).toBe(false);
+    expect(reward.xpGained).toBeGreaterThan(0);
+    expect(reward.goldGained).toBeGreaterThan(0);
+    expect(reward.mode).toBe("solo");
+    expect(reward.result).toBe("win");
   });
 
-  it("should increase rewards for higher levels", () => {
-    const reward1 = getRewardForLevel(1);
-    const reward5 = getRewardForLevel(5);
-    const reward10 = getRewardForLevel(10);
+  it("should return valid reward structure for loss", () => {
+    const reward = calculateMatchRewards("solo", "loss");
 
-    // Higher level should typically get more reward
-    expect(reward5.gold).toBeGreaterThanOrEqual(reward1.gold);
-    expect(reward10.gold).toBeGreaterThanOrEqual(reward5.gold);
+    expect(reward.xpGained).toBeGreaterThan(0);
+    expect(reward.goldGained).toBeGreaterThanOrEqual(0);
   });
 
-  it("should handle level cap gracefully", () => {
-    const maxLevel = 100;
-    const reward = getRewardForLevel(maxLevel);
+  it("should return valid reward structure for draw", () => {
+    const reward = calculateMatchRewards("solo", "draw");
 
-    expect(reward.gold).toBeGreaterThanOrEqual(0);
-    expect(reward.gems).toBeGreaterThanOrEqual(0);
-  });
-});
-
-describe("progression - XP to next level", () => {
-  it("should return positive XP required", () => {
-    const xpNeeded = calculateXPToNextLevel(1);
-    expect(xpNeeded).toBeGreaterThan(0);
+    expect(reward.xpGained).toBeGreaterThan(0);
+    expect(reward.goldGained).toBeGreaterThan(0);
   });
 
-  it("should increase for higher levels", () => {
-    const xp1 = calculateXPToNextLevel(1);
-    const xp5 = calculateXPToNextLevel(5);
-    const xp10 = calculateXPToNextLevel(10);
+  it("should give more rewards in online mode", () => {
+    const soloWin = calculateMatchRewards("solo", "win", () => 0.5);
+    const onlineWin = calculateMatchRewards("online", "win", () => 0.5);
 
-    // Higher level should require more XP to next level
-    expect(xp5).toBeGreaterThanOrEqual(xp1);
-    expect(xp10).toBeGreaterThanOrEqual(xp5);
+    expect(onlineWin.xpGained).toBeGreaterThan(soloWin.xpGained);
   });
 
-  it("should handle max level gracefully", () => {
-    const xpNeeded = calculateXPToNextLevel(99);
-    expect(xpNeeded).toBeGreaterThanOrEqual(0);
-  });
-});
+  it("should award trophies only in online mode for wins", () => {
+    const soloReward = calculateMatchRewards("solo", "win");
+    const onlineReward = calculateMatchRewards("online", "win");
 
-describe("progression - Full progression calculation", () => {
-  it("should calculate progression from win correctly", () => {
-    const progression = calculateProgression({
-      result: "win",
-      mode: "online",
-      difficulty: "normal",
-      currentXP: 0,
-      currentLevel: 1,
-      currentTrophies: 100,
-      turnsPlayed: 5,
-    });
-
-    expect(progression.xpGained).toBeGreaterThan(0);
-    expect(progression.trophiesGained).toBeGreaterThan(0);
-    expect(progression.goldReward).toBeGreaterThanOrEqual(0);
+    expect(soloReward.trophyDelta).toBe(0);
+    expect(onlineReward.trophyDelta).toBeGreaterThan(0);
   });
 
-  it("should calculate progression from loss correctly", () => {
-    const progression = calculateProgression({
-      result: "loss",
-      mode: "online",
-      difficulty: "normal",
-      currentXP: 100,
-      currentLevel: 2,
-      currentTrophies: 150,
-      turnsPlayed: 8,
-    });
+  it("should allow trophy loss in online mode for losses", () => {
+    const reward = calculateMatchRewards("online", "loss");
 
-    // Loss should still give some reward, but less than win
-    expect(progression.xpGained).toBeGreaterThanOrEqual(0);
-    expect(progression.trophiesGained).toBeGreaterThanOrEqual(-50); // May lose trophies
-  });
-
-  it("should calculate progression from draw correctly", () => {
-    const progression = calculateProgression({
-      result: "draw",
-      mode: "solo",
-      difficulty: "advanced",
-      currentXP: 50,
-      currentLevel: 1,
-      currentTrophies: 120,
-      turnsPlayed: 10,
-    });
-
-    expect(progression.xpGained).toBeGreaterThanOrEqual(0);
-  });
-
-  it("should give solo mode less trophy reward than online", () => {
-    const soloProgression = calculateProgression({
-      result: "win",
-      mode: "solo",
-      difficulty: "advanced",
-      currentXP: 0,
-      currentLevel: 1,
-      currentTrophies: 100,
-      turnsPlayed: 5,
-    });
-
-    const onlineProgression = calculateProgression({
-      result: "win",
-      mode: "online",
-      difficulty: "advanced",
-      currentXP: 0,
-      currentLevel: 1,
-      currentTrophies: 100,
-      turnsPlayed: 5,
-    });
-
-    expect(onlineProgression.trophiesGained).toBeGreaterThanOrEqual(
-      soloProgression.trophiesGained,
-    );
-  });
-
-  it("should give difficulty bonus correctly", () => {
-    const easyProgression = calculateProgression({
-      result: "win",
-      mode: "solo",
-      difficulty: "beginner",
-      currentXP: 0,
-      currentLevel: 1,
-      currentTrophies: 100,
-      turnsPlayed: 5,
-    });
-
-    const hardProgression = calculateProgression({
-      result: "win",
-      mode: "solo",
-      difficulty: "advanced",
-      currentXP: 0,
-      currentLevel: 1,
-      currentTrophies: 100,
-      turnsPlayed: 5,
-    });
-
-    // Advanced should reward more than beginner
-    expect(hardProgression.xpGained).toBeGreaterThan(easyProgression.xpGained);
+    expect(reward.trophyDelta).toBeLessThan(0);
   });
 });
 
 describe("progression - Trophy clamping", () => {
-  it("should clamp trophies to minimum 0", () => {
-    const clamped = clampTrophies(-100);
-    expect(clamped).toBe(0);
+  it("should clamp negative values to 0", () => {
+    expect(clampTrophies(-5)).toBe(0);
+    expect(clampTrophies(-1000)).toBe(0);
   });
 
-  it("should not clamp positive values below cap", () => {
-    const clamped = clampTrophies(500);
-    expect(clamped).toBe(500);
+  it("should allow positive values", () => {
+    expect(clampTrophies(100)).toBe(100);
+    expect(clampTrophies(5000)).toBe(5000);
   });
 
-  it("should clamp trophies to maximum if exceeding cap", () => {
-    const maxCap = 9999;
-    const clamped = clampTrophies(maxCap + 1000);
-    expect(clamped).toBeLessThanOrEqual(maxCap);
-  });
-
-  it("should preserve values in valid range", () => {
-    const value = 1000;
-    const clamped = clampTrophies(value);
-    expect(clamped).toBe(value);
+  it("should clamp floats to integers", () => {
+    expect(clampTrophies(99.9)).toBe(99);
+    expect(clampTrophies(100.5)).toBe(100);
   });
 });
