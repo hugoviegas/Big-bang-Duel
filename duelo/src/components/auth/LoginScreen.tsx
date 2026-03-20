@@ -17,6 +17,7 @@ import {
   normalizeCurrencies,
   normalizeRanked,
   normalizeUnlocks,
+  normalizeClassMastery,
 } from "../../lib/progression";
 import type { PlayerProfile } from "../../types";
 
@@ -64,6 +65,7 @@ export function LoginScreen() {
             currencies: normalizeCurrencies({}),
             ranked: normalizeRanked({}),
             unlocks: normalizeUnlocks({}),
+            classMastery: normalizeClassMastery(undefined),
             characterStats: {},
             achievements: {},
             favoriteCharacter: undefined,

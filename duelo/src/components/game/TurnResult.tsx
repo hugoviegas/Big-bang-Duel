@@ -1,16 +1,32 @@
 import { motion, AnimatePresence } from "framer-motion";
-import type { TurnResult } from "../../types";
+import { getClassIconSources } from "../../lib/characters";
+import type { CharacterClass, TurnResult } from "../../types";
 
 interface TurnResultProps {
   result: TurnResult;
 }
 
-const CARD_IMAGES: Record<string, string> = {
-  shot: "/assets/cards/card_shoot.png",
-  double_shot: "/assets/cards/card_double_shoot.png",
-  dodge: "/assets/cards/card_dodge.png",
-  reload: "/assets/cards/card_reload.png",
-  counter: "/assets/cards/card_counter.png",
+const CARD_IMAGE_SOURCES: Record<string, { webp: string; png: string }> = {
+  shot: {
+    webp: "/assets/cards/card_shoot.webp",
+    png: "/assets/cards/card_shoot.png",
+  },
+  double_shot: {
+    webp: "/assets/cards/card_double_shoot.webp",
+    png: "/assets/cards/card_double_shoot.png",
+  },
+  dodge: {
+    webp: "/assets/cards/card_dodge.webp",
+    png: "/assets/cards/card_dodge.png",
+  },
+  reload: {
+    webp: "/assets/cards/card_reload.webp",
+    png: "/assets/cards/card_reload.png",
+  },
+  counter: {
+    webp: "/assets/cards/card_counter.webp",
+    png: "/assets/cards/card_counter.png",
+  },
 };
 
 const CARD_LABELS: Record<string, string> = {
@@ -21,15 +37,30 @@ const CARD_LABELS: Record<string, string> = {
   counter: "Contra-golpe",
 };
 
-/** Icon displayed beside each triggered ability name. */
-const ABILITY_ICONS: Record<string, string> = {
-  "Tiro Crítico": "🎯",
-  "Recarga Dupla": "🧠",
-  "Esquiva Fantasma": "👻",
-  Ricochete: "🔄",
-  "Bala Fantasma": "🩸",
-  Escudo: "🛡️",
+/** Maps ability labels to class ids so we can render class image icons. */
+const ABILITY_CLASS: Record<string, CharacterClass> = {
+  "Tiro Crítico": "atirador",
+  "Recarga Dupla": "estrategista",
+  "Esquiva Fantasma": "sorrateiro",
+  Ricochete: "ricochete",
+  "Bala Fantasma": "sanguinario",
+  Escudo: "suporte",
 };
+
+function AbilityIcon({ ability }: { ability: string }) {
+  const cls = ABILITY_CLASS[ability];
+  if (!cls) {
+    return <span className="text-base leading-none">⚡</span>;
+  }
+
+  const source = getClassIconSources(cls);
+  return (
+    <picture>
+      <source srcSet={source.webp} type="image/webp" />
+      <img src={source.png} alt={ability} className="w-5 h-5 rounded-sm" />
+    </picture>
+  );
+}
 
 export function TurnResultOverlay({ result }: TurnResultProps) {
   if (!result) return null;
@@ -55,13 +86,17 @@ export function TurnResultOverlay({ result }: TurnResultProps) {
         <div className="flex items-center justify-center gap-4 mb-4">
           {/* Player card */}
           <div className="flex flex-col items-center">
-            <div
-              className="w-16 h-22 rounded-lg border-2 border-sand/50 bg-cover bg-center shadow-lg"
-              style={{
-                backgroundImage:
-                  "url('" + CARD_IMAGES[result.playerCard] + "')",
-              }}
-            />
+            <picture>
+              <source
+                srcSet={CARD_IMAGE_SOURCES[result.playerCard]?.webp}
+                type="image/webp"
+              />
+              <img
+                src={CARD_IMAGE_SOURCES[result.playerCard]?.png}
+                alt={CARD_LABELS[result.playerCard]}
+                className="w-16 h-22 rounded-lg border-2 border-sand/50 shadow-lg object-contain"
+              />
+            </picture>
             <span className="font-stats text-xs text-sand mt-1">
               {CARD_LABELS[result.playerCard]}
             </span>
@@ -73,13 +108,17 @@ export function TurnResultOverlay({ result }: TurnResultProps) {
 
           {/* Opponent card */}
           <div className="flex flex-col items-center">
-            <div
-              className="w-16 h-22 rounded-lg border-2 border-sand/50 bg-cover bg-center shadow-lg"
-              style={{
-                backgroundImage:
-                  "url('" + CARD_IMAGES[result.opponentCard] + "')",
-              }}
-            />
+            <picture>
+              <source
+                srcSet={CARD_IMAGE_SOURCES[result.opponentCard]?.webp}
+                type="image/webp"
+              />
+              <img
+                src={CARD_IMAGE_SOURCES[result.opponentCard]?.png}
+                alt={CARD_LABELS[result.opponentCard]}
+                className="w-16 h-22 rounded-lg border-2 border-sand/50 shadow-lg object-contain"
+              />
+            </picture>
             <span className="font-stats text-xs text-sand mt-1">
               {CARD_LABELS[result.opponentCard]}
             </span>
@@ -107,9 +146,7 @@ export function TurnResultOverlay({ result }: TurnResultProps) {
             >
               {result.playerAbilityTriggered && (
                 <div className="flex items-center justify-center gap-1.5 bg-gold/10 border border-gold/30 rounded-lg px-3 py-1.5">
-                  <span className="text-base leading-none">
-                    {ABILITY_ICONS[result.playerAbilityTriggered] ?? "⚡"}
-                  </span>
+                  <AbilityIcon ability={result.playerAbilityTriggered} />
                   <span className="font-stats text-xs text-gold font-bold uppercase tracking-wide">
                     {result.playerAbilityTriggered}
                   </span>
@@ -120,9 +157,7 @@ export function TurnResultOverlay({ result }: TurnResultProps) {
               )}
               {result.opponentAbilityTriggered && (
                 <div className="flex items-center justify-center gap-1.5 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-1.5">
-                  <span className="text-base leading-none">
-                    {ABILITY_ICONS[result.opponentAbilityTriggered] ?? "⚡"}
-                  </span>
+                  <AbilityIcon ability={result.opponentAbilityTriggered} />
                   <span className="font-stats text-xs text-red-400 font-bold uppercase tracking-wide">
                     {result.opponentAbilityTriggered}
                   </span>
@@ -141,7 +176,7 @@ export function TurnResultOverlay({ result }: TurnResultProps) {
             <span className="text-red-400">
               Você: -{result.playerLifeLost} HP
               {result.playerShieldUsed && (
-                <span className="text-green-400 ml-1">(🛡️ bloqueou 1)</span>
+                <span className="text-green-400 ml-1">(Escudo bloqueou 1)</span>
               )}
             </span>
           )}
@@ -149,7 +184,7 @@ export function TurnResultOverlay({ result }: TurnResultProps) {
             <span className="text-green-400 ml-auto">
               Inimigo: -{result.opponentLifeLost} HP
               {result.opponentShieldUsed && (
-                <span className="text-green-400 ml-1">(🛡️ bloqueou 1)</span>
+                <span className="text-green-400 ml-1">(Escudo bloqueou 1)</span>
               )}
             </span>
           )}

@@ -3,7 +3,7 @@ export type CardType = "shot" | "double_shot" | "dodge" | "reload" | "counter";
 export type AttackTimer = 2 | 3 | 5 | 10 | 30;
 
 /**
- * Classes de personagem — cada uma tem uma habilidade passiva com 5% de chance de ativar.
+ * Classes de personagem — cada uma tem habilidade passiva com chance baseada na maestria da classe.
  *  - atirador:     tiro tem chance de ser crítico (2x dano).
  *  - estrategista: recarga tem chance de dar +2 munições ao invés de +1.
  *  - sorrateiro:   qualquer carta tem chance de esquivar de tiros inimigos.
@@ -18,6 +18,13 @@ export type CharacterClass =
   | "ricochete"
   | "sanguinario"
   | "suporte";
+
+export interface ClassMasteryState {
+  points: number;
+  level: number;
+}
+
+export type ClassMasteryProgress = Record<CharacterClass, ClassMasteryState>;
 
 /** User preferences that are persisted in Firestore and loaded on every device. */
 export interface UserPreferences {
@@ -76,6 +83,7 @@ export interface PlayerState {
   dodgeStreak: number; // consecutive dodges used this round
   doubleShotsLeft: number; // remaining double_shot uses this round (max 3)
   characterClass: CharacterClass; // passive ability class
+  classMasteryLevel?: number; // passive ability mastery level (1-5)
   shieldUsesLeft: number; // Suporte class: remaining shield activations this match (max 2)
   avatarPicture?: string; // custom profile picture (independent of character)
 }
@@ -257,8 +265,12 @@ export interface User {
   characterStats?: Record<string, CharacterStats>;
   /** Achievement progress. Key = achievement id. */
   achievements?: Record<string, AchievementProgress>;
+  /** Class mastery progression used to scale passive ability chances. */
+  classMastery?: ClassMasteryProgress;
   /** Character with most matches played. Computed on save. */
   favoriteCharacter?: string;
+  /** Class with highest mastery points (tie broken by selected avatar class). */
+  favoriteClass?: CharacterClass;
   /** Win streak (consecutive wins, reset on loss/draw). */
   winStreak?: number;
   /** Distinct opponent character ids faced. */
@@ -292,9 +304,11 @@ export interface PlayerProfile {
   currencies?: Currencies;
   ranked?: RankedStats;
   unlocks?: Unlocks;
+  classMastery?: ClassMasteryProgress;
   characterStats?: Record<string, CharacterStats>;
   achievements?: Record<string, AchievementProgress>;
   favoriteCharacter?: string;
+  favoriteClass?: CharacterClass;
   winStreak?: number;
   opponentsFaced?: string[];
   onlinePlayersDefeated?: string[];
@@ -350,10 +364,12 @@ export interface Room {
   hostName: string;
   hostAvatar?: string;
   hostAvatarPicture?: string;
+  hostClassMasteryLevel?: number;
   guestId: string | null;
   guestName: string | null;
   guestAvatar?: string;
   guestAvatarPicture?: string;
+  guestClassMasteryLevel?: number;
   hostChoice: string | null;
   guestChoice: string | null;
   mode: GameMode;

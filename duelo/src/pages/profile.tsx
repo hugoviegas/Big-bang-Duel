@@ -3,7 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import {
   CHARACTERS,
+  CLASS_INFO,
   getCharacter,
+  getCharacterClass,
+  getClassIconSources,
   getAllAvatarOptions,
   resolveAvatarPicture,
   RARITY_STYLES,
@@ -16,7 +19,9 @@ import {
 } from "../lib/firebaseService";
 import {
   calculateProgression,
+  getMostPlayedClass,
   normalizeCurrencies,
+  normalizeClassMastery,
   normalizeRanked,
   normalizeUnlocks,
 } from "../lib/progression";
@@ -103,6 +108,7 @@ export default function ProfilePage() {
             characterStats: user.characterStats,
             achievements: user.achievements,
             favoriteCharacter: user.favoriteCharacter,
+            favoriteClass: user.favoriteClass,
             winStreak: user.winStreak,
             opponentsFaced: user.opponentsFaced,
             onlinePlayersDefeated: user.onlinePlayersDefeated,
@@ -159,6 +165,12 @@ export default function ProfilePage() {
       winRate: profile.winRate ?? 0,
     },
   };
+  const normalizedMastery = normalizeClassMastery(profile.classMastery);
+  const displayFavoriteClass =
+    profile.favoriteClass ??
+    getMostPlayedClass(normalizedMastery, getCharacterClass(profile.avatar));
+  const favoriteClassInfo = CLASS_INFO[displayFavoriteClass];
+  const favoriteClassIcon = getClassIconSources(displayFavoriteClass);
 
   const handleSelectAvatarPicture = (image: string) => {
     setSelectedAvatarPicture(image);
@@ -456,6 +468,27 @@ export default function ProfilePage() {
             <span className="font-western text-sky-400 text-base ml-2">
               {statsByMode.overall.winRate.toFixed(1)}%
             </span>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-sand/15">
+            <div className="flex items-center justify-between">
+              <span className="font-stats text-[10px] text-sand/50 uppercase tracking-widest">
+                Classe mais jogada
+              </span>
+              <div className="flex items-center gap-2">
+                <picture>
+                  <source srcSet={favoriteClassIcon.webp} type="image/webp" />
+                  <img
+                    src={favoriteClassIcon.png}
+                    alt={favoriteClassInfo.name}
+                    className="w-6 h-6 rounded-md border border-sand/20 bg-black/30"
+                  />
+                </picture>
+                <span className="font-western text-sm text-gold">
+                  {favoriteClassInfo.name}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

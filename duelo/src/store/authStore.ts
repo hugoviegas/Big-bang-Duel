@@ -14,7 +14,6 @@ import {
   generateUniquePlayerCode,
   setOnlinePresence,
   subscribeToPlayerProfile,
-  migrateCharacterStatsForAllPlayers,
   ensurePlayerHasStats,
 } from "../lib/firebaseService";
 import {
@@ -22,6 +21,7 @@ import {
   normalizeCurrencies,
   normalizeRanked,
   normalizeUnlocks,
+  normalizeClassMastery,
 } from "../lib/progression";
 
 type GlobalWithProfileUnsub = typeof globalThis & {
@@ -141,6 +141,8 @@ export const useAuthStore = create<AuthState>()(
                   currencies: profile.currencies ?? normalizeCurrencies({}),
                   ranked: profile.ranked ?? normalizeRanked({}),
                   unlocks: profile.unlocks ?? normalizeUnlocks({}),
+                  classMastery:
+                    profile.classMastery ?? normalizeClassMastery(undefined),
                   displayName: profile.displayName ?? user.displayName,
                   lastSeen: profile.lastSeen
                     ? new Date(profile.lastSeen)
@@ -267,6 +269,8 @@ export const useAuthStore = create<AuthState>()(
               currencies: existing.currencies ?? normalizeCurrencies({}),
               ranked: existing.ranked ?? normalizeRanked({}),
               unlocks: existing.unlocks ?? normalizeUnlocks({}),
+              classMastery:
+                existing.classMastery ?? normalizeClassMastery(undefined),
               displayName: existing.displayName ?? current.displayName,
               preferences: current.preferences,
               createdAt: current.createdAt,
@@ -279,22 +283,8 @@ export const useAuthStore = create<AuthState>()(
             // Update presence
             setOnlinePresence(current.uid, "online");
 
-            // Run migration in background (non-blocking) only once per session
-            const anyWindow = globalThis as GlobalWithProfileUnsub;
-            if (!anyWindow.__bbd_migration_done) {
-              anyWindow.__bbd_migration_done = true;
-              migrateCharacterStatsForAllPlayers()
-                .then((result) => {
-                  if (result.migratedCount > 0) {
-                    console.log(
-                      `[Boot] Migration complete: ${result.migratedCount}/${result.totalScanned} profiles updated`,
-                    );
-                  }
-                })
-                .catch((err) => {
-                  console.error("[Boot] Migration error:", err);
-                });
-            }
+            // NOTE: global migration disabled on client to avoid permission errors.
+            // Admin-only bulk migrations should run via server-side/admin SDK.
 
             return;
           }
@@ -318,6 +308,7 @@ export const useAuthStore = create<AuthState>()(
             currencies: normalizeCurrencies(current.currencies),
             ranked: normalizeRanked(current.ranked),
             unlocks: normalizeUnlocks(current.unlocks),
+            classMastery: normalizeClassMastery(current.classMastery),
             // Initialize character stats and other stats fields
             characterStats: current.characterStats ?? {},
             achievements: current.achievements ?? {},
@@ -337,22 +328,8 @@ export const useAuthStore = create<AuthState>()(
           set({ _profileEnsuredAt: Date.now() });
           setOnlinePresence(current.uid, "online");
 
-          // Run migration in background (non-blocking) only once per session
-          const anyWindow = globalThis as GlobalWithProfileUnsub;
-          if (!anyWindow.__bbd_migration_done) {
-            anyWindow.__bbd_migration_done = true;
-            migrateCharacterStatsForAllPlayers()
-              .then((result) => {
-                if (result.migratedCount > 0) {
-                  console.log(
-                    `[Boot] Migration complete: ${result.migratedCount}/${result.totalScanned} profiles updated`,
-                  );
-                }
-              })
-              .catch((err) => {
-                console.error("[Boot] Migration error:", err);
-              });
-          }
+          // NOTE: global migration disabled on client to avoid permission errors.
+          // Admin-only bulk migrations should run via server-side/admin SDK.
         } catch (err) {
           // Surface errors so developers can see why profile creation failed
           console.error("[authStore] ensureProfile failed:", err);

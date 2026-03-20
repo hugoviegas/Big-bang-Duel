@@ -7,7 +7,12 @@ import {
   recordMatchResult,
   type MatchContext,
 } from "../../lib/firebaseService";
-import { getCharacter } from "../../lib/characters";
+import {
+  getCharacter,
+  getCharacterClass,
+  CLASS_INFO,
+  getClassIconSources,
+} from "../../lib/characters";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
 import type { MatchResult } from "../../lib/firebaseService";
 import type { MatchMode } from "../../types";
@@ -92,6 +97,8 @@ export function GameOver() {
     levelRewards: LevelReward[];
     levelBefore: number;
     levelAfter: number;
+    masteryPoints: number;
+    playerCharacterClass: string;
   }>(() => {
     const currentProgression = calculateProgression(
       user?.progression?.xpTotal ?? 0,
@@ -101,6 +108,7 @@ export function GameOver() {
       (user?.progression?.xpTotal ?? 0) + rewardSummary.xpGained,
     );
     const unlocks = normalizeUnlocks(user?.unlocks);
+    const playerCharClass = getCharacterClass(player.avatar);
     return {
       rewardSummary,
       levelRewards: getLevelUpRewards(
@@ -110,6 +118,8 @@ export function GameOver() {
       ),
       levelBefore: currentProgression.level,
       levelAfter: nextProgression.level,
+      masteryPoints: 1,
+      playerCharacterClass: playerCharClass,
     };
   });
 
@@ -154,6 +164,8 @@ export function GameOver() {
   const levelRewards = rewardSnapshot.levelRewards;
   const levelBefore = rewardSnapshot.levelBefore;
   const levelAfter = rewardSnapshot.levelAfter;
+  const masteryPoints = rewardSnapshot.masteryPoints;
+  const playerCharacterClass = rewardSnapshot.playerCharacterClass;
 
   // Resolve avatar image using character registry
   const resolveAvatar = (avatarId: string): string => {
@@ -203,9 +215,9 @@ export function GameOver() {
   const handleRematch = () => {
     initializeGame(
       mode,
+      isOnline,
       false,
-      false,
-      undefined,
+      roomId ?? undefined,
       player.avatar,
       {},
       player.displayName,
@@ -359,22 +371,24 @@ export function GameOver() {
             </div>
             <div className="flex items-center justify-between border-b border-sand/10 pb-1">
               <span className="text-sand/60 flex items-center gap-2">
-                <picture>
-                  <source
-                    srcSet="/assets/ui/ruby_coin.webp"
-                    type="image/webp"
-                  />
-                  <img
-                    src="/assets/ui/ruby_coin.png"
-                    alt="ruby"
-                    className="w-4 h-4"
-                  />
-                </picture>
-                Ruby ganho
+                {(playerCharacterClass as keyof typeof CLASS_INFO) && (
+                  <picture>
+                    <source
+                      srcSet={
+                        getClassIconSources(playerCharacterClass as any).webp
+                      }
+                      type="image/webp"
+                    />
+                    <img
+                      src={getClassIconSources(playerCharacterClass as any).png}
+                      alt={playerCharacterClass}
+                      className="w-4 h-4"
+                    />
+                  </picture>
+                )}
+                Pontos de Maestria
               </span>
-              <span className="font-bold text-fuchsia-300">
-                +{rewardSummary.rubyGained}
-              </span>
+              <span className="font-bold text-amber-400">+{masteryPoints}</span>
             </div>
             {isOnline && (
               <div className="flex items-center justify-between border-b border-sand/10 pb-1">
@@ -455,24 +469,13 @@ export function GameOver() {
             </div>
           )}
 
-          {!isOnline && (
-            <button
-              onClick={handleRematch}
-              disabled={saveStatus !== "saved"}
-              className="btn-western animate-pulse-glow"
-            >
-              REVANCHE
-            </button>
-          )}
-          {isOnline && (
-            <button
-              onClick={handleMenu}
-              disabled={saveStatus !== "saved"}
-              className="btn-western btn-sky"
-            >
-              VOLTAR AO MENU
-            </button>
-          )}
+          <button
+            onClick={handleRematch}
+            disabled={saveStatus !== "saved"}
+            className="btn-western animate-pulse-glow"
+          >
+            REVANCHE
+          </button>
           <button
             onClick={handleMenu}
             disabled={saveStatus !== "saved"}

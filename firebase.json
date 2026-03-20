@@ -1,4 +1,7 @@
 {
+  "database": {
+    "rules": "duelo/realtime.rules.json"
+  },
   "emulators": {
     "dataconnect": {
       "dataDir": "dataconnect/.dataconnect/pgliteData"

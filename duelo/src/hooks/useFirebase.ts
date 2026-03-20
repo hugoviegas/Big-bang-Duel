@@ -13,6 +13,8 @@ import { rtdb } from "../lib/firebase";
 import { useAuthStore } from "../store/authStore";
 import { useGameStore } from "../store/gameStore";
 import { LIFE_BY_MODE } from "../lib/gameEngine";
+import { getCharacterClass } from "../lib/characters";
+import { getClassMasteryLevelForClass } from "../lib/progression";
 import type { Room, GameMode, RoomConfig } from "../types";
 
 const QUICK_MATCH_MODE: GameMode = "advanced";
@@ -47,6 +49,11 @@ export function useFirebaseRoom() {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const roomRef = ref(rtdb, `rooms/${roomId}`);
     const initialLife = LIFE_BY_MODE[mode];
+    const hostClass = getCharacterClass(playerAvatar);
+    const hostClassMasteryLevel = getClassMasteryLevelForClass(
+      user.classMastery,
+      hostClass,
+    );
 
     const newRoom: Partial<Room> = {
       id: roomId,
@@ -54,6 +61,7 @@ export function useFirebaseRoom() {
       hostName: user.displayName || "Pistoleiro",
       hostAvatar: playerAvatar,
       hostAvatarPicture: playerAvatarPicture,
+      hostClassMasteryLevel,
       guestId: null,
       mode,
       status: "waiting",
@@ -109,6 +117,10 @@ export function useFirebaseRoom() {
           guestName: user.displayName || "Pistoleiro",
           guestAvatar: playerAvatar,
           guestAvatarPicture: playerAvatarPicture ?? null,
+          guestClassMasteryLevel: getClassMasteryLevelForClass(
+            user.classMastery,
+            getCharacterClass(playerAvatar),
+          ),
           status: "in_progress",
           // Ensure state persistence fields are initialized for guest
           guestDodgeStreak: room.guestDodgeStreak ?? 0,
@@ -412,6 +424,10 @@ export function useMatchSync(roomId: string | null) {
           guestId: user.uid,
           guestName: user.displayName || "Pistoleiro",
           guestAvatarPicture: user.avatarPicture ?? null,
+          guestClassMasteryLevel: getClassMasteryLevelForClass(
+            user.classMastery,
+            getCharacterClass(user.avatar || "marshal"),
+          ),
           status: "in_progress",
         });
         return true;

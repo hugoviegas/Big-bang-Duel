@@ -4,7 +4,13 @@ import {
   calculateMatchRewards,
   clampTrophies,
   LEVEL_CAP,
-  LEVEL_XP_THRESHOLDS,
+  getClassMasteryLevel,
+  normalizeClassMastery,
+  awardClassMasteryPoint,
+  getClassAbilityChance,
+  getClassMasteryUpgradeCost,
+  getMostPlayedClass,
+  resolveCharacterUnlockStatus,
 } from "./progression";
 
 /**
@@ -115,5 +121,118 @@ describe("progression - Trophy clamping", () => {
   it("should clamp floats to integers", () => {
     expect(clampTrophies(99.9)).toBe(99);
     expect(clampTrophies(100.5)).toBe(100);
+  });
+});
+
+describe("progression - Class mastery", () => {
+  it("should map mastery points to cumulative levels", () => {
+    expect(getClassMasteryLevel(0)).toBe(1);
+    expect(getClassMasteryLevel(5)).toBe(2);
+    expect(getClassMasteryLevel(20)).toBe(3);
+    expect(getClassMasteryLevel(50)).toBe(4);
+    expect(getClassMasteryLevel(100)).toBe(5);
+    expect(getClassMasteryLevel(999)).toBe(5);
+  });
+
+  it("should award mastery points to the played class", () => {
+    let mastery = normalizeClassMastery(undefined);
+    mastery = awardClassMasteryPoint(mastery, "atirador", 5);
+    expect(mastery.atirador.points).toBe(5);
+    // Level must not auto-increase; only paid upgrade changes level.
+    expect(mastery.atirador.level).toBe(1);
+    expect(mastery.suporte.points).toBe(0);
+    expect(mastery.suporte.level).toBe(1);
+  });
+
+  it("should scale class chance by mastery level", () => {
+    expect(getClassAbilityChance("atirador", 1)).toBeLessThan(
+      getClassAbilityChance("atirador", 5),
+    );
+  });
+
+  it("should match exact per-class mastery percentages", () => {
+    expect(getClassAbilityChance("estrategista", 1)).toBe(0.04);
+    expect(getClassAbilityChance("estrategista", 5)).toBe(0.2);
+
+    expect(getClassAbilityChance("atirador", 1)).toBe(0.05);
+    expect(getClassAbilityChance("atirador", 5)).toBe(0.25);
+
+    expect(getClassAbilityChance("sorrateiro", 1)).toBe(0.03);
+    expect(getClassAbilityChance("sorrateiro", 5)).toBe(0.15);
+
+    // Ricochete table defines the base chance (vs shot); engine doubles it vs double_shot.
+    expect(getClassAbilityChance("ricochete", 1)).toBe(0.06);
+    expect(getClassAbilityChance("ricochete", 5)).toBe(0.3);
+
+    expect(getClassAbilityChance("suporte", 1)).toBe(0.03);
+    expect(getClassAbilityChance("suporte", 5)).toBe(0.15);
+
+    expect(getClassAbilityChance("sanguinario", 1)).toBe(0.08);
+    expect(getClassAbilityChance("sanguinario", 5)).toBe(0.4);
+  });
+});
+
+describe("progression - Character unlock rules", () => {
+  it("should gate level-based characters correctly", () => {
+    const statusLocked = resolveCharacterUnlockStatus("the_razor", 9, false);
+    const statusUnlocked = resolveCharacterUnlockStatus("the_razor", 10, false);
+
+    expect(statusLocked.unlockedByRule).toBe(false);
+    expect(statusUnlocked.unlockedByRule).toBe(true);
+    expect(statusUnlocked.purchasable).toBe(true);
+  });
+
+  it("should make The Toon non-purchasable and achievement-gated", () => {
+    const blocked = resolveCharacterUnlockStatus("the_toon", 10, false);
+    const unlocked = resolveCharacterUnlockStatus("the_toon", 10, true);
+
+    expect(blocked.purchasable).toBe(false);
+    expect(blocked.unlockedByRule).toBe(false);
+    expect(unlocked.unlockedByRule).toBe(true);
+  });
+});
+
+describe("progression - Mastery upgrade cost", () => {
+  it("should return configured gold costs for level upgrades", () => {
+    expect(getClassMasteryUpgradeCost(2)).toBe(100);
+    expect(getClassMasteryUpgradeCost(3)).toBe(300);
+    expect(getClassMasteryUpgradeCost(4)).toBe(800);
+    expect(getClassMasteryUpgradeCost(5)).toBe(1500);
+  });
+
+  it("should return null for invalid next levels", () => {
+    expect(getClassMasteryUpgradeCost(1)).toBeNull();
+    expect(getClassMasteryUpgradeCost(6)).toBeNull();
+  });
+});
+
+describe("progression - Most played class", () => {
+  it("should pick class with highest mastery points", () => {
+    const favorite = getMostPlayedClass({
+      atirador: { points: 10, level: 2 },
+      estrategista: { points: 35, level: 3 },
+      sorrateiro: { points: 0, level: 1 },
+      ricochete: { points: 0, level: 1 },
+      sanguinario: { points: 0, level: 1 },
+      suporte: { points: 0, level: 1 },
+    });
+
+    expect(favorite).toBe("estrategista");
+  });
+
+  it("should use tie-breaker class when points are tied", () => {
+    const favorite = getMostPlayedClass(
+      {
+        atirador: { points: 10, level: 2 },
+        estrategista: { points: 10, level: 2 },
+        sorrateiro: { points: 0, level: 1 },
+        ricochete: { points: 0, level: 1 },
+        sanguinario: { points: 0, level: 1 },
+        suporte: { points: 0, level: 1 },
+      },
+      "estrategista",
+    );
+
+    expect(favorite).toBe("estrategista");
   });
 });

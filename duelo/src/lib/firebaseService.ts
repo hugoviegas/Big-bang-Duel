@@ -37,20 +37,31 @@ import type {
   TurnResult,
   CharacterStats,
   MatchSummary,
+  ClassMasteryProgress,
+  CharacterClass,
 } from "../types";
-import { evaluateAchievements, type EvaluationResult } from "./achievements";
+import {
+  evaluateAchievements,
+  hasCompletedAllAchievements,
+  type EvaluationResult,
+} from "./achievements";
 import {
   calculateProgression,
   calculateMatchRewards,
   normalizeCurrencies,
   normalizeRanked,
   normalizeUnlocks,
+  normalizeClassMastery,
+  getClassMasteryUpgradeCost,
+  getMostPlayedClass,
   getLevelUpRewards,
   applyLevelRewards,
   clampTrophies,
-  getCharacterShopRequirement,
+  resolveCharacterUnlockStatus,
+  awardClassMasteryPoint,
   type MatchRewardSummary,
 } from "./progression";
+import { getCharacterClass } from "./characters";
 
 // ─── In-Memory TTL Cache ────────────────────────────────────────────────────
 // Prevents redundant Firestore reads within a single session.
@@ -178,6 +189,7 @@ async function ensurePlayerProfileForMatch(uid: string): Promise<void> {
     currencies: normalizeCurrencies(undefined),
     ranked: normalizeRanked(undefined),
     unlocks: normalizeUnlocks(undefined),
+    classMastery: normalizeClassMastery(undefined),
     characterStats: {},
     achievements: {},
     // omit favoriteCharacter when unknown to avoid Firestore `undefined` errors
@@ -261,6 +273,7 @@ export interface MatchResultUpdate {
   currencies: Currencies;
   ranked: RankedStats;
   unlocks: Unlocks;
+  classMastery: ClassMasteryProgress;
   levelRewards: Array<{
     level: number;
     gold: number;
@@ -327,6 +340,10 @@ function profileWithNormalizedStats(profile: PlayerProfile): PlayerProfile {
   const currencies = normalizeCurrencies(profile.currencies);
   const ranked = normalizeRanked(profile.ranked);
   const unlocks = normalizeUnlocks(profile.unlocks);
+  const classMastery = normalizeClassMastery(profile.classMastery);
+  const favoriteClass =
+    profile.favoriteClass ??
+    getMostPlayedClass(classMastery, getCharacterClass(profile.avatar));
 
   return {
     ...profile,
@@ -335,6 +352,7 @@ function profileWithNormalizedStats(profile: PlayerProfile): PlayerProfile {
     currencies,
     ranked,
     unlocks,
+    classMastery,
     wins: statsByMode.overall.wins,
     losses: statsByMode.overall.losses,
     draws: statsByMode.overall.draws,
@@ -346,6 +364,7 @@ function profileWithNormalizedStats(profile: PlayerProfile): PlayerProfile {
     achievements: profile.achievements ?? {},
     // Ensure favoriteCharacter is present
     favoriteCharacter: profile.favoriteCharacter ?? undefined,
+    favoriteClass,
     // Ensure other stat fields are present
     winStreak: profile.winStreak ?? 0,
     perfectWins: profile.perfectWins ?? 0,
@@ -464,13 +483,23 @@ export async function recordMatchResult(
   // ── Character stats & achievements (only when match context provided) ──
   let matchSummary: MatchSummary | undefined;
   let achievementEval: EvaluationResult | undefined;
+  let classMastery = normalizeClassMastery(data.classMastery);
   const updatedCharacterStats = { ...(data.characterStats ?? {}) };
+
+  // Award mastery point for the character's class after each match
+  if (matchCtx) {
+    const charClass = getCharacterClass(matchCtx.playerCharacterId);
+    classMastery = awardClassMasteryPoint(classMastery, charClass, 1);
+  }
   let winStreak = data.winStreak ?? 0;
   const opponentsFaced = [...(data.opponentsFaced ?? [])];
   const onlinePlayersDefeated = [...(data.onlinePlayersDefeated ?? [])];
   let perfectWins = data.perfectWins ?? 0;
   let highLifeWins = data.highLifeWins ?? 0;
   let favoriteCharacter = data.favoriteCharacter;
+  let favoriteClass =
+    data.favoriteClass ??
+    getMostPlayedClass(classMastery, getCharacterClass(data.avatar));
 
   if (matchCtx) {
     const h = matchCtx.history;
@@ -577,6 +606,10 @@ export async function recordMatchResult(
         favoriteCharacter = cid;
       }
     }
+    favoriteClass = getMostPlayedClass(
+      classMastery,
+      getCharacterClass(data.avatar),
+    );
 
     // Evaluate achievements
     const profileForEval: PlayerProfile = {
@@ -586,6 +619,7 @@ export async function recordMatchResult(
       currencies: afterLevelRewards.currencies,
       ranked,
       unlocks: afterLevelRewards.unlocks,
+      classMastery,
       characterStats: updatedCharacterStats,
       winStreak,
       opponentsFaced,
@@ -607,6 +641,7 @@ export async function recordMatchResult(
     currencies: afterLevelRewards.currencies,
     ranked,
     unlocks: afterLevelRewards.unlocks,
+    classMastery,
     lastSeen: Date.now(),
   };
 
@@ -620,10 +655,25 @@ export async function recordMatchResult(
     if (favoriteCharacter !== undefined) {
       updatePayload.favoriteCharacter = favoriteCharacter;
     }
+    updatePayload.favoriteClass = favoriteClass;
     if (achievementEval) {
       updatePayload.achievements = achievementEval.updatedProgress;
     }
   }
+
+  const finalUnlocks = hasCompletedAllAchievements(
+    achievementEval?.updatedProgress ?? data.achievements,
+  )
+    ? normalizeUnlocks({
+        ...afterLevelRewards.unlocks,
+        charactersUnlocked: [
+          ...afterLevelRewards.unlocks.charactersUnlocked,
+          "the_toon",
+        ],
+      })
+    : afterLevelRewards.unlocks;
+
+  updatePayload.unlocks = finalUnlocks;
 
   await updateDoc(playerRef, updatePayload);
 
@@ -651,7 +701,8 @@ export async function recordMatchResult(
     progression: nextProgression,
     currencies: afterLevelRewards.currencies,
     ranked,
-    unlocks: afterLevelRewards.unlocks,
+    unlocks: finalUnlocks,
+    classMastery,
   });
 
   // Invalidate so the next leaderboard/profile read picks up fresh stats
@@ -667,7 +718,8 @@ export async function recordMatchResult(
     progression: nextProgression,
     currencies: afterLevelRewards.currencies,
     ranked,
-    unlocks: afterLevelRewards.unlocks,
+    unlocks: finalUnlocks,
+    classMastery,
     levelRewards,
     achievementEval,
   };
@@ -757,8 +809,23 @@ export async function syncAchievementsRetroactively(
     }
   }
 
-  if (changedCount > 0) {
-    await updateDoc(playerRef, { achievements: newProgress });
+  const unlocks = normalizeUnlocks(profile.unlocks);
+  const shouldUnlockToon =
+    hasCompletedAllAchievements(newProgress) &&
+    !unlocks.charactersUnlocked.includes("the_toon");
+
+  if (changedCount > 0 || shouldUnlockToon) {
+    await updateDoc(playerRef, {
+      achievements: newProgress,
+      ...(shouldUnlockToon
+        ? {
+            unlocks: normalizeUnlocks({
+              ...unlocks,
+              charactersUnlocked: [...unlocks.charactersUnlocked, "the_toon"],
+            }),
+          }
+        : {}),
+    });
     invalidateCache(`profile:${uid}`);
   }
 
@@ -796,11 +863,24 @@ export async function buyCharacterInShop(
     };
   }
 
-  const requiredLevel = getCharacterShopRequirement(characterId);
-  if (progression.level < requiredLevel) {
+  const unlockStatus = resolveCharacterUnlockStatus(
+    characterId,
+    progression.level,
+    hasCompletedAllAchievements(profile.achievements),
+  );
+  if (!unlockStatus.purchasable) {
     return {
       ok: false,
-      message: `Esse personagem requer nível ${requiredLevel}.`,
+      message: unlockStatus.reason,
+      currencies,
+      unlocks,
+    };
+  }
+
+  if (!unlockStatus.unlockedByRule) {
+    return {
+      ok: false,
+      message: unlockStatus.reason,
       currencies,
       unlocks,
     };
@@ -843,6 +923,75 @@ export async function buyCharacterInShop(
     message: "Compra realizada com sucesso.",
     currencies: nextCurrencies,
     unlocks: nextUnlocks,
+  };
+}
+
+export interface BuyClassMasteryResult {
+  ok: boolean;
+  message: string;
+  classMastery?: ClassMasteryProgress;
+  currencies?: Currencies;
+}
+
+export async function buyClassMasteryLevel(
+  uid: string,
+  characterClass: CharacterClass,
+): Promise<BuyClassMasteryResult> {
+  const profile = await getPlayerProfile(uid);
+  if (!profile) {
+    return { ok: false, message: "Perfil não encontrado." };
+  }
+
+  const currentMastery = normalizeClassMastery(profile.classMastery);
+  const currentClassState = currentMastery[characterClass];
+  const nextLevel = currentClassState.level + 1;
+  const upgradeCost = getClassMasteryUpgradeCost(nextLevel);
+
+  if (upgradeCost === null) {
+    return { ok: false, message: "Classe já está no nível máximo." };
+  }
+
+  const currentCurrencies = normalizeCurrencies(profile.currencies);
+  if (currentCurrencies.gold < upgradeCost) {
+    return {
+      ok: false,
+      message: `Gold insuficiente. Necessário: ${upgradeCost.toLocaleString("pt-BR")}.`,
+    };
+  }
+
+  // Preserve the player's existing mastery points when upgrading — do not reset to the new level's minimum.
+  const nextClassMastery: ClassMasteryProgress = {
+    ...currentMastery,
+    [characterClass]: {
+      points: currentClassState.points,
+      level: nextLevel,
+    },
+  };
+
+  const nextCurrencies: Currencies = {
+    ...currentCurrencies,
+    gold: Math.max(0, currentCurrencies.gold - upgradeCost),
+  };
+
+  const favoriteClass = getMostPlayedClass(
+    nextClassMastery,
+    getCharacterClass(profile.avatar),
+  );
+
+  await updateDoc(doc(db, "players", uid), {
+    classMastery: nextClassMastery,
+    currencies: nextCurrencies,
+    favoriteClass,
+    lastSeen: Date.now(),
+  });
+
+  invalidateCache(`profile:${uid}`);
+
+  return {
+    ok: true,
+    message: `Maestria de ${characterClass} evoluiu para Nv ${nextLevel}.`,
+    classMastery: nextClassMastery,
+    currencies: nextCurrencies,
   };
 }
 
@@ -1285,16 +1434,22 @@ export async function migrateCharacterStatsForAllPlayers(): Promise<{
         profileData.winStreak === undefined;
 
       if (needsMigration) {
-        await updateDoc(doc.ref, {
+        const migrationPayload: Record<string, unknown> = {
           characterStats: profileData.characterStats ?? {},
           achievements: profileData.achievements ?? {},
-          favoriteCharacter: profileData.favoriteCharacter ?? undefined,
           winStreak: profileData.winStreak ?? 0,
           perfectWins: profileData.perfectWins ?? 0,
           highLifeWins: profileData.highLifeWins ?? 0,
           opponentsFaced: profileData.opponentsFaced ?? [],
           onlinePlayersDefeated: profileData.onlinePlayersDefeated ?? [],
-        });
+        };
+        if (profileData.favoriteCharacter !== undefined) {
+          migrationPayload.favoriteCharacter = profileData.favoriteCharacter;
+        }
+        if (profileData.favoriteClass !== undefined) {
+          migrationPayload.favoriteClass = profileData.favoriteClass;
+        }
+        await updateDoc(doc.ref, migrationPayload);
         migratedCount++;
 
         // Log every 10 migrations to avoid spam
@@ -1331,16 +1486,22 @@ export async function ensurePlayerHasStats(uid: string): Promise<boolean> {
       profileData.winStreak === undefined;
 
     if (needsMigration) {
-      await updateDoc(snap.ref, {
+      const migrationPayload: Record<string, unknown> = {
         characterStats: profileData.characterStats ?? {},
         achievements: profileData.achievements ?? {},
-        favoriteCharacter: profileData.favoriteCharacter ?? undefined,
         winStreak: profileData.winStreak ?? 0,
         perfectWins: profileData.perfectWins ?? 0,
         highLifeWins: profileData.highLifeWins ?? 0,
         opponentsFaced: profileData.opponentsFaced ?? [],
         onlinePlayersDefeated: profileData.onlinePlayersDefeated ?? [],
-      });
+      };
+      if (profileData.favoriteCharacter !== undefined) {
+        migrationPayload.favoriteCharacter = profileData.favoriteCharacter;
+      }
+      if (profileData.favoriteClass !== undefined) {
+        migrationPayload.favoriteClass = profileData.favoriteClass;
+      }
+      await updateDoc(snap.ref, migrationPayload);
       console.log(`[Migration] ✅ Migrated ${uid}`);
       invalidateCache(`profile:${uid}`);
       return true;

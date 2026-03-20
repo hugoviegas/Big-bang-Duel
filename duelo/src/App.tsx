@@ -23,6 +23,7 @@ import {
   DEFAULT_CURRENCIES,
   DEFAULT_RANKED,
   DEFAULT_UNLOCKS,
+  normalizeClassMastery,
 } from "./lib/progression";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -93,6 +94,7 @@ function App() {
           currencies: { ...DEFAULT_CURRENCIES },
           ranked: { ...DEFAULT_RANKED },
           unlocks: { ...DEFAULT_UNLOCKS },
+          classMastery: normalizeClassMastery(undefined),
           createdAt: new Date(),
           isGuest: firebaseUser.isAnonymous,
         });

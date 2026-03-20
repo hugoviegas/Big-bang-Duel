@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getAchievementDef, ACHIEVEMENTS, evaluateAchievements } from "./achievements";
-import type { AchievementProgress, PlayerProfile } from "../types";
+import {
+  getAchievementDef,
+  ACHIEVEMENTS,
+  hasCompletedAllAchievements,
+} from "./achievements";
+import type { AchievementProgress } from "../types";
 
 /**
  * Tests for achievement system: definitions, evaluation
@@ -43,20 +47,27 @@ describe("achievements - Achievement definitions", () => {
   it("should have group property", () => {
     const achievement = getAchievementDef("level");
     expect(achievement?.group).toBeDefined();
-    expect(['level', 'discovery', 'single_match', 'cumulative', 'career', 'online']).toContain(achievement?.group);
+    expect([
+      "level",
+      "discovery",
+      "single_match",
+      "cumulative",
+      "career",
+      "online",
+    ]).toContain(achievement?.group);
   });
 });
 
 describe("achievements - All achievements defined", () => {
   it("should have basic achievement types", () => {
-    const ids = ACHIEVEMENTS.map(a => a.id);
-    
+    const ids = ACHIEVEMENTS.map((a) => a.id);
+
     // Check for some expected achievements
     expect(ids.length).toBeGreaterThan(5);
   });
 
   it("should not have duplicate achievement IDs", () => {
-    const ids = ACHIEVEMENTS.map(a => a.id);
+    const ids = ACHIEVEMENTS.map((a) => a.id);
     const unique = new Set(ids);
     expect(unique.size).toBe(ids.length);
   });
@@ -76,11 +87,31 @@ describe("achievements - All achievements defined", () => {
 describe("achievements - Tier thresholds are progressive", () => {
   it("should have escalating thresholds within a tier", () => {
     ACHIEVEMENTS.forEach((achievement) => {
-      const thresholds = achievement.tiers.map(t => t.threshold);
-      
+      const thresholds = achievement.tiers.map((t) => t.threshold);
+
       for (let i = 1; i < thresholds.length; i++) {
         expect(thresholds[i]).toBeGreaterThan(thresholds[i - 1]);
       }
     });
+  });
+});
+
+describe("achievements - completion helper", () => {
+  it("should return false when progress is empty", () => {
+    expect(hasCompletedAllAchievements(undefined)).toBe(false);
+  });
+
+  it("should return true when all achievements are maxed", () => {
+    const raw: Record<string, AchievementProgress> = {};
+    for (const def of ACHIEVEMENTS) {
+      raw[def.id] = {
+        id: def.id,
+        level: def.tiers.length,
+        progress: def.tiers[def.tiers.length - 1].threshold,
+        claimedLevel: def.tiers.length,
+      };
+    }
+
+    expect(hasCompletedAllAchievements(raw)).toBe(true);
   });
 });

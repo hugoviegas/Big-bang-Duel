@@ -61,6 +61,21 @@ describe('gameEngine - resolveCards 25 combinations in advanced mode', () => {
     const res = resolveCards('reload', 'dodge', 3, 3, 'advanced', 1);
     expect(res.playerAmmoChange).toBe(0); // already maxed!
   });
+
+  it('should use class mastery chance (atirador) instead of fixed 20% in ability roll', () => {
+    const originalMathRandom = Math.random;
+    Math.random = () => 0.1; // 10% roll
+
+    // Level 1 atirador has 5% (0.05) chance: should NOT trigger
+    const resultLvl1 = resolveCards('shot', 'reload', 3, 0, 'advanced', 1, 'atirador', 'sorrateiro', 1, 1);
+    expect(resultLvl1.playerAbilityTriggered).toBeUndefined();
+
+    // Level 5 atirador has 25% (0.25) chance: should trigger at 0.1 roll
+    const resultLvl5 = resolveCards('shot', 'reload', 3, 0, 'advanced', 1, 'atirador', 'sorrateiro', 5, 1);
+    expect(resultLvl5.playerAbilityTriggered).toBe('Tiro Crítico');
+
+    Math.random = originalMathRandom;
+  });
 });
 
 describe('gameEngine - dodge streak blocking', () => {

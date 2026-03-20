@@ -5,6 +5,7 @@ import type {
   PlayerState,
   CharacterClass,
 } from "../types";
+import { getClassAbilityChance } from "./progression";
 
 export const CARDS_BY_MODE: Record<GameMode, CardType[]> = {
   beginner: ["reload", "shot", "dodge"],
@@ -22,7 +23,7 @@ export const MAX_AMMO = 3;
 export const MAX_DODGE_STREAK = 3; // Maximum consecutive dodges before forced to pick another card
 export const MAX_DOUBLE_SHOT_USES = 2;
 
-/** Base ability trigger chance (20%). Testing phase. Scales with character level in the future. */
+/** Base ability trigger chance fallback (when class/mastery is unknown). */
 export const BASE_ABILITY_CHANCE = 0.2;
 
 export function getAvailableCards(
@@ -68,6 +69,8 @@ export function resolveCards(
   turn: number,
   pClass?: CharacterClass,
   oClass?: CharacterClass,
+  pMasteryLevel: number = 1,
+  oMasteryLevel: number = 1,
   pShields: number = 0,
   oShields: number = 0,
 ): TurnResult {
@@ -182,7 +185,7 @@ export function resolveCards(
 
   // ─────────────────────────────────────────────────────────────────────────
   // CLASS ABILITY ROLLS
-  // All abilities have BASE_ABILITY_CHANCE (5%) unless noted otherwise.
+  // Chances scale by class mastery level (1-5).
   // ─────────────────────────────────────────────────────────────────────────
 
   let playerAbilityTriggered: string | undefined;
@@ -190,19 +193,24 @@ export function resolveCards(
   let playerShieldUsed = false;
   let opponentShieldUsed = false;
 
-  const chance = BASE_ABILITY_CHANCE;
+  const playerChance = pClass
+    ? getClassAbilityChance(pClass, pMasteryLevel)
+    : BASE_ABILITY_CHANCE;
+  const opponentChance = oClass
+    ? getClassAbilityChance(oClass, oMasteryLevel)
+    : BASE_ABILITY_CHANCE;
 
   // ── ATIRADOR: Tiro Crítico ───────────────────────────────────────────────
-  // When playing shot and the opponent would take damage, 5% chance to double it.
+  // When playing shot and the opponent would take damage, chance to add +1 damage.
   if (pClass === "atirador" && pCard === "shot" && oLifeLost > 0) {
-    if (Math.random() < chance) {
+    if (Math.random() < playerChance) {
       oLifeLost += 1;
       playerAbilityTriggered = "Tiro Crítico";
       narrative += " TIRO CRÍTICO!";
     }
   }
   if (oClass === "atirador" && oCard === "shot" && pLifeLost > 0) {
-    if (Math.random() < chance) {
+    if (Math.random() < opponentChance) {
       pLifeLost += 1;
       opponentAbilityTriggered = "Tiro Crítico";
       narrative += " TIRO CRÍTICO do oponente!";
@@ -210,13 +218,13 @@ export function resolveCards(
   }
 
   // ── ESTRATEGISTA: Recarga Dupla ──────────────────────────────────────────
-  // When using reload and ammo was gained, 5% chance to gain +1 extra ammo (capped at MAX_AMMO).
+  // When using reload and ammo was gained, chance to gain +1 extra ammo (capped at MAX_AMMO).
   if (
     pClass === "estrategista" &&
     pCard === "reload" &&
     actualPAmmoChange > 0
   ) {
-    if (Math.random() < chance) {
+    if (Math.random() < playerChance) {
       // Grant an extra ammo if not already at max after the first reload
       if (pAmmo + actualPAmmoChange < MAX_AMMO) {
         actualPAmmoChange += 1;
@@ -230,7 +238,7 @@ export function resolveCards(
     oCard === "reload" &&
     actualOAmmoChange > 0
   ) {
-    if (Math.random() < chance) {
+    if (Math.random() < opponentChance) {
       if (oAmmo + actualOAmmoChange < MAX_AMMO) {
         actualOAmmoChange += 1;
       }
@@ -240,7 +248,7 @@ export function resolveCards(
   }
 
   // ── SORRATEIRO: Esquiva Fantasma ─────────────────────────────────────────
-  // When playing any card other than dodge, 5% chance to dodge incoming shot damage.
+  // When playing any card other than dodge, chance to dodge incoming shot damage.
   // Only triggers when the player would take damage from a shot or double_shot.
   if (
     pClass === "sorrateiro" &&
@@ -248,7 +256,7 @@ export function resolveCards(
     pLifeLost > 0 &&
     (oCard === "shot" || oCard === "double_shot")
   ) {
-    if (Math.random() < chance) {
+    if (Math.random() < playerChance) {
       pLifeLost = 0;
       playerAbilityTriggered = "Esquiva Fantasma";
       narrative += " ESQUIVA FANTASMA! Dano evitado!";
@@ -260,7 +268,7 @@ export function resolveCards(
     oLifeLost > 0 &&
     (pCard === "shot" || pCard === "double_shot")
   ) {
-    if (Math.random() < chance) {
+    if (Math.random() < opponentChance) {
       oLifeLost = 0;
       opponentAbilityTriggered = "Esquiva Fantasma";
       narrative += " ESQUIVA FANTASMA do oponente!";
@@ -269,10 +277,10 @@ export function resolveCards(
 
   // ── RICOCHETE: Ricochete ─────────────────────────────────────────────────
   // When using counter that hits (oLifeLost > 0):
-  //   - vs shot:        5% chance to double return damage
-  //   - vs double_shot: 10% chance to double return damage
+  //   - vs shot:        base class chance
+  //   - vs double_shot: double class chance
   if (pClass === "ricochete" && pCard === "counter" && oLifeLost > 0) {
-    const ricChance = oCard === "double_shot" ? chance * 2 : chance;
+    const ricChance = oCard === "double_shot" ? playerChance * 2 : playerChance;
     if (Math.random() < ricChance) {
       oLifeLost += 1;
       playerAbilityTriggered = "Ricochete";
@@ -280,7 +288,8 @@ export function resolveCards(
     }
   }
   if (oClass === "ricochete" && oCard === "counter" && pLifeLost > 0) {
-    const ricChance = pCard === "double_shot" ? chance * 2 : chance;
+    const ricChance =
+      pCard === "double_shot" ? opponentChance * 2 : opponentChance;
     if (Math.random() < ricChance) {
       pLifeLost += 1;
       opponentAbilityTriggered = "Ricochete";
@@ -289,17 +298,17 @@ export function resolveCards(
   }
 
   // ── SANGUINÁRIO: Bala Fantasma ───────────────────────────────────────────
-  // When using double_shot, 5% chance to consume only 1 ammo instead of 2.
+  // When using double_shot, chance to consume only 1 ammo instead of 2.
   // (base cost was already set to -2; adding +1 makes it effectively -1)
   if (pClass === "sanguinario" && pCard === "double_shot") {
-    if (Math.random() < chance) {
+    if (Math.random() < playerChance) {
       actualPAmmoChange += 1; // offsets one bullet of the -2 cost
       playerAbilityTriggered = "Bala Fantasma";
       narrative += " BALA FANTASMA! Apenas 1 munição consumida!";
     }
   }
   if (oClass === "sanguinario" && oCard === "double_shot") {
-    if (Math.random() < chance) {
+    if (Math.random() < opponentChance) {
       actualOAmmoChange += 1;
       opponentAbilityTriggered = "Bala Fantasma";
       narrative += " BALA FANTASMA do oponente!";
@@ -307,7 +316,7 @@ export function resolveCards(
   }
 
   // ── SUPORTE: Escudo ──────────────────────────────────────────────────────
-  // When taking damage from a shot or double_shot, 5% chance to block 1 HP.
+  // When taking damage from a shot or double_shot, chance to block 1 HP.
   // Limited to pShields / oShields remaining uses this match.
   if (
     pClass === "suporte" &&
@@ -315,7 +324,7 @@ export function resolveCards(
     pShields > 0 &&
     (oCard === "shot" || oCard === "double_shot")
   ) {
-    if (Math.random() < chance) {
+    if (Math.random() < playerChance) {
       pLifeLost = Math.max(0, pLifeLost - 1);
       playerShieldUsed = true;
       playerAbilityTriggered = "Escudo";
@@ -328,7 +337,7 @@ export function resolveCards(
     oShields > 0 &&
     (pCard === "shot" || pCard === "double_shot")
   ) {
-    if (Math.random() < chance) {
+    if (Math.random() < opponentChance) {
       oLifeLost = Math.max(0, oLifeLost - 1);
       opponentShieldUsed = true;
       opponentAbilityTriggered = "Escudo";

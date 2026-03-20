@@ -6,8 +6,9 @@ import {
   calculateProgression,
   normalizeCurrencies,
   normalizeUnlocks,
-  getCharacterShopRequirement,
+  resolveCharacterUnlockStatus,
 } from "../lib/progression";
+import { hasCompletedAllAchievements } from "../lib/achievements";
 
 const CHARACTER_PRICE_GOLD = 1000;
 
@@ -19,6 +20,9 @@ export default function ShopPage() {
   const progression = calculateProgression(user?.progression?.xpTotal ?? 0);
   const currencies = normalizeCurrencies(user?.currencies);
   const unlocks = normalizeUnlocks(user?.unlocks);
+  const allAchievementsCompleted = hasCompletedAllAchievements(
+    user?.achievements,
+  );
   const unlockedSet = useMemo(
     () => new Set(unlocks.charactersUnlocked),
     [unlocks.charactersUnlocked],
@@ -105,11 +109,19 @@ export default function ShopPage() {
 
         <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
           {CHARACTERS.map((char) => {
-            const requiredLevel = getCharacterShopRequirement(char.id);
+            const unlockStatus = resolveCharacterUnlockStatus(
+              char.id,
+              progression.level,
+              allAchievementsCompleted,
+            );
             const isOwned = unlockedSet.has(char.id);
-            const meetsLevel = progression.level >= requiredLevel;
+            const canBeBought = unlockStatus.purchasable;
+            const meetsRule = unlockStatus.unlockedByRule;
             const canBuy =
-              !isOwned && meetsLevel && currencies.gold >= CHARACTER_PRICE_GOLD;
+              !isOwned &&
+              canBeBought &&
+              meetsRule &&
+              currencies.gold >= CHARACTER_PRICE_GOLD;
 
             return (
               <div
@@ -129,7 +141,7 @@ export default function ShopPage() {
                     {char.name}
                   </div>
                   <div className="font-stats text-[10px] text-sand/50 uppercase tracking-wider mt-0.5">
-                    Requer nível {requiredLevel}
+                    {unlockStatus.reason}
                   </div>
                 </div>
 
@@ -149,8 +161,14 @@ export default function ShopPage() {
                   >
                     {loadingId === char.id ? (
                       "..."
-                    ) : !meetsLevel ? (
-                      `Nv ${requiredLevel}`
+                    ) : !canBeBought ? (
+                      "Especial"
+                    ) : !meetsRule ? (
+                      unlockStatus.requiredLevel ? (
+                        `Nv ${unlockStatus.requiredLevel}`
+                      ) : (
+                        "Bloqueado"
+                      )
                     ) : currencies.gold < CHARACTER_PRICE_GOLD ? (
                       "Sem Gold"
                     ) : (

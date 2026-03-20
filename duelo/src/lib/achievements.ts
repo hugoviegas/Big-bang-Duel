@@ -776,6 +776,16 @@ export function normalizeAchievements(
   return result;
 }
 
+export function hasCompletedAllAchievements(
+  raw?: Record<string, AchievementProgress>,
+): boolean {
+  const normalized = normalizeAchievements(raw);
+  return ACHIEVEMENTS.every((def) => {
+    const progress = normalized[def.id];
+    return progress.level >= def.tiers.length;
+  });
+}
+
 // ─── Metric extraction ──────────────────────────────────────────────────────
 
 interface AchievementMetrics {

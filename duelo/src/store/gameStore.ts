@@ -16,8 +16,10 @@ import {
   MAX_DODGE_STREAK,
   MAX_DOUBLE_SHOT_USES,
 } from "../lib/gameEngine";
+import { getClassMasteryLevelForClass } from "../lib/progression";
 import { botChooseCard, initBotPersona } from "../lib/botAI";
 import { CHARACTERS, getCharacter, getCharacterClass } from "../lib/characters";
+import { useAuthStore } from "./authStore";
 
 // ─── Solo Game Persistence (localStorage) ────────────────────────────────────
 const SOLO_MATCH_KEY = "bbd_active_solo_match";
@@ -134,6 +136,7 @@ const initialState: GameState = {
     dodgeStreak: 0,
     doubleShotsLeft: MAX_DOUBLE_SHOT_USES,
     characterClass: "atirador",
+    classMasteryLevel: 1,
     shieldUsesLeft: 2,
   },
   opponent: {
@@ -152,6 +155,7 @@ const initialState: GameState = {
     dodgeStreak: 0,
     doubleShotsLeft: MAX_DOUBLE_SHOT_USES,
     characterClass: "sorrateiro",
+    classMasteryLevel: 1,
     shieldUsesLeft: 2,
   },
   lastResult: null,
@@ -208,6 +212,12 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const attackTimer: AttackTimer = (config.attackTimer ?? 10) as AttackTimer;
 
     const opponentCharDef = getCharacter(opponentAvatar);
+    const currentUser = useAuthStore.getState().user;
+    const playerClass = getCharacterClass(playerAvatar);
+    const playerMasteryLevel = getClassMasteryLevelForClass(
+      currentUser?.classMastery,
+      playerClass,
+    );
 
     // Solo: always hide opponent ammo (matches hard-difficulty behaviour)
     // Online: use room config (default false = visible)
@@ -237,7 +247,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         avatar: playerAvatar,
         avatarPicture: playerAvatarPicture,
         displayName: playerDisplayName,
-        characterClass: getCharacterClass(playerAvatar),
+        characterClass: playerClass,
+        classMasteryLevel: playerMasteryLevel,
         shieldUsesLeft: 2,
       },
       opponent: {
@@ -247,6 +258,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         avatar: opponentAvatar,
         displayName: opponentCharDef.name,
         characterClass: getCharacterClass(opponentAvatar),
+        classMasteryLevel: 1,
         shieldUsesLeft: 2,
       },
     });
@@ -329,6 +341,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         state.turn,
         state.player.characterClass,
         state.opponent.characterClass,
+        state.player.classMasteryLevel ?? 1,
+        state.opponent.classMasteryLevel ?? 1,
         state.player.shieldUsesLeft,
         state.opponent.shieldUsesLeft,
       );
@@ -652,6 +666,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           selectedCard:
             (roomData[`${myRole}Choice`] as CardType) ||
             state.player.selectedCard,
+          classMasteryLevel:
+            roomData[`${myRole}ClassMasteryLevel`] ??
+            state.player.classMasteryLevel ??
+            1,
         },
         opponent: {
           ...state.opponent,
@@ -685,6 +703,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               ? (roomData.guestAvatar ?? state.opponent.avatar)
               : (roomData.hostAvatar ?? state.opponent.avatar),
           ),
+          classMasteryLevel:
+            roomData[`${otherRole}ClassMasteryLevel`] ??
+            state.opponent.classMasteryLevel ??
+            1,
         },
       });
 
@@ -807,6 +829,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               (roomData[`${myRole}Choice`] as CardType) ||
               null
             : null,
+        classMasteryLevel:
+          roomData[`${myRole}ClassMasteryLevel`] ??
+          curr.player.classMasteryLevel ??
+          1,
       },
       opponent: {
         ...curr.opponent,
@@ -824,6 +850,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
             ? (roomData.guestAvatar ?? curr.opponent.avatar)
             : (roomData.hostAvatar ?? curr.opponent.avatar),
         ),
+        classMasteryLevel:
+          roomData[`${otherRole}ClassMasteryLevel`] ??
+          curr.opponent.classMasteryLevel ??
+          1,
         life: roomData[`${otherRole}Life`] ?? curr.opponent.life,
         ammo: roomData[`${otherRole}Ammo`] ?? curr.opponent.ammo,
         dodgeStreak:

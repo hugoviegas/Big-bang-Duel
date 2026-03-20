@@ -38,7 +38,8 @@ export const CLASS_INFO: Record<
     name: string;
     abilityName: string;
     description: string;
-    icon: string;
+    iconWebp: string;
+    iconPng: string;
     color: string;
   }
 > = {
@@ -46,51 +47,68 @@ export const CLASS_INFO: Record<
     name: "Atirador",
     abilityName: "Tiro Crítico",
     description:
-      "Ao usar Tiro, tem 20% de chance de dar um tiro crítico que tira 2 vidas.",
-    icon: "🎯",
+      "Ao usar Tiro, tem {chance}% de dar um tiro crítico que tira 2 vidas. A chance escala com a maestria da classe.",
+    iconWebp: "/assets/class_icons/atirador_icon.webp",
+    iconPng: "/assets/class_icons/png/atirador_icon.png",
     color: "text-red-400",
   },
   estrategista: {
     name: "Estrategista",
     abilityName: "Recarga Dupla",
     description:
-      "Ao usar Recarga, tem 20% de chance de ganhar +2 munições ao invés de +1.",
-    icon: "🧠",
+      "Ao usar Recarga, tem {chance}% de ganhar +2 munições ao invés de +1. A chance escala com a maestria da classe.",
+    iconWebp: "/assets/class_icons/estrategista_icon.webp",
+    iconPng: "/assets/class_icons/png/estrategista_icon.png",
     color: "text-blue-400",
   },
   sorrateiro: {
     name: "Sorrateiro",
     abilityName: "Esquiva Fantasma",
     description:
-      "Ao usar qualquer carta, tem 20% de chance de esquivar automaticamente de tiros inimigos.",
-    icon: "👻",
+      "Ao usar qualquer carta, tem {chance}% de esquivar automaticamente de tiros inimigos. A chance escala com a maestria da classe.",
+    iconWebp: "/assets/class_icons/sorrateiro_icon.webp",
+    iconPng: "/assets/class_icons/png/sorrateiro_icon.png",
     color: "text-purple-400",
   },
   ricochete: {
     name: "Ricochete",
     abilityName: "Ricochete",
     description:
-      "Ao usar Contra-golpe, tem 20% de chance de dobrar o dano de retorno (40% contra Tiro Duplo).",
-    icon: "🔄",
+      "Ao usar Contra-golpe, tem {chance}% de dobrar o dano de retorno (chance dobrada contra Tiro Duplo). Escala com a maestria da classe.",
+    iconWebp: "/assets/class_icons/ricochete_icon.webp",
+    iconPng: "/assets/class_icons/png/ricochete_icon.png",
     color: "text-yellow-400",
   },
   sanguinario: {
     name: "Sanguinário",
     abilityName: "Bala Fantasma",
     description:
-      "Ao usar Tiro Duplo, tem 20% de chance de consumir apenas 1 munição.",
-    icon: "🩸",
+      "Ao usar Tiro Duplo, tem {chance}% de consumir apenas 1 munição. A chance escala com a maestria da classe.",
+    iconWebp: "/assets/class_icons/sanguinario_icon.webp",
+    iconPng: "/assets/class_icons/png/sanguinario_icon.png",
     color: "text-orange-400",
   },
   suporte: {
     name: "Suporte",
     abilityName: "Escudo",
     description:
-      "Ao levar um tiro, tem 20% de chance de ativar um escudo que bloqueia 1 HP (máx 2x por partida).",
-    icon: "🛡️",
+      "Ao levar um tiro, tem {chance}% de ativar um escudo que bloqueia 1 HP (máx 2x por partida). A chance escala com a maestria da classe.",
+    iconWebp: "/assets/class_icons/suporte_icon.webp",
+    iconPng: "/assets/class_icons/png/suporte_icon.png",
     color: "text-green-400",
   },
 };
+
+export function getClassIconSources(characterClass: CharacterClass): {
+  webp: string;
+  png: string;
+} {
+  const classInfo = CLASS_INFO[characterClass];
+  return {
+    webp: classInfo.iconWebp,
+    png: classInfo.iconPng,
+  };
+}
 
 export const CHARACTERS: CharacterDef[] = [
   // ─── Original trio ───────────────────────────────────────────────────────
@@ -114,18 +132,18 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_skull_profile.webp",
     avatarCropY: "10%",
     rarity: "rare",
-    characterClass: "sorrateiro",
+    characterClass: "sanguinario",
   },
   {
     id: "la_dama",
-    name: "La Dama",
+    name: "Lá Zorra",
     title: "A Pistoleira Lendária",
     description: "Elegante como uma rosa, mortal como seu revólver.",
     image: "/assets/characters/la_dama.webp",
     profileImage: "/assets/characters_profile/la_dama_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
-    characterClass: "suporte",
+    characterClass: "sorrateiro",
   },
 
   // ─── New roster ──────────────────────────────────────────────────────────
@@ -138,7 +156,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/alucard_profile.webp",
     avatarCropY: "12%",
     rarity: "legendary",
-    characterClass: "suporte",
+    characterClass: "sanguinario",
   },
   {
     id: "detective_hopps",
@@ -171,7 +189,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/pe_de_pano_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
-    characterClass: "sorrateiro",
+    characterClass: "suporte",
   },
   {
     id: "serpent_queen",
@@ -182,7 +200,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/serpent_queen_profile.webp",
     avatarCropY: "12%",
     rarity: "legendary",
-    characterClass: "ricochete",
+    characterClass: "sorrateiro",
   },
   {
     id: "spider_noir",
@@ -193,7 +211,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/spider_noir_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
-    characterClass: "estrategista",
+    characterClass: "sorrateiro",
   },
   {
     id: "stormtrooper",
@@ -204,7 +222,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/stormtrooper_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
-    characterClass: "sanguinario",
+    characterClass: "atirador",
   },
   {
     id: "the_cowboy",
@@ -215,7 +233,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_cowboy_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
-    characterClass: "atirador",
+    characterClass: "suporte",
   },
   {
     id: "the_jedi",
@@ -248,7 +266,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_outlaw_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
-    characterClass: "sanguinario",
+    characterClass: "ricochete",
   },
   {
     id: "the_rango",
@@ -259,7 +277,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_rango_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
-    characterClass: "estrategista",
+    characterClass: "atirador",
   },
   {
     id: "the_scrapper",
@@ -270,7 +288,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_scrapper_profile.webp",
     avatarCropY: "10%",
     rarity: "rare",
-    characterClass: "sanguinario",
+    characterClass: "suporte",
   },
   {
     id: "the_sheriff",
@@ -292,7 +310,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_witcher_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
-    characterClass: "sorrateiro",
+    characterClass: "estrategista",
   },
   {
     id: "tigress_blaze",
@@ -303,7 +321,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/tigress_blaze_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
-    characterClass: "atirador",
+    characterClass: "ricochete",
   },
   {
     id: "the_razor",
@@ -315,7 +333,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_razor_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
-    characterClass: "ricochete",
+    characterClass: "estrategista",
   },
   {
     id: "ben",
@@ -326,18 +344,18 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/Ben_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
-    characterClass: "estrategista",
+    characterClass: "sanguinario",
   },
   {
     id: "cooper",
-    name: "Cooper",
+    name: "O Ladrão",
     title: "O Detetive Metódico",
     description: "Tático e preciso. Cada tiro conta quando o tempo aperta.",
     image: "/assets/characters/cooper.webp",
     profileImage: "/assets/characters_profile/cooper_profile.webp",
     avatarCropY: "12%",
     rarity: "common",
-    characterClass: "atirador",
+    characterClass: "sorrateiro",
   },
   {
     id: "o_genio",
@@ -360,7 +378,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/o_galo_profile.webp",
     avatarCropY: "12%",
     rarity: "legendary",
-    characterClass: "sorrateiro",
+    characterClass: "ricochete",
   },
   {
     id: "the_toon",
@@ -371,7 +389,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_toon_profile.webp",
     avatarCropY: "12%",
     rarity: "common",
-    characterClass: "sanguinario",
+    characterClass: "estrategista",
   },
   {
     id: "la_belle",
@@ -406,7 +424,19 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/tai_lung_profile.webp",
     avatarCropY: "12%",
     rarity: "legendary",
-    characterClass: "sorrateiro",
+    characterClass: "sanguinario",
+  },
+  {
+    id: "norris",
+    name: "Norris",
+    title: "O Lendário Indomável",
+    description:
+      "Norris é uma lenda viva do combate — um guerreiro que transcendeu o tempo através de disciplina absoluta e dedicação inabalável. Sua reputação não é construída sobre bravatas ou arrogância, mas sobre fatos simples e indiscutíveis: seus inimigos nunca conseguem acertá-lo duas vezes. Aqueles que enfrentaram Norris falam sobre sua presença quase sobrenatural na arena, como se ele pudesse ler cada movimento com antecipação perfeita.\n\nSeu poder reside não em técnicas exóticas, mas na maestria completa do corpo e mente. Cada ação é calculada, cada respiração é deliberada. Quando Norris deseja atirar novamente com apenas uma munição em vez de duas, o universo simplesmente concorda com ele. Seus músculos foram forjados através de décadas de treinamento implacável, tornando-o capaz de coisas que outros guerreiros consideram impossíveis. A verdade é que para Norris, o impossível é apenas o improvável.\n\nEle chegou aos duelos de Big Bang não em busca de glória ou riqueza, mas porque tinha que ir. Aqueles que enfrentam Norris sentem algo que poucas vezes experimentam: a calma absoluta de alguém que já venceu a si mesmo. Sua força não apenas física, mas espiritual, faz dele um adversário praticamente imbatível. Nos duelos, ele não apenas ganha — ele redefine o que é possível.",
+    image: "/assets/characters/norris.webp",
+    profileImage: "/assets/characters_profile/norris_profile.webp",
+    avatarCropY: "12%",
+    rarity: "legendary",
+    characterClass: "sanguinario",
   },
 ];
 
