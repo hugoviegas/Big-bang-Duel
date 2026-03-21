@@ -81,6 +81,7 @@ export function useFirebaseRoom() {
       hostReady: false,
       guestReady: false,
       turn: 1,
+      turnStartedAt: null,
       currentRound: 1,
       hostLife: initialLife,
       guestLife: initialLife,
@@ -122,6 +123,7 @@ export function useFirebaseRoom() {
             getCharacterClass(playerAvatar),
           ),
           status: "in_progress",
+          turnStartedAt: room.turnStartedAt ?? Date.now(),
           // Ensure state persistence fields are initialized for guest
           guestDodgeStreak: room.guestDodgeStreak ?? 0,
           guestDoubleShotsLeft: room.guestDoubleShotsLeft ?? 2,
@@ -449,7 +451,10 @@ export function useMatchSync(roomId: string | null) {
       if (room.hostId === user.uid || room.guestId === user.uid) {
         const isHost = room.hostId === user.uid;
         const rolePrefix = isHost ? "host" : "guest";
-        await update(roomRef, { [`${rolePrefix}LeftAt`]: null });
+        await update(roomRef, {
+          [`${rolePrefix}LeftAt`]: null,
+          turnStartedAt: room.turnStartedAt ?? Date.now(),
+        });
         return true;
       }
       // Otherwise try joining as guest (waiting room only)
@@ -463,6 +468,7 @@ export function useMatchSync(roomId: string | null) {
             getCharacterClass(user.avatar || "marshal"),
           ),
           status: "in_progress",
+          turnStartedAt: room.turnStartedAt ?? Date.now(),
         });
         return true;
       }

@@ -398,6 +398,7 @@ export interface Room {
   hostAmmo?: number;
   guestAmmo?: number;
   turn?: number;
+  turnStartedAt?: number | null;
   hostDodgeStreak?: number;
   guestDodgeStreak?: number;
   hostDoubleShotsLeft?: number;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { onValue, ref } from "firebase/database";
 import { useGameStore } from "../../store/gameStore";
 import { CardItem } from "./CardItem";
 import {
@@ -8,6 +9,7 @@ import {
   MAX_DOUBLE_SHOT_USES,
 } from "../../lib/gameEngine";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
+import { rtdb } from "../../lib/firebase";
 import type { CardType } from "../../types";
 import {
   UI_PREFS_UPDATED_EVENT,
@@ -79,15 +81,56 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
   const [draggedCardId, setDraggedCardId] = useState<CardType | null>(null);
   const [isDropZoneActive, setIsDropZoneActive] = useState(false);
   const [prefs, setPrefs] = useState(getUIPreferences);
+  const [onlineTurnStartedAt, setOnlineTurnStartedAt] = useState<number | null>(
+    null,
+  );
+  const [onlineNow, setOnlineNow] = useState<number>(Date.now());
 
   const autoFiredRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dropZoneRef = useRef<HTMLDivElement | null>(null);
+  const touchDragStateRef = useRef<{
+    cardId: CardType | null;
+    startX: number;
+    startY: number;
+    dragging: boolean;
+  }>({
+    cardId: null,
+    startX: 0,
+    startY: 0,
+    dragging: false,
+  });
+  const lastTapRef = useRef<{ cardId: CardType; at: number } | null>(null);
 
   useEffect(() => {
     const syncPrefs = () => setPrefs(getUIPreferences());
     window.addEventListener(UI_PREFS_UPDATED_EVENT, syncPrefs);
     return () => window.removeEventListener(UI_PREFS_UPDATED_EVENT, syncPrefs);
   }, []);
+
+  useEffect(() => {
+    if (!isOnline || !roomId) {
+      setOnlineTurnStartedAt(null);
+      return;
+    }
+
+    const roomRef = ref(rtdb, `rooms/${roomId}`);
+    const unsubscribe = onValue(roomRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const room = snapshot.val() as { turnStartedAt?: number | null };
+      setOnlineTurnStartedAt(
+        typeof room.turnStartedAt === "number" ? room.turnStartedAt : null,
+      );
+    });
+
+    return () => unsubscribe();
+  }, [isOnline, roomId]);
+
+  useEffect(() => {
+    if (!isOnline || phase !== "selecting") return;
+    const id = setInterval(() => setOnlineNow(Date.now()), 200);
+    return () => clearInterval(id);
+  }, [isOnline, phase]);
 
   useEffect(() => {
     if (timerRef.current) {
@@ -116,8 +159,25 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     };
   }, [phase, turn, attackTimer]);
 
+  const syncedOnlineTimeLeft =
+    isOnline &&
+    phase === "selecting" &&
+    attackTimer > 0 &&
+    onlineTurnStartedAt !== null
+      ? Math.max(
+          0,
+          Math.ceil(attackTimer - (onlineNow - onlineTurnStartedAt) / 1000),
+        )
+      : null;
+
+  const effectiveTimeLeft = syncedOnlineTimeLeft ?? timeLeft;
+
   useEffect(() => {
-    if (timeLeft !== 0 || phase !== "selecting" || autoFiredRef.current) {
+    if (
+      effectiveTimeLeft !== 0 ||
+      phase !== "selecting" ||
+      autoFiredRef.current
+    ) {
       return;
     }
 
@@ -151,7 +211,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
         finalState.resolveTurn();
       }
     }, 260);
-  }, [timeLeft, phase, submitChoice]);
+  }, [effectiveTimeLeft, phase, submitChoice]);
 
   const tryResolve = (delayMs = 100) => {
     setTimeout(() => {
@@ -224,6 +284,85 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     tryResolve(150);
   };
 
+  const handleTouchStart = (e: React.TouchEvent, cardId: CardType) => {
+    if (phase !== "selecting") return;
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchDragStateRef.current = {
+      cardId,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      dragging: false,
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const state = touchDragStateRef.current;
+    if (!state.cardId || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const dx = touch.clientX - state.startX;
+    const dy = touch.clientY - state.startY;
+    const dist = Math.hypot(dx, dy);
+
+    if (!state.dragging && dist > 14) {
+      state.dragging = true;
+      setDraggedCardId(state.cardId);
+    }
+
+    if (!state.dragging) return;
+    e.preventDefault();
+
+    const zone = dropZoneRef.current?.getBoundingClientRect();
+    const inside =
+      !!zone &&
+      touch.clientX >= zone.left &&
+      touch.clientX <= zone.right &&
+      touch.clientY >= zone.top &&
+      touch.clientY <= zone.bottom;
+
+    setIsDropZoneActive(inside);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent, cardId: CardType) => {
+    const state = touchDragStateRef.current;
+
+    if (state.dragging) {
+      e.preventDefault();
+      if (isDropZoneActive && phase === "selecting") {
+        selectCard(cardId);
+        tryResolve(120);
+      }
+      setDraggedCardId(null);
+      setIsDropZoneActive(false);
+      touchDragStateRef.current = {
+        cardId: null,
+        startX: 0,
+        startY: 0,
+        dragging: false,
+      };
+      return;
+    }
+
+    const now = Date.now();
+    const prev = lastTapRef.current;
+    if (prev && prev.cardId === cardId && now - prev.at < 320) {
+      e.preventDefault();
+      handleDoubleClick(cardId);
+      lastTapRef.current = null;
+    } else {
+      handleSelect(cardId);
+      lastTapRef.current = { cardId, at: now };
+    }
+
+    touchDragStateRef.current = {
+      cardId: null,
+      startX: 0,
+      startY: 0,
+      dragging: false,
+    };
+  };
+
   const allCards = CARDS_BY_MODE[mode];
   const availableCards = getAvailableCards(
     mode,
@@ -238,7 +377,9 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     player.selectedCard !== null;
 
   const timerRatio =
-    attackTimer > 0 ? Math.max(0, Math.min(timeLeft / attackTimer, 1)) : 1;
+    attackTimer > 0
+      ? Math.max(0, Math.min(effectiveTimeLeft / attackTimer, 1))
+      : 1;
   const timerPercent = Math.round(timerRatio * 100);
   const timerClass =
     timerRatio <= 0.3
@@ -303,6 +444,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
   return (
     <>
       <div
+        ref={dropZoneRef}
         onDragOver={(e) => {
           if (!draggedCardId) return;
           e.preventDefault();
@@ -330,7 +472,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
               <span
                 className={`text-xl md:text-2xl font-western drop-shadow-lg ${timerTextClass}`}
               >
-                {timeLeft}
+                {effectiveTimeLeft}
               </span>
             </div>
           </div>
@@ -361,8 +503,11 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
                   onDragStart={(e) => handleDragStart(e, cId)}
                   onDragEnd={handleDragEnd}
                   onDoubleClick={() => handleDoubleClick(cId)}
+                  onTouchStart={(e) => handleTouchStart(e, cId)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={(e) => handleTouchEnd(e, cId)}
                   draggable={isAvailable && phase === "selecting"}
-                  className="cursor-grab active:cursor-grabbing"
+                  className="cursor-grab active:cursor-grabbing touch-none"
                 >
                   <motion.div
                     layout

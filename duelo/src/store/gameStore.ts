@@ -624,6 +624,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
                 guestChoice: null,
                 lastTurnResult: null,
                 turn: afterAnimState.turn + 1,
+
+
+                turnStartedAt: matchOver ? null : Date.now(),
+
+
                 status: matchOver ? "finished" : "in_progress",
               });
             } catch (e) {
@@ -682,6 +687,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               guestChoice: null,
               lastTurnResult: null,
               turn: afterAnimState.turn + 1,
+
+
+              turnStartedAt: afterAnimState.winnerId ? null : Date.now(),
+
+
               status: afterAnimState.winnerId ? "finished" : "in_progress",
             });
           } catch (e) {
@@ -1003,8 +1013,16 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           roomData[`${otherRole}ShieldUsesLeft`] ??
           curr.opponent.shieldUsesLeft ??
           2,
-        selectedCard: null,
-        choiceRevealed: false,
+        // ─ PATCH 1: Proteger choices confirmadas durante seleção ─
+        // Se estamos em "selecting" e o oponente já confirmou uma escolha (hostChoice/guestChoice),
+        // sincronizar visualmente; caso contrário, limpar apenas se realmente necessário
+        selectedCard:
+          curr.phase === "selecting" && roomData[`${otherRole}Choice`]
+            ? (roomData[`${otherRole}Choice`] as CardType)
+            : null,
+        choiceRevealed: !!(
+          curr.phase === "selecting" && roomData[`${otherRole}Choice`]
+        ),
       },
     }));
   },
@@ -1049,7 +1067,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       },
     }));
 
-    // Host syncs the new round to Firebase
+
+
+
     const after = get();
     if (after.isOnline && after.isHost && after.roomId) {
       const roomRef = ref(rtdb, `rooms/${after.roomId}`);
@@ -1150,3 +1170,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     set(initialState);
   },
 }));
+
+
+
+
+
+
