@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useGameStore } from "../../store/gameStore";
 import { BattleHeader } from "./BattleHeader";
 import { BattleArena } from "./BattleArena";
@@ -6,7 +6,6 @@ import { CardHandEnhanced } from "./CardHandEnhanced";
 import { QuickChat } from "./QuickChat";
 import { GameOver } from "./GameOver";
 import { GamePauseMenu } from "./GamePauseMenu";
-import { AnimatePresence, motion } from "framer-motion";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
 import { onValue, ref } from "firebase/database";
 import { rtdb } from "../../lib/firebase";
@@ -44,81 +43,8 @@ export function BattleUILayout({
   } = useGameStore();
   const { submitEmoji } = useFirebaseRoom();
 
-  const [lastResultMessage, setLastResultMessage] = useState<string>("");
-  const [resultSubline, setResultSubline] = useState<string>("");
   const [playerEmoji, setPlayerEmoji] = useState<string | null>(null);
   const [opponentEmoji, setOpponentEmoji] = useState<string | null>(null);
-  const resultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    // Clear previous timeout to avoid multiple timeouts stacking
-    if (resultTimeoutRef.current) {
-      clearTimeout(resultTimeoutRef.current);
-      resultTimeoutRef.current = null;
-    }
-
-    if ((phase === "animating" || phase === "resolving") && lastResult) {
-      let message = "";
-      let subline = "";
-
-      if (
-        lastResult.playerCard === "dodge" &&
-        lastResult.opponentCard === "shot"
-      ) {
-        message = "DESVIOU! ✨";
-        subline = "Boa leitura de jogada";
-      } else if (
-        lastResult.opponentCard === "dodge" &&
-        lastResult.playerCard === "shot"
-      ) {
-        message = "Bloqueado! 🛡️";
-        subline = "Oponente neutralizou seu ataque";
-      } else if (
-        lastResult.playerLifeLost > 0 &&
-        lastResult.opponentLifeLost > 0
-      ) {
-        message = "CHOQUE! ⚡";
-        subline = "Ambos sofreram dano";
-      } else if (lastResult.opponentLifeLost > 0) {
-        message = "ACERTO! 💥";
-        subline = `Inimigo -${lastResult.opponentLifeLost} HP`;
-      } else if (lastResult.playerLifeLost > 0) {
-        message = "LEVOU DANO! 🔥";
-        subline = `Voce -${lastResult.playerLifeLost} HP`;
-      } else {
-        message = "EMPATE! 🤝";
-        subline = "Sem dano neste turno";
-      }
-
-      setLastResultMessage(message);
-      setResultSubline(subline);
-
-      resultTimeoutRef.current = setTimeout(() => {
-        setLastResultMessage("");
-        setResultSubline("");
-        resultTimeoutRef.current = null;
-      }, 3000);
-    }
-
-    return () => {
-      if (resultTimeoutRef.current) {
-        clearTimeout(resultTimeoutRef.current);
-        resultTimeoutRef.current = null;
-      }
-    };
-  }, [phase, lastResult]);
-
-  // Additional safety: clear result messages when leaving animating/resolving phase
-  useEffect(() => {
-    if (phase !== "animating" && phase !== "resolving") {
-      if (resultTimeoutRef.current) {
-        clearTimeout(resultTimeoutRef.current);
-        resultTimeoutRef.current = null;
-      }
-      setLastResultMessage("");
-      setResultSubline("");
-    }
-  }, [phase]);
 
   useEffect(() => {
     if (!isOnline || !roomId) {
@@ -191,36 +117,7 @@ export function BattleUILayout({
         <QuickChat onSendMessage={handleSendEmoji} />
       )}
 
-      <AnimatePresence>
-        {lastResultMessage && (
-          <motion.div
-            key={lastResultMessage}
-            initial={{ opacity: 0, y: 16, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.96 }}
-            transition={{ duration: 0.25 }}
-            className="absolute left-1/2 -translate-x-1/2 top-[145px] md:top-[155px] z-[35] pointer-events-none"
-            style={{ top: "calc(145px + var(--ios-notch-top, 0px))" }}
-          >
-            <div className="min-w-[220px] md:min-w-[280px] px-4 py-3 rounded-xl border border-gold/45 bg-gradient-to-b from-[#2b1906]/95 to-[#1b1106]/95 shadow-[0_10px_25px_rgba(0,0,0,0.45)] backdrop-blur-sm text-center">
-              <div className="font-western text-lg md:text-2xl text-gold tracking-wide leading-tight">
-                {lastResultMessage}
-              </div>
-              <div className="font-stats text-[11px] md:text-xs text-sand/75 mt-1 uppercase tracking-widest">
-                {resultSubline}
-              </div>
-              <div className="mt-2 h-1 w-full rounded-full bg-black/45 overflow-hidden">
-                <motion.div
-                  initial={{ width: "100%" }}
-                  animate={{ width: "0%" }}
-                  transition={{ duration: 3, ease: "linear" }}
-                  className="h-full bg-gradient-to-r from-gold to-yellow-300"
-                />
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Result message box removed - now only showing in central modal via BattleArena */}
 
       {phase === "game_over" && <GameOver />}
 

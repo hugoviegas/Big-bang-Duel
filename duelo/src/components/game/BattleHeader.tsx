@@ -117,12 +117,6 @@ function PlayerCard({
           className="w-full h-full object-cover"
         />
       </div>
-
-      <div className="absolute -bottom-5 md:-bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
-        <span className="text-[10px] md:text-xs font-stats text-sand-light drop-shadow-lg uppercase">
-          {player.displayName}
-        </span>
-      </div>
     </motion.div>
   );
 }

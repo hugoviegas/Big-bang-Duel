@@ -108,6 +108,41 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     return () => window.removeEventListener(UI_PREFS_UPDATED_EVENT, syncPrefs);
   }, []);
 
+  // Register touch listeners with passive: false to allow preventDefault
+  useEffect(() => {
+    const handleTouchMoveNonPassive = (e: TouchEvent) => {
+      const state = touchDragStateRef.current;
+      if (!state.cardId || !state.dragging) return;
+      try {
+        e.preventDefault();
+      } catch (err) {
+        // Ignore passive event listener errors
+      }
+    };
+
+    const handleTouchEndNonPassive = (e: TouchEvent) => {
+      const state = touchDragStateRef.current;
+      if (!state.dragging) return;
+      try {
+        e.preventDefault();
+      } catch (err) {
+        // Ignore passive event listener errors
+      }
+    };
+
+    document.addEventListener("touchmove", handleTouchMoveNonPassive, {
+      passive: false,
+    });
+    document.addEventListener("touchend", handleTouchEndNonPassive, {
+      passive: false,
+    });
+
+    return () => {
+      document.removeEventListener("touchmove", handleTouchMoveNonPassive);
+      document.removeEventListener("touchend", handleTouchEndNonPassive);
+    };
+  }, []);
+
   useEffect(() => {
     if (!isOnline || !roomId) {
       setOnlineTurnStartedAt(null);
@@ -311,7 +346,6 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     }
 
     if (!state.dragging) return;
-    e.preventDefault();
 
     const zone = dropZoneRef.current?.getBoundingClientRect();
     const inside =
@@ -324,11 +358,10 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     setIsDropZoneActive(inside);
   };
 
-  const handleTouchEnd = (e: React.TouchEvent, cardId: CardType) => {
+  const handleTouchEnd = (cardId: CardType) => {
     const state = touchDragStateRef.current;
 
     if (state.dragging) {
-      e.preventDefault();
       if (isDropZoneActive && phase === "selecting") {
         selectCard(cardId);
         tryResolve(120);
@@ -347,7 +380,6 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     const now = Date.now();
     const prev = lastTapRef.current;
     if (prev && prev.cardId === cardId && now - prev.at < 320) {
-      e.preventDefault();
       handleDoubleClick(cardId);
       lastTapRef.current = null;
     } else {
@@ -491,6 +523,50 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
             </span>
           </div>
 
+          <AnimatePresence>
+            {shouldShowInfoPanel && selectedCard && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                className="mb-2 flex flex-col md:flex-row items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/35 backdrop-blur-md"
+              >
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="font-western text-gold mb-0.5 text-sm md:text-base">
+                    {CARD_DETAILS[selectedCard].label}
+                  </h3>
+                  <p className="font-stats text-sand/75 text-[11px] md:text-sm">
+                    {CARD_DETAILS[selectedCard].description}
+                  </p>
+                </div>
+
+                {prefs.useConfirmButton && (
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={handleConfirm}
+                    disabled={!confirmButtonEnabled}
+                    className={`px-4 md:px-6 py-1.5 md:py-2 rounded-lg font-western text-sm md:text-base uppercase tracking-wider transition-all whitespace-nowrap ${
+                      confirmButtonEnabled
+                        ? "bg-gold text-black hover:bg-yellow-300"
+                        : "bg-sand/20 text-sand/50 cursor-not-allowed"
+                    }`}
+                  >
+                    Confirmar
+                  </motion.button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {!prefs.hideInfoTexts && (
+            <div className="text-center mb-2">
+              <p className="font-stats text-sand/45 text-[10px] md:text-xs uppercase tracking-wider">
+                Dicas: clique, duplo clique para jogar, ou arraste e solte
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-5 gap-1 md:gap-2 place-items-center overflow-visible pb-1 pt-2">
             {allCards.map((cId) => {
               const details = CARD_DETAILS[cId];
@@ -505,7 +581,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
                   onDoubleClick={() => handleDoubleClick(cId)}
                   onTouchStart={(e) => handleTouchStart(e, cId)}
                   onTouchMove={handleTouchMove}
-                  onTouchEnd={(e) => handleTouchEnd(e, cId)}
+                  onTouchEnd={() => handleTouchEnd(cId)}
                   draggable={isAvailable && phase === "selecting"}
                   className="cursor-grab active:cursor-grabbing touch-none"
                 >
@@ -553,50 +629,6 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
               {prefs.hideInfoTexts ? "Mostrar infos" : "Ocultar infos"}
             </button>
           </div>
-
-          <AnimatePresence>
-            {shouldShowInfoPanel && selectedCard && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                className="mt-2 flex flex-col md:flex-row items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/35 backdrop-blur-md"
-              >
-                <div className="flex-1 text-center md:text-left">
-                  <h3 className="font-western text-gold mb-0.5 text-sm md:text-base">
-                    {CARD_DETAILS[selectedCard].label}
-                  </h3>
-                  <p className="font-stats text-sand/75 text-[11px] md:text-sm">
-                    {CARD_DETAILS[selectedCard].description}
-                  </p>
-                </div>
-
-                {prefs.useConfirmButton && (
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={handleConfirm}
-                    disabled={!confirmButtonEnabled}
-                    className={`px-4 md:px-6 py-1.5 md:py-2 rounded-lg font-western text-sm md:text-base uppercase tracking-wider transition-all whitespace-nowrap ${
-                      confirmButtonEnabled
-                        ? "bg-gold text-black hover:bg-yellow-300"
-                        : "bg-sand/20 text-sand/50 cursor-not-allowed"
-                    }`}
-                  >
-                    Confirmar
-                  </motion.button>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {!prefs.hideInfoTexts && (
-            <div className="text-center mt-2">
-              <p className="font-stats text-sand/45 text-[10px] md:text-xs uppercase tracking-wider">
-                Dicas: clique, duplo clique para jogar, ou arraste e solte
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </>
