@@ -837,7 +837,7 @@ function extractMetrics(
     trophies: profile.ranked?.trophies ?? 0,
     maxCharacterMatches: maxCharacterField(profile.characterStats, "partidas"),
     highLifeWins: profile.highLifeWins ?? 0,
-    onlineRivalsCount: (profile.onlinePlayersDefeated ?? []).length,
+    onlineRivalsCount: new Set(profile.onlinePlayersDefeated ?? []).size,
   };
 }
 
@@ -1063,7 +1063,7 @@ export function retroactivelyEvaluateAchievements(
     trophies: profile.ranked?.trophies ?? 0,
     maxCharacterMatches: maxCharacterField(profile.characterStats, "partidas"),
     highLifeWins: profile.highLifeWins ?? 0,
-    onlineRivalsCount: (profile.onlinePlayersDefeated ?? []).length,
+    onlineRivalsCount: new Set(profile.onlinePlayersDefeated ?? []).size,
   };
 
   // Evaluate each achievement

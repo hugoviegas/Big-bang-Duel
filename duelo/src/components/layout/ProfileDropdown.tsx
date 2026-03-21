@@ -30,7 +30,7 @@ export function ProfileDropdown({
   const playerCode = user.playerCode ?? "";
 
   // Count unclaimed achievement rewards
-  const allProgress = normalizeAchievements(user.achievements);
+  const allProgress = normalizeAchievements(user.achievements ?? {});
   const unclaimedCount = ACHIEVEMENTS.reduce((n, def) => {
     const p = allProgress[def.id];
     return n + (p && p.level > p.claimedLevel ? 1 : 0);
@@ -50,8 +50,11 @@ export function ProfileDropdown({
   return (
     <div className={`profile-dropdown ${isOpen ? "open" : ""}`}>
       <div className="dropdown-header">
-        <div className="dropdown-avatar">
-          <img src={avatarPic} alt="" className="w-full h-full object-cover" />
+        <div className="dropdown-avatar relative">
+          <img src={avatarPic} alt="" />
+          {unclaimedCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full ring-2 ring-black" />
+          )}
         </div>
         <div>
           <div className="dropdown-name">{user.displayName}</div>
@@ -75,12 +78,10 @@ export function ProfileDropdown({
       </div>
       <div className="dropdown-item" onClick={() => handleNav("/achievements")}>
         <Trophy size={20} className="dropdown-item-icon" />
-        <span className="dropdown-item-text">
+        <span className="dropdown-item-text flex items-center">
           Conquistas
           {unclaimedCount > 0 && (
-            <span className="inline-flex ml-2 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5">
-              {unclaimedCount}
-            </span>
+            <span className="ml-2 w-3 h-3 bg-red-600 rounded-full inline-block ring-2 ring-black animate-pulse" />
           )}
         </span>
       </div>

@@ -89,10 +89,10 @@ export const CLASS_INFO: Record<
     color: "text-orange-400",
   },
   suporte: {
-    name: "Suporte",
-    abilityName: "Escudo",
+    name: "Curandeiro",
+    abilityName: "Cura",
     description:
-      "Ao levar um tiro, tem {chance}% de ativar um escudo que bloqueia 1 HP (máx 2x por partida). A chance escala com a maestria da classe.",
+      "Ao usar qualquer carta, tem {chance}% de recuperar 1 HP (máx 2x por partida). A cura não ultrapassa a vida máxima.",
     iconWebp: "/assets/class_icons/suporte_icon.webp",
     iconPng: "/assets/class_icons/png/suporte_icon.png",
     color: "text-green-400",

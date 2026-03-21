@@ -76,6 +76,96 @@ describe('gameEngine - resolveCards 25 combinations in advanced mode', () => {
 
     Math.random = originalMathRandom;
   });
+
+  it('should trigger Curandeiro heal on any card when below max life', () => {
+    const originalMathRandom = Math.random;
+    Math.random = () => 0.0; // always trigger
+
+    const result = resolveCards(
+      'reload',
+      'reload',
+      0,
+      0,
+      'advanced',
+      1,
+      'suporte',
+      'atirador',
+      1,
+      1,
+      2,
+      2,
+      2,
+      3,
+      3,
+      3,
+    );
+
+    expect(result.playerAbilityTriggered).toBe('Cura');
+    expect(result.playerShieldUsed).toBe(true);
+    expect(result.playerLifeLost).toBe(-1);
+
+    Math.random = originalMathRandom;
+  });
+
+  it('should not trigger Curandeiro heal when already at max life', () => {
+    const originalMathRandom = Math.random;
+    Math.random = () => 0.0; // would trigger if eligible
+
+    const result = resolveCards(
+      'reload',
+      'reload',
+      0,
+      0,
+      'advanced',
+      1,
+      'suporte',
+      'atirador',
+      1,
+      1,
+      2,
+      2,
+      3,
+      3,
+      3,
+      3,
+    );
+
+    expect(result.playerAbilityTriggered).toBeUndefined();
+    expect(result.playerShieldUsed).toBe(false);
+    expect(result.playerLifeLost).toBe(0);
+
+    Math.random = originalMathRandom;
+  });
+
+  it('should not trigger Curandeiro heal when passive uses are exhausted', () => {
+    const originalMathRandom = Math.random;
+    Math.random = () => 0.0; // would trigger if eligible
+
+    const result = resolveCards(
+      'reload',
+      'reload',
+      0,
+      0,
+      'advanced',
+      1,
+      'suporte',
+      'atirador',
+      1,
+      1,
+      0,
+      2,
+      2,
+      3,
+      3,
+      3,
+    );
+
+    expect(result.playerAbilityTriggered).toBeUndefined();
+    expect(result.playerShieldUsed).toBe(false);
+    expect(result.playerLifeLost).toBe(0);
+
+    Math.random = originalMathRandom;
+  });
 });
 
 describe('gameEngine - dodge streak blocking', () => {

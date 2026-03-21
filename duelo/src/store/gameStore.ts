@@ -242,6 +242,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       roundWinnerId: null,
       player: {
         ...initialState.player,
+        id: currentUser?.uid ?? initialState.player.id,
         life,
         maxLife: life,
         avatar: playerAvatar,
@@ -253,6 +254,13 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       },
       opponent: {
         ...initialState.opponent,
+        id: isOnline
+          ? (isHost
+              ? currentUser?.uid
+                ? `pending_guest_for_${currentUser.uid}`
+                : "pending_guest"
+              : "pending_host")
+          : initialState.opponent.id,
         life,
         maxLife: life,
         avatar: opponentAvatar,
@@ -350,6 +358,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         state.opponent.classMasteryLevel ?? 1,
         state.player.shieldUsesLeft,
         state.opponent.shieldUsesLeft,
+        pLife,
+        oLife,
+        state.player.maxLife,
+        state.opponent.maxLife,
       );
     }
 
@@ -402,8 +414,14 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       const pAnim = result.playerLifeLost > 0 ? "hit" : cardToAnim(pCard);
       const oAnim = result.opponentLifeLost > 0 ? "hit" : cardToAnim(oCard);
 
-      const newPlayerLife = Math.max(0, pLife - result.playerLifeLost);
-      const newOpponentLife = Math.max(0, oLife - result.opponentLifeLost);
+      const newPlayerLife = Math.min(
+        currentState.player.maxLife,
+        Math.max(0, pLife - result.playerLifeLost),
+      );
+      const newOpponentLife = Math.min(
+        currentState.opponent.maxLife,
+        Math.max(0, oLife - result.opponentLifeLost),
+      );
       const newPlayerAmmo = Math.min(
         3,
         Math.max(0, pAmmo + result.playerAmmoChange),
@@ -670,6 +688,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           : (roomData.hostStars ?? state.opponentStars),
         player: {
           ...state.player,
+          id: isHost
+            ? (roomData.hostId ?? state.player.id)
+            : (roomData.guestId ?? state.player.id),
           life: roomData[`${myRole}Life`] ?? state.player.life,
           ammo: roomData[`${myRole}Ammo`] ?? state.player.ammo,
           dodgeStreak:
@@ -695,6 +716,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         },
         opponent: {
           ...state.opponent,
+          id: isHost
+            ? (roomData.guestId ?? state.opponent.id)
+            : (roomData.hostId ?? state.opponent.id),
           displayName: isHost
             ? roomData.guestName || "Inimigo"
             : roomData.hostName || "Host",
@@ -830,6 +854,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         : (roomData.hostStars ?? curr.opponentStars),
       player: {
         ...curr.player,
+        id: isHost
+          ? (roomData.hostId ?? curr.player.id)
+          : (roomData.guestId ?? curr.player.id),
         life: roomData[`${myRole}Life`] ?? curr.player.life,
         ammo: roomData[`${myRole}Ammo`] ?? curr.player.ammo,
         dodgeStreak:
@@ -858,6 +885,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       },
       opponent: {
         ...curr.opponent,
+        id: isHost
+          ? (roomData.guestId ?? curr.opponent.id)
+          : (roomData.hostId ?? curr.opponent.id),
         displayName: isHost
           ? roomData.guestName || "Inimigo"
           : roomData.hostName || "Host",

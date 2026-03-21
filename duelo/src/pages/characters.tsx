@@ -94,7 +94,7 @@ const CLASS_FILTERS: Array<{
   { value: "sorrateiro", label: "Sorrateiro", iconClass: "sorrateiro" },
   { value: "ricochete", label: "Ricochete", iconClass: "ricochete" },
   { value: "sanguinario", label: "Sanguinário", iconClass: "sanguinario" },
-  { value: "suporte", label: "Suporte", iconClass: "suporte" },
+  { value: "suporte", label: "Curandeiro", iconClass: "suporte" },
 ];
 
 function ClassIcon({

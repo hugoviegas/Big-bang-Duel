@@ -150,6 +150,15 @@ export const useAuthStore = create<AuthState>()(
                   onlineStatus: profile.onlineStatus ?? "online",
                   preferences: user.preferences,
                   createdAt: user.createdAt,
+                  // Game progression and achievements
+                  achievements: profile.achievements ?? {},
+                  characterStats: profile.characterStats ?? {},
+                  favoriteCharacter: profile.favoriteCharacter,
+                  winStreak: profile.winStreak ?? 0,
+                  perfectWins: profile.perfectWins ?? 0,
+                  highLifeWins: profile.highLifeWins ?? 0,
+                  opponentsFaced: profile.opponentsFaced ?? [],
+                  onlinePlayersDefeated: profile.onlinePlayersDefeated ?? [],
                 },
                 isAuthenticated: true,
                 isLoading: false,
@@ -278,6 +287,15 @@ export const useAuthStore = create<AuthState>()(
                 ? new Date(existing.lastSeen)
                 : new Date(),
               onlineStatus: existing.onlineStatus ?? "online",
+              // Game progression and achievements
+              achievements: existing.achievements ?? {},
+              characterStats: existing.characterStats ?? {},
+              favoriteCharacter: existing.favoriteCharacter,
+              winStreak: existing.winStreak ?? 0,
+              perfectWins: existing.perfectWins ?? 0,
+              highLifeWins: existing.highLifeWins ?? 0,
+              opponentsFaced: existing.opponentsFaced ?? [],
+              onlinePlayersDefeated: existing.onlinePlayersDefeated ?? [],
             });
             set({ _profileEnsuredAt: Date.now() });
             // Update presence

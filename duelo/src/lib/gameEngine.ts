@@ -57,8 +57,8 @@ export function checkWinner(
  *
  * @param pClass   - player's character class (for ability rolls)
  * @param oClass   - opponent's character class (for ability rolls)
- * @param pShields - player's remaining Suporte shield uses this match
- * @param oShields - opponent's remaining Suporte shield uses this match
+ * @param pShields - player's remaining Curandeiro passive uses this match
+ * @param oShields - opponent's remaining Curandeiro passive uses this match
  */
 export function resolveCards(
   pCard: CardType,
@@ -73,6 +73,10 @@ export function resolveCards(
   oMasteryLevel: number = 1,
   pShields: number = 0,
   oShields: number = 0,
+  pLifeCurrent?: number,
+  oLifeCurrent?: number,
+  pMaxLife?: number,
+  oMaxLife?: number,
 ): TurnResult {
   let pLifeLost = 0;
   let oLifeLost = 0;
@@ -315,33 +319,37 @@ export function resolveCards(
     }
   }
 
-  // ── SUPORTE: Escudo ──────────────────────────────────────────────────────
-  // When taking damage from a shot or double_shot, chance to block 1 HP.
-  // Limited to pShields / oShields remaining uses this match.
+  // ── SUPORTE (CURANDEIRO): Cura ───────────────────────────────────────────
+  // On any card, chance to recover 1 HP, limited to pShields/oShields uses.
+  // Healing never exceeds max life.
+  const safePLifeCurrent = pLifeCurrent ?? 0;
+  const safeOLifeCurrent = oLifeCurrent ?? 0;
+  const safePMaxLife = pMaxLife ?? safePLifeCurrent;
+  const safeOMaxLife = oMaxLife ?? safeOLifeCurrent;
+
   if (
     pClass === "suporte" &&
-    pLifeLost > 0 &&
     pShields > 0 &&
-    (oCard === "shot" || oCard === "double_shot")
+    safePLifeCurrent < safePMaxLife
   ) {
     if (Math.random() < playerChance) {
-      pLifeLost = Math.max(0, pLifeLost - 1);
+      // Negative life loss means net healing, clamped by state layer max life.
+      pLifeLost -= 1;
       playerShieldUsed = true;
-      playerAbilityTriggered = "Escudo";
-      narrative += " ESCUDO ATIVADO! Dano bloqueado!";
+      playerAbilityTriggered = "Cura";
+      narrative += " CURA ATIVADA! Você recuperou 1 HP!";
     }
   }
   if (
     oClass === "suporte" &&
-    oLifeLost > 0 &&
     oShields > 0 &&
-    (pCard === "shot" || pCard === "double_shot")
+    safeOLifeCurrent < safeOMaxLife
   ) {
     if (Math.random() < opponentChance) {
-      oLifeLost = Math.max(0, oLifeLost - 1);
+      oLifeLost -= 1;
       opponentShieldUsed = true;
-      opponentAbilityTriggered = "Escudo";
-      narrative += " ESCUDO do oponente ativado!";
+      opponentAbilityTriggered = "Cura";
+      narrative += " CURA do oponente ativada!";
     }
   }
 

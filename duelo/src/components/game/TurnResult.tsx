@@ -44,6 +44,7 @@ const ABILITY_CLASS: Record<string, CharacterClass> = {
   "Esquiva Fantasma": "sorrateiro",
   Ricochete: "ricochete",
   "Bala Fantasma": "sanguinario",
+  Cura: "suporte",
   Escudo: "suporte",
 };
 
@@ -172,19 +173,27 @@ export function TurnResultOverlay({ result }: TurnResultProps) {
 
         {/* Damage indicators */}
         <div className="flex justify-between mt-4 font-stats text-sm">
+          {result.playerLifeLost < 0 && (
+            <span className="text-green-400">Você: +{-result.playerLifeLost} HP</span>
+          )}
           {result.playerLifeLost > 0 && (
             <span className="text-red-400">
               Você: -{result.playerLifeLost} HP
               {result.playerShieldUsed && (
-                <span className="text-green-400 ml-1">(Escudo bloqueou 1)</span>
+                <span className="text-green-400 ml-1">(Cura +1 HP)</span>
               )}
+            </span>
+          )}
+          {result.opponentLifeLost < 0 && (
+            <span className="text-green-400 ml-auto">
+              Inimigo: +{-result.opponentLifeLost} HP
             </span>
           )}
           {result.opponentLifeLost > 0 && (
             <span className="text-green-400 ml-auto">
               Inimigo: -{result.opponentLifeLost} HP
               {result.opponentShieldUsed && (
-                <span className="text-green-400 ml-1">(Escudo bloqueou 1)</span>
+                <span className="text-green-400 ml-1">(Cura +1 HP)</span>
               )}
             </span>
           )}

@@ -9,7 +9,7 @@ export type AttackTimer = 2 | 3 | 5 | 10 | 30;
  *  - sorrateiro:   qualquer carta tem chance de esquivar de tiros inimigos.
  *  - ricochete:    contra-golpe tem chance de dobrar o dano de retorno.
  *  - sanguinario:  tiro duplo tem chance de consumir apenas 1 munição.
- *  - suporte:      quando leva tiro tem chance de ativar escudo (bloqueia 1 HP, máx 2x por partida).
+ *  - suporte:      Curandeiro: ao usar qualquer carta tem chance de recuperar 1 HP (máx 2x por partida).
  */
 export type CharacterClass =
   | "atirador"
@@ -84,7 +84,7 @@ export interface PlayerState {
   doubleShotsLeft: number; // remaining double_shot uses this round (max 3)
   characterClass: CharacterClass; // passive ability class
   classMasteryLevel?: number; // passive ability mastery level (1-5)
-  shieldUsesLeft: number; // Suporte class: remaining shield activations this match (max 2)
+  shieldUsesLeft: number; // Curandeiro class: remaining heal activations this match (max 2)
   avatarPicture?: string; // custom profile picture (independent of character)
 }
 
@@ -126,9 +126,9 @@ export interface TurnResult {
   playerAbilityTriggered?: string;
   /** Name of the ability that triggered this turn for the opponent. */
   opponentAbilityTriggered?: string;
-  /** True if the player's Suporte shield blocked damage this turn. */
+  /** True if the player's Curandeiro passive was used this turn. */
   playerShieldUsed?: boolean;
-  /** True if the opponent's Suporte shield blocked damage this turn. */
+  /** True if the opponent's Curandeiro passive was used this turn. */
   opponentShieldUsed?: boolean;
 }
 

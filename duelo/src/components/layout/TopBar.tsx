@@ -9,6 +9,7 @@ import {
   normalizeCurrencies,
   normalizeRanked,
 } from "../../lib/progression";
+import { ACHIEVEMENTS, normalizeAchievements } from "../../lib/achievements";
 
 export function TopBar() {
   const user = useAuthStore((s) => s.user);
@@ -33,6 +34,13 @@ export function TopBar() {
   const toggleDropdown = () => setIsDropdownOpen((v) => !v);
   const closeDropdown = () => setIsDropdownOpen(false);
 
+  // Count unclaimed achievement rewards for header indicator
+  const allProgress = normalizeAchievements(user.achievements ?? {});
+  const headerUnclaimed = ACHIEVEMENTS.reduce((n, def) => {
+    const p = allProgress[def.id];
+    return n + (p && p.level > p.claimedLevel ? 1 : 0);
+  }, 0);
+
   return (
     <>
       <div className="top-bar">
@@ -41,8 +49,10 @@ export function TopBar() {
           <img
             src={avatarPic}
             alt={activeChar.name}
-            className="w-full h-full object-cover"
           />
+          {headerUnclaimed > 0 && (
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-600 rounded-full ring-2 ring-black animate-pulse" />
+          )}
         </button>
 
         {/* Profile Info */}
