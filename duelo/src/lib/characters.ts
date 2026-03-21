@@ -47,7 +47,7 @@ export const CLASS_INFO: Record<
     name: "Atirador",
     abilityName: "Tiro Crítico",
     description:
-      "Ao usar Tiro, tem {chance}% de dar um tiro crítico que tira 2 vidas. A chance escala com a maestria da classe.",
+      "Ao usar Tiro, tem {chance} de dar um tiro crítico que tira 2 vidas. A chance escala com a maestria da classe.",
     iconWebp: "/assets/class_icons/atirador_icon.webp",
     iconPng: "/assets/class_icons/png/atirador_icon.png",
     color: "text-red-400",
@@ -56,7 +56,7 @@ export const CLASS_INFO: Record<
     name: "Estrategista",
     abilityName: "Recarga Dupla",
     description:
-      "Ao usar Recarga, tem {chance}% de ganhar +2 munições ao invés de +1. A chance escala com a maestria da classe.",
+      "Ao usar Recarga, tem {chance} de ganhar +2 munições ao invés de +1. A chance escala com a maestria da classe.",
     iconWebp: "/assets/class_icons/estrategista_icon.webp",
     iconPng: "/assets/class_icons/png/estrategista_icon.png",
     color: "text-blue-400",
@@ -65,7 +65,7 @@ export const CLASS_INFO: Record<
     name: "Sorrateiro",
     abilityName: "Esquiva Fantasma",
     description:
-      "Ao usar qualquer carta, tem {chance}% de esquivar automaticamente de tiros inimigos. A chance escala com a maestria da classe.",
+      "Ao usar qualquer carta, tem {chance} de esquivar automaticamente de tiros inimigos. A chance escala com a maestria da classe.",
     iconWebp: "/assets/class_icons/sorrateiro_icon.webp",
     iconPng: "/assets/class_icons/png/sorrateiro_icon.png",
     color: "text-purple-400",
@@ -74,7 +74,7 @@ export const CLASS_INFO: Record<
     name: "Ricochete",
     abilityName: "Ricochete",
     description:
-      "Ao usar Contra-golpe, tem {chance}% de dobrar o dano de retorno (chance dobrada contra Tiro Duplo). Escala com a maestria da classe.",
+      "Ao usar Contra-golpe, tem {chance} de dobrar o dano de retorno (chance dobrada contra Tiro Duplo). Escala com a maestria da classe.",
     iconWebp: "/assets/class_icons/ricochete_icon.webp",
     iconPng: "/assets/class_icons/png/ricochete_icon.png",
     color: "text-yellow-400",
@@ -83,7 +83,7 @@ export const CLASS_INFO: Record<
     name: "Sanguinário",
     abilityName: "Bala Fantasma",
     description:
-      "Ao usar qualquer carta, tem {chance}% de recarregar 1 carga de Tiro Duplo (máx 2x por partida). Nunca ultrapassa 3 cargas ao mesmo tempo.",
+      "Ao usar qualquer carta, tem {chance} de recarregar 1 carga de Tiro Duplo (máx 2x por partida). Nunca ultrapassa 3 cargas ao mesmo tempo.",
     iconWebp: "/assets/class_icons/sanguinario_icon.webp",
     iconPng: "/assets/class_icons/png/sanguinario_icon.png",
     color: "text-orange-400",
@@ -92,7 +92,7 @@ export const CLASS_INFO: Record<
     name: "Curandeiro",
     abilityName: "Cura",
     description:
-      "Ao usar qualquer carta, tem {chance}% de recuperar 1 HP (máx 2x por partida). A cura não ultrapassa a vida máxima.",
+      "Ao usar qualquer carta, tem {chance} de recuperar 1 HP (máx 2x por partida). A cura não ultrapassa a vida máxima.",
     iconWebp: "/assets/class_icons/suporte_icon.webp",
     iconPng: "/assets/class_icons/png/suporte_icon.png",
     color: "text-green-400",

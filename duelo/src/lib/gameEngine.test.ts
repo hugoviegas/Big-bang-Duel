@@ -110,6 +110,52 @@ describe("gameEngine - resolveCards 25 combinations in advanced mode", () => {
     Math.random = originalMathRandom;
   });
 
+  it("should make Atirador critical shot hit through dodge for 1 damage", () => {
+    const originalMathRandom = Math.random;
+    Math.random = () => 0.0; // always trigger
+
+    const result = resolveCards(
+      "shot",
+      "dodge",
+      1,
+      0,
+      "advanced",
+      1,
+      "atirador",
+      "sorrateiro",
+      5,
+      1,
+    );
+
+    expect(result.playerAbilityTriggered).toBe("Tiro Crítico");
+    expect(result.opponentLifeLost).toBe(1);
+
+    Math.random = originalMathRandom;
+  });
+
+  it("should make opponent Atirador critical shot hit through dodge for 1 damage", () => {
+    const originalMathRandom = Math.random;
+    Math.random = () => 0.0; // always trigger
+
+    const result = resolveCards(
+      "dodge",
+      "shot",
+      0,
+      1,
+      "advanced",
+      1,
+      "sorrateiro",
+      "atirador",
+      1,
+      5,
+    );
+
+    expect(result.opponentAbilityTriggered).toBe("Tiro Crítico");
+    expect(result.playerLifeLost).toBe(1);
+
+    Math.random = originalMathRandom;
+  });
+
   it("should trigger Curandeiro heal on any card when below max life", () => {
     const originalMathRandom = Math.random;
     Math.random = () => 0.0; // always trigger

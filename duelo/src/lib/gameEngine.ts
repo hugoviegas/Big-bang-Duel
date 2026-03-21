@@ -209,17 +209,27 @@ export function resolveCards(
     : BASE_ABILITY_CHANCE;
 
   // ── ATIRADOR: Tiro Crítico ───────────────────────────────────────────────
-  // When playing shot and the opponent would take damage, chance to add +1 damage.
-  if (pClass === "atirador" && pCard === "shot" && oLifeLost > 0) {
+  // When playing shot, chance to fire a second bullet.
+  // - If base shot already caused damage, add +1 damage.
+  // - If target used dodge, second bullet still connects (same behavior as double_shot vs dodge).
+  if (pClass === "atirador" && pCard === "shot") {
     if (Math.random() < playerChance) {
-      oLifeLost += 1;
+      if (oLifeLost > 0) {
+        oLifeLost += 1;
+      } else if (oCard === "dodge") {
+        oLifeLost = 1;
+      }
       playerAbilityTriggered = "Tiro Crítico";
       narrative += " TIRO CRÍTICO!";
     }
   }
-  if (oClass === "atirador" && oCard === "shot" && pLifeLost > 0) {
+  if (oClass === "atirador" && oCard === "shot") {
     if (Math.random() < opponentChance) {
-      pLifeLost += 1;
+      if (pLifeLost > 0) {
+        pLifeLost += 1;
+      } else if (pCard === "dodge") {
+        pLifeLost = 1;
+      }
       opponentAbilityTriggered = "Tiro Crítico";
       narrative += " TIRO CRÍTICO do oponente!";
     }
