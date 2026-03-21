@@ -17,9 +17,21 @@ import {
   MAX_DOUBLE_SHOT_USES,
 } from "../lib/gameEngine";
 import { getClassMasteryLevelForClass } from "../lib/progression";
-import { botChooseCard, initBotPersona } from "../lib/botAI";
+import {
+  botChooseCard,
+  initBotPersona,
+  exportBotRuntimeState,
+  restoreBotRuntimeState,
+  rebuildBotRuntimeFromHistory,
+  type BotRuntimeState,
+} from "../lib/botAI";
 import { CHARACTERS, getCharacter, getCharacterClass } from "../lib/characters";
 import { useAuthStore } from "./authStore";
+import {
+  savePrivateSoloMatch,
+  getPrivateSoloMatch,
+  clearPrivateSoloMatch,
+} from "../lib/firebaseService";
 
 // ─── Solo Game Persistence (localStorage) ────────────────────────────────────
 const SOLO_MATCH_KEY = "bbd_active_solo_match";
@@ -37,6 +49,40 @@ interface SavedSoloMatch {
   hideOpponentAmmo: boolean;
   attackTimer: AttackTimer;
   savedAt: number;
+  botRuntime?: BotRuntimeState;
+}
+
+function _sanitizeSavedSolo(saved: SavedSoloMatch): SavedSoloMatch {
+  return {
+    ...saved,
+    player: {
+      ...saved.player,
+      selectedCard: null,
+      choiceRevealed: false,
+      isAnimating: false,
+      currentAnimation: "idle",
+    },
+    opponent: {
+      ...saved.opponent,
+      selectedCard: null,
+      choiceRevealed: false,
+      isAnimating: false,
+      currentAnimation: "idle",
+    },
+  };
+}
+
+async function _persistSoloStatePrivate(saved: SavedSoloMatch): Promise<void> {
+  const uid = useAuthStore.getState().user?.uid;
+  if (!uid) return;
+  try {
+    await savePrivateSoloMatch(
+      uid,
+      saved as unknown as Record<string, unknown>,
+    );
+  } catch (err) {
+    console.warn("[solo-persist] remote save failed:", err);
+  }
 }
 
 function _persistSoloState(state: GameState): void {
@@ -68,8 +114,11 @@ function _persistSoloState(state: GameState): void {
       hideOpponentAmmo: state.hideOpponentAmmo,
       attackTimer: state.attackTimer,
       savedAt: Date.now(),
+      botRuntime: exportBotRuntimeState(),
     };
-    localStorage.setItem(SOLO_MATCH_KEY, JSON.stringify(saved));
+    const sanitized = _sanitizeSavedSolo(saved);
+    localStorage.setItem(SOLO_MATCH_KEY, JSON.stringify(sanitized));
+    void _persistSoloStatePrivate(sanitized);
   } catch {
     /* quota exceeded — silently ignore */
   }
@@ -91,8 +140,30 @@ export function getSavedSoloMatch(): SavedSoloMatch | null {
   }
 }
 
+export async function getSavedSoloMatchFromServer(): Promise<SavedSoloMatch | null> {
+  const uid = useAuthStore.getState().user?.uid;
+  if (!uid) return null;
+  try {
+    const data = await getPrivateSoloMatch(uid);
+    if (!data) return null;
+    const saved = data as unknown as SavedSoloMatch;
+    if (!saved?.savedAt || Date.now() - saved.savedAt > 24 * 60 * 60 * 1000) {
+      await clearPrivateSoloMatch(uid);
+      return null;
+    }
+    return _sanitizeSavedSolo(saved);
+  } catch (err) {
+    console.warn("[solo-restore] remote load failed:", err);
+    return null;
+  }
+}
+
 export function clearSavedSoloMatch(): void {
   localStorage.removeItem(SOLO_MATCH_KEY);
+  const uid = useAuthStore.getState().user?.uid;
+  if (uid) {
+    void clearPrivateSoloMatch(uid).catch(() => {});
+  }
 }
 
 interface GameStore extends GameState {
@@ -112,7 +183,7 @@ interface GameStore extends GameState {
   quitGame: () => void;
   syncFromFirebase: (roomData: any, isHost: boolean) => void;
   nextRound: () => void;
-  restoreSoloMatch: () => boolean;
+  restoreSoloMatch: () => Promise<boolean>;
 }
 
 const initialState: GameState = {
@@ -1008,10 +1079,22 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
   setPhase: (phase) => set({ phase }),
 
-  restoreSoloMatch: () => {
-    const saved = getSavedSoloMatch();
+  restoreSoloMatch: async () => {
+    const localSaved = getSavedSoloMatch();
+    const saved = localSaved ?? (await getSavedSoloMatchFromServer());
     if (!saved) return false;
     _isResolving = false;
+
+    // Restore internal bot runtime first (strategy continuity).
+    if (saved.botRuntime) {
+      restoreBotRuntimeState(saved.botRuntime);
+    } else {
+      rebuildBotRuntimeFromHistory(
+        saved.turn,
+        saved.history.map((h) => h.playerCard),
+      );
+    }
+
     set({
       ...initialState,
       mode: saved.mode,
@@ -1045,6 +1128,17 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       roundWinnerId: null,
       lastResult: null,
     });
+
+    // Keep local cache refreshed even when restored from server.
+    try {
+      localStorage.setItem(
+        SOLO_MATCH_KEY,
+        JSON.stringify(_sanitizeSavedSolo(saved)),
+      );
+    } catch {
+      // ignore quota/local errors
+    }
+
     return true;
   },
 

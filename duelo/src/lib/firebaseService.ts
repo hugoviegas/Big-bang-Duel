@@ -7,6 +7,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteField,
   collection,
   query,
   where,
@@ -372,6 +373,38 @@ function profileWithNormalizedStats(profile: PlayerProfile): PlayerProfile {
     opponentsFaced: profile.opponentsFaced ?? [],
     onlinePlayersDefeated: profile.onlinePlayersDefeated ?? [],
   };
+}
+
+// ─── Private Solo Match Snapshot (users/{uid}) ─────────────────────────────
+
+export async function savePrivateSoloMatch(
+  uid: string,
+  snapshot: Record<string, unknown>,
+): Promise<void> {
+  await setDoc(
+    doc(db, "users", uid),
+    {
+      activeSoloMatch: snapshot,
+      activeSoloMatchUpdatedAt: Date.now(),
+    },
+    { merge: true },
+  );
+}
+
+export async function getPrivateSoloMatch(
+  uid: string,
+): Promise<Record<string, unknown> | null> {
+  const snap = await getDoc(doc(db, "users", uid));
+  if (!snap.exists()) return null;
+  const data = snap.data() as Record<string, unknown>;
+  return (data.activeSoloMatch as Record<string, unknown> | undefined) ?? null;
+}
+
+export async function clearPrivateSoloMatch(uid: string): Promise<void> {
+  await updateDoc(doc(db, "users", uid), {
+    activeSoloMatch: deleteField(),
+    activeSoloMatchUpdatedAt: deleteField(),
+  });
 }
 
 async function upsertLeaderboardEntry(profile: PlayerProfile): Promise<void> {

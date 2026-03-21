@@ -46,7 +46,7 @@ import { getAvailableCards, MAX_DOUBLE_SHOT_USES } from "./gameEngine";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-type BotPersona =
+export type BotPersona =
   | "aggressor" // Pressiona sem parar; prefere tiros e tiro duplo
   | "counter_trap" // Espera o adversário atacar para responder com contra-golpe
   | "ammo_hoarder" // Acumula munição e ataca pesado no momento certo
@@ -66,6 +66,12 @@ interface OpponentAnalysis {
   predictedNextMove: CardType | null;
   isFollowingPattern: boolean;
   consistencyScore: number; // 0–1: how predictable opponent is
+}
+
+export interface BotRuntimeState {
+  activePersona: BotPersona;
+  matchTurnCount: number;
+  opponentAnalysis: OpponentAnalysis;
 }
 
 interface CardOutcome {
@@ -127,6 +133,60 @@ let _opponentAnalysis: OpponentAnalysis = {
   isFollowingPattern: false,
   consistencyScore: 0,
 };
+
+export function exportBotRuntimeState(): BotRuntimeState {
+  return {
+    activePersona: _activePersona,
+    matchTurnCount: _matchTurnCount,
+    opponentAnalysis: { ..._opponentAnalysis },
+  };
+}
+
+export function restoreBotRuntimeState(state: Partial<BotRuntimeState>): void {
+  if (state.activePersona && state.activePersona in PERSONAS) {
+    _activePersona = state.activePersona;
+  }
+  if (typeof state.matchTurnCount === "number" && state.matchTurnCount >= 0) {
+    _matchTurnCount = Math.floor(state.matchTurnCount);
+  }
+  if (state.opponentAnalysis) {
+    _opponentAnalysis = {
+      estimatedAmmo: state.opponentAnalysis.estimatedAmmo ?? 0,
+      lastMoveType: state.opponentAnalysis.lastMoveType ?? null,
+      predictedNextMove: state.opponentAnalysis.predictedNextMove ?? null,
+      isFollowingPattern: state.opponentAnalysis.isFollowingPattern ?? false,
+      consistencyScore: state.opponentAnalysis.consistencyScore ?? 0,
+    };
+  }
+}
+
+export function rebuildBotRuntimeFromHistory(
+  turn: number,
+  playerHistory: CardType[],
+): void {
+  _matchTurnCount = Math.max(0, turn - 1);
+  if (playerHistory.length > 0) {
+    analyzeOpponent(playerHistory, {
+      id: "player",
+      displayName: "player",
+      avatar: "marshal",
+      life: 3,
+      maxLife: 3,
+      ammo: 0,
+      maxAmmo: 3,
+      selectedCard: null,
+      choiceRevealed: false,
+      isAnimating: false,
+      currentAnimation: "idle",
+      wins: 0,
+      dodgeStreak: 0,
+      doubleShotsLeft: MAX_DOUBLE_SHOT_USES,
+      characterClass: "atirador",
+      classMasteryLevel: 1,
+      shieldUsesLeft: 2,
+    });
+  }
+}
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 

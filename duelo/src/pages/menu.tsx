@@ -104,8 +104,8 @@ export default function MenuPage() {
     navigate(`/game/${room.id}`);
   }, [activeOnlineRoom, user, initializeGame, navigate]);
 
-  const handleResumeSolo = () => {
-    const ok = restoreSoloMatch();
+  const handleResumeSolo = async () => {
+    const ok = await restoreSoloMatch();
     if (ok) {
       navigate("/game");
     } else {
