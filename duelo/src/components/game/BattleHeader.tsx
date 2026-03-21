@@ -1,6 +1,10 @@
 import { motion } from "framer-motion";
-import { resolveAvatarPicture } from "../../lib/characters";
-import type { PlayerState } from "../../types";
+import {
+  resolveAvatarPicture,
+  getClassIconSources,
+  CLASS_INFO,
+} from "../../lib/characters";
+import type { PlayerState, CharacterClass } from "../../types";
 
 interface BattleHeaderProps {
   player: PlayerState;
@@ -106,12 +110,14 @@ function PlayerCard({
       className="relative"
     >
       <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden border-2 border-gold/50 shadow-lg">
+        {/* Avatar principal */}
         <img
           src={avatar}
           alt={player.displayName}
           className="w-full h-full object-cover"
         />
       </div>
+
       <div className="absolute -bottom-5 md:-bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
         <span className="text-[10px] md:text-xs font-stats text-sand-light drop-shadow-lg uppercase">
           {player.displayName}
@@ -130,35 +136,103 @@ function HealthBar({
   isOpponent?: boolean;
   hideOpponentAmmo: boolean;
 }) {
-  const healthPercent = (player.life / player.maxLife) * 100;
-  const isLow = healthPercent <= 33;
-  const isCritical = healthPercent <= 15;
+  // Contar quantas vidas (quantos segmentos cheios)
+  const segmentSize = player.maxLife / 4;
+  const filledSegments = Math.ceil(player.life / segmentSize);
+
+  // Dividir vida em 4 segmentos
+  const segments = Array.from({ length: 4 }).map((_, i) => {
+    const segmentStart = i * segmentSize;
+    const segmentEnd = (i + 1) * segmentSize;
+    const segmentLife = Math.max(
+      0,
+      Math.min(player.life, segmentEnd) - segmentStart,
+    );
+    const segmentPercent = (segmentLife / segmentSize) * 100;
+    return segmentPercent;
+  });
+
+  // Determinar cor baseada no número de vidas
+  const getSegmentColor = () => {
+    if (filledSegments === 4) return "from-emerald-600 to-green-400"; // 4 vidas - verde
+    if (filledSegments === 3) return "from-yellow-600 to-yellow-400"; // 3 vidas - amarelo
+    if (filledSegments === 2) return "from-orange-600 to-orange-400"; // 2 vidas - laranja
+    return "from-red-700 to-red-500 animate-pulse"; // 1 vida - vermelho com pulse
+  };
+
+  const classInfo = CLASS_INFO[player.characterClass as CharacterClass];
+  const classIcon = classInfo
+    ? getClassIconSources(player.characterClass as CharacterClass)
+    : null;
 
   return (
     <div
       className={`flex flex-col gap-1 flex-1 ${isOpponent ? "items-end" : "items-start"}`}
     >
-      <div className="relative h-4 md:h-5 w-full bg-black/60 rounded-lg border border-gold/30 overflow-hidden shadow-inner">
-        <motion.div
-          initial={{ width: "100%" }}
-          animate={{ width: `${Math.max(0, Math.min(healthPercent, 100))}%` }}
-          transition={{ duration: 0.5 }}
-          className={`h-full transition-all duration-300 ${
-            isCritical
-              ? "bg-gradient-to-r from-red-700 to-red-500 animate-pulse"
-              : isLow
-                ? "bg-gradient-to-r from-orange-600 to-yellow-500"
-                : "bg-gradient-to-r from-emerald-600 to-green-400"
-          }`}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+      {/* Barra de vida dividida em 4 segmentos */}
+      <div
+        className={`flex gap-1.5 w-full ${isOpponent ? "justify-end" : "justify-start"}`}
+      >
+        {segments.map((segmentPercent, idx) => (
+          <motion.div
+            key={idx}
+            className="flex-1 h-4 md:h-5 relative bg-black/60 rounded-md border border-gold/30 overflow-hidden shadow-inner"
+          >
+            <motion.div
+              initial={{ width: "100%" }}
+              animate={{
+                width: `${Math.max(0, Math.min(segmentPercent, 100))}%`,
+              }}
+              transition={{ duration: 0.5 }}
+              className={`h-full transition-all duration-300 bg-gradient-to-r ${getSegmentColor()}`}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+          </motion.div>
+        ))}
       </div>
 
-      <AmmoIndicator
-        ammo={hideOpponentAmmo && isOpponent ? 0 : player.ammo}
-        maxAmmo={player.maxAmmo}
-        isOpponent={isOpponent}
-      />
+      {/* indicador de munição + ícone de classe */}
+      <div
+        className={`flex items-center gap-1.5 ${isOpponent ? "justify-end" : "justify-start"}`}
+      >
+        {!isOpponent && classIcon && (
+          <div
+            className="w-7 h-7 md:w-8 md:h-8 rounded-lg overflow-hidden border border-gold/40 shadow-md bg-black/40 flex items-center justify-center"
+            title={classInfo?.name}
+          >
+            <picture>
+              <source srcSet={classIcon.webp} type="image/webp" />
+              <img
+                src={classIcon.png}
+                alt={classInfo?.name}
+                className="w-full h-full object-cover"
+              />
+            </picture>
+          </div>
+        )}
+
+        <AmmoIndicator
+          ammo={hideOpponentAmmo && isOpponent ? 0 : player.ammo}
+          maxAmmo={player.maxAmmo}
+          isOpponent={isOpponent}
+        />
+
+        {isOpponent && classIcon && (
+          <div
+            className="w-7 h-7 md:w-8 md:h-8 rounded-lg overflow-hidden border border-gold/40 shadow-md bg-black/40 flex items-center justify-center"
+            title={classInfo?.name}
+          >
+            <picture>
+              <source srcSet={classIcon.webp} type="image/webp" />
+              <img
+                src={classIcon.png}
+                alt={classInfo?.name}
+                className="w-full h-full object-cover"
+              />
+            </picture>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -174,26 +248,64 @@ function AmmoIndicator({
 }) {
   return (
     <div
-      className={`flex gap-1 ${isOpponent ? "justify-end" : "justify-start"}`}
+      className={`flex gap-1.5 ${isOpponent ? "justify-end" : "justify-start"}`}
     >
       {Array.from({ length: maxAmmo }).map((_, i) => (
         <motion.div
           key={i}
           animate={
-            i < ammo ? { scale: [1, 1.15, 1] } : { scale: 1, opacity: 0.35 }
+            i < ammo ? { scale: [1, 1.2, 1] } : { scale: 1, opacity: 0.3 }
           }
           transition={{
             duration: 1.6,
             delay: i * 0.1,
             repeat: i < ammo ? Infinity : 0,
           }}
-          className={`w-1.5 h-4 md:w-2 md:h-5 rounded-full transition-all ${
-            i < ammo
-              ? "bg-gold shadow-[0_0_6px_rgba(212,175,55,0.8)]"
-              : "bg-sand/25"
-          }`}
-          title={i < ammo ? "Bala carregada" : "Sem bala"}
-        />
+          className="relative"
+          title={i < ammo ? "Munição carregada" : "Sem munição"}
+        >
+          {/* Desenho de munição (cartuchos) */}
+          <svg
+            viewBox="0 0 20 36"
+            className={`w-3 h-6 md:w-3.5 md:h-7 transition-all ${
+              i < ammo
+                ? "drop-shadow-[0_0_5px_rgba(212,175,55,0.9)]"
+                : "opacity-30"
+            }`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {/* Ponta (projétil) - Dourada/Laranja */}
+            <g fill={i < ammo ? "#E8A028" : "#B8956F"}>
+              <path d="M 10 2 L 14 8 L 10 10 L 6 8 Z" />
+            </g>
+            {/* Cilindro superior (latão) - Marrom */}
+            <g fill={i < ammo ? "#8B6F47" : "#6B5340"} stroke="none">
+              <rect x="6" y="10" width="8" height="14" rx="1" />
+            </g>
+            {/* Base/cartucho - Marrom mais escuro */}
+            <g fill={i < ammo ? "#6B5340" : "#4A3F32"} stroke="none">
+              <rect x="7" y="24" width="6" height="8" rx="0.5" />
+              <ellipse cx="10" cy="24" rx="3" ry="1.5" />
+              <ellipse cx="10" cy="32" rx="3" ry="1" />
+            </g>
+            {/* Brilho na ponta */}
+            {i < ammo && (
+              <rect
+                x="8.5"
+                y="11"
+                width="1"
+                height="10"
+                fill="#F4D03F"
+                opacity="0.5"
+                rx="0.5"
+              />
+            )}
+          </svg>
+        </motion.div>
       ))}
     </div>
   );
