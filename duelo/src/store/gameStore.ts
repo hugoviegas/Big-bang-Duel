@@ -258,7 +258,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         avatar: opponentAvatar,
         displayName: opponentCharDef.name,
         characterClass: getCharacterClass(opponentAvatar),
-        classMasteryLevel: 1,
+        classMasteryLevel: playerMasteryLevel,
         shieldUsesLeft: 2,
       },
     });
