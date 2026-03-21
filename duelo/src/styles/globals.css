@@ -50,6 +50,10 @@
 }
 
 @layer base {
+  :root {
+    --ios-notch-top: 0px;
+  }
+
   body {
     background-color: var(--color-parchment);
     color: var(--color-black-ink);

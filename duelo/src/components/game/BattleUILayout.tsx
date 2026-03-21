@@ -200,6 +200,7 @@ export function BattleUILayout({
             exit={{ opacity: 0, y: -10, scale: 0.96 }}
             transition={{ duration: 0.25 }}
             className="absolute left-1/2 -translate-x-1/2 top-[145px] md:top-[155px] z-[35] pointer-events-none"
+            style={{ top: "calc(145px + var(--ios-notch-top, 0px))" }}
           >
             <div className="min-w-[220px] md:min-w-[280px] px-4 py-3 rounded-xl border border-gold/45 bg-gradient-to-b from-[#2b1906]/95 to-[#1b1106]/95 shadow-[0_10px_25px_rgba(0,0,0,0.45)] backdrop-blur-sm text-center">
               <div className="font-western text-lg md:text-2xl text-gold tracking-wide leading-tight">

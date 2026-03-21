@@ -29,6 +29,7 @@ export function BattleHeader({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
       className="relative z-20 w-full bg-gradient-to-b from-black/85 via-black/65 to-transparent backdrop-blur-md border-b border-gold/25 py-2 md:py-3 px-3 md:px-6"
+      style={{ paddingTop: "calc(var(--ios-notch-top, 0px) + 0.5rem)" }}
     >
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gold to-transparent" />
 

@@ -43,6 +43,45 @@ function MobilePage({ children }: { children: React.ReactNode }) {
 
 function App() {
   useEffect(() => {
+    const detectIPhoneNotch = () => {
+      const isIPhone = /iPhone/i.test(window.navigator.userAgent);
+      if (!isIPhone) {
+        document.documentElement.classList.remove("ios-notch");
+        document.documentElement.style.setProperty("--ios-notch-top", "0px");
+        return;
+      }
+
+      const probe = document.createElement("div");
+      probe.style.position = "fixed";
+      probe.style.top = "0";
+      probe.style.left = "0";
+      probe.style.visibility = "hidden";
+      probe.style.pointerEvents = "none";
+      probe.style.paddingTop = "env(safe-area-inset-top, 0px)";
+      document.body.appendChild(probe);
+
+      const insetTop = parseFloat(getComputedStyle(probe).paddingTop || "0");
+      probe.remove();
+
+      const hasNotch = insetTop > 0;
+      document.documentElement.classList.toggle("ios-notch", hasNotch);
+      document.documentElement.style.setProperty(
+        "--ios-notch-top",
+        `${hasNotch ? insetTop : 0}px`,
+      );
+    };
+
+    detectIPhoneNotch();
+    window.addEventListener("resize", detectIPhoneNotch);
+    window.addEventListener("orientationchange", detectIPhoneNotch);
+
+    return () => {
+      window.removeEventListener("resize", detectIPhoneNotch);
+      window.removeEventListener("orientationchange", detectIPhoneNotch);
+    };
+  }, []);
+
+  useEffect(() => {
     // Listen to Firebase Auth state changes.
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       const store = useAuthStore.getState();
