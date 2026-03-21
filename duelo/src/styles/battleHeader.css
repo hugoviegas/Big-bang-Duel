@@ -57,28 +57,28 @@
 .battle-nine-top {
   grid-column: 2;
   grid-row: 1;
-  background: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.05));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.05));
   background-size: 100% 100%;
 }
 
 .battle-nine-bottom {
   grid-column: 2;
   grid-row: 3;
-  background: linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.15));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.15));
   background-size: 100% 100%;
 }
 
 .battle-nine-left {
   grid-column: 1;
   grid-row: 2;
-  background: linear-gradient(90deg, rgba(0,0,0,0.12), rgba(0,0,0,0.02));
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.02));
   background-size: 100% 100%;
 }
 
 .battle-nine-right {
   grid-column: 3;
   grid-row: 2;
-  background: linear-gradient(90deg, rgba(0,0,0,0.02), rgba(0,0,0,0.12));
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.12));
   background-size: 100% 100%;
 }
 
