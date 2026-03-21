@@ -116,16 +116,24 @@ function AchievementCard({
                 {progress.level}/{def.tiers.length}
               </span>
               {isMaxLevel && (
-                <span title="Concluída" className="ml-1 inline-flex items-center text-emerald-300 bg-emerald-900/20 border border-emerald-600/30 rounded-full px-2 py-0.5 text-xs">
+                <span
+                  title="Concluída"
+                  className="ml-1 inline-flex items-center text-emerald-300 bg-emerald-900/20 border border-emerald-600/30 rounded-full px-2 py-0.5 text-xs"
+                >
                   ✓
                 </span>
               )}
               {hasUnclaimedReward && (
-                <span className="ml-2 w-3 h-3 bg-red-600 rounded-full inline-block ring-2 ring-black animate-pulse" title="Recompensa disponível" />
+                <span
+                  className="ml-2 w-3 h-3 bg-red-600 rounded-full inline-block ring-2 ring-black animate-pulse"
+                  title="Recompensa disponível"
+                />
               )}
             </div>
           </div>
-          <p className="text-sm md:text-base text-amber-200/90 mt-1 line-clamp-1">{currentLabel}</p>
+          <p className="text-sm md:text-base text-amber-200/90 mt-1 line-clamp-1">
+            {currentLabel}
+          </p>
         </div>
 
         {/* Expand indicator */}
@@ -185,23 +193,23 @@ function AchievementCard({
 
           {/* Tier indicators */}
           <div className="grid grid-cols-5 gap-1.5">
-        {def.tiers.map((tier, i) => {
-          const unlocked = progress.level > i;
-          const claimed = progress.claimedLevel > i;
-          return (
-            <div
-              key={i}
-              title={`${tier.label}: ${tier.description}`}
-              className={`h-2.5 rounded-full ${
-                unlocked
-                  ? claimed
-                    ? "bg-emerald-400"
-                    : "bg-amber-300 animate-pulse"
-                  : "bg-zinc-600"
-              }`}
-            />
-          );
-        })}
+            {def.tiers.map((tier, i) => {
+              const unlocked = progress.level > i;
+              const claimed = progress.claimedLevel > i;
+              return (
+                <div
+                  key={i}
+                  title={`${tier.label}: ${tier.description}`}
+                  className={`h-2.5 rounded-full ${
+                    unlocked
+                      ? claimed
+                        ? "bg-emerald-400"
+                        : "bg-amber-300 animate-pulse"
+                      : "bg-zinc-600"
+                  }`}
+                />
+              );
+            })}
           </div>
 
           {/* Claim button */}
@@ -212,7 +220,9 @@ function AchievementCard({
                 : "bg-gray-700/50 text-gray-400 cursor-default"
             }`}
             disabled={claiming !== null}
-            onClick={() => hasUnclaimedReward && onClaim(def.id, progress.level - 1)}
+            onClick={() =>
+              hasUnclaimedReward && onClaim(def.id, progress.level - 1)
+            }
           >
             {claiming === def.id
               ? "Resgatando..."
@@ -343,58 +353,70 @@ export default function AchievementsPage() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-r from-amber-950/30 via-stone-900/80 to-black/80 p-4 md:p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              className="text-gold hover:text-yellow-300 transition-colors"
-              onClick={() => navigate(-1)}
-              aria-label="Voltar"
-            >
-              <svg viewBox="0 0 24 24" className="w-7 h-7">
-                <path
-                  fill="currentColor"
-                  d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"
-                />
-              </svg>
-            </button>
-            <div>
-              <h1 className="font-western text-3xl md:text-4xl text-gold leading-none">
-                Conquistas
-              </h1>
-              <p className="text-sm md:text-base text-stone-200 mt-2">
-                Acompanhe seu progresso, objetivos e recompensas em tempo real.
-              </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                className="text-gold hover:text-yellow-300 transition-colors"
+                onClick={() => navigate(-1)}
+                aria-label="Voltar"
+              >
+                <svg viewBox="0 0 24 24" className="w-7 h-7">
+                  <path
+                    fill="currentColor"
+                    d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"
+                  />
+                </svg>
+              </button>
+              <div>
+                <h1 className="font-western text-3xl md:text-4xl text-gold leading-none">
+                  Conquistas
+                </h1>
+                <p className="text-sm md:text-base text-stone-200 mt-2">
+                  Acompanhe seu progresso, objetivos e recompensas em tempo
+                  real.
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="rounded-xl border border-amber-500/40 bg-black/35 px-3 py-2 text-sm md:text-base text-stone-100">
-              Concluidas: <span className="text-amber-300 font-semibold">{totalCompleted}</span>/{ACHIEVEMENTS.length}
-            </div>
-            <div className="rounded-xl border border-red-500/40 bg-black/35 px-3 py-2 text-sm md:text-base text-stone-100">
-              Pendentes: <span className="text-red-300 font-semibold">{totalUnclaimed}</span>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="rounded-xl border border-amber-500/40 bg-black/35 px-3 py-2 text-sm md:text-base text-stone-100">
+                Concluidas:{" "}
+                <span className="text-amber-300 font-semibold">
+                  {totalCompleted}
+                </span>
+                /{ACHIEVEMENTS.length}
+              </div>
+              <div className="rounded-xl border border-red-500/40 bg-black/35 px-3 py-2 text-sm md:text-base text-stone-100">
+                Pendentes:{" "}
+                <span className="text-red-300 font-semibold">
+                  {totalUnclaimed}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
         </div>
 
         {/* Toast message */}
         {claimMsg && (
-        <div
-          className={`mb-5 px-4 py-3 rounded-xl text-sm md:text-base font-medium ${
-            claimMsg.type === "success"
-              ? "bg-green-800/70 text-green-300 border border-green-600/50"
-              : "bg-red-800/70 text-red-300 border border-red-600/50"
-          }`}
-        >
-          {claimMsg.text}
-        </div>
+          <div
+            className={`mb-5 px-4 py-3 rounded-xl text-sm md:text-base font-medium ${
+              claimMsg.type === "success"
+                ? "bg-green-800/70 text-green-300 border border-green-600/50"
+                : "bg-red-800/70 text-red-300 border border-red-600/50"
+            }`}
+          >
+            {claimMsg.text}
+          </div>
         )}
 
         {/* Achievements grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {sortedAchievements.map((def, idx) => {
-            const p = allProgress[def.id] ?? { level: 0, progress: 0, claimedLevel: 0 };
+          {sortedAchievements.map((def) => {
+            const p = allProgress[def.id] ?? {
+              level: 0,
+              progress: 0,
+              claimedLevel: 0,
+            };
             const hasUnclaimed = p.level > p.claimedLevel;
             return (
               <AchievementCard
