@@ -283,6 +283,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       setTimeout(() => {
         const currentState = get();
         if (currentState.phase !== "selecting") return;
+        // If opponent already pre-decided a card (bot decided after last round),
+        // do not re-decide when the player selects a card. This prevents the
+        // bot from changing its choice on each player interaction.
+        if (currentState.opponent.selectedCard) return;
+
         const pHistory = currentState.history.map((h) => h.playerCard);
         const botCard = botChooseCard(
           currentState.opponent,
@@ -608,6 +613,23 @@ export const useGameStore = create<GameStore>()((set, get) => ({
             },
           }));
           if (!afterAnimState.isOnline) _persistSoloState(get());
+          // Solo mode: let the bot pre-decide immediately after the round ends
+          // so the decision is stable and visible before the player picks.
+          if (!afterAnimState.isOnline) {
+            const pHistory = get().history.map((h) => h.playerCard);
+            const predecided = botChooseCard(
+              get().opponent,
+              pHistory,
+              get().mode,
+              get().player,
+            );
+            // Only set if not already chosen by other logic
+            if (!get().opponent.selectedCard) {
+              set({
+                opponent: { ...get().opponent, selectedCard: predecided },
+              });
+            }
+          }
         }
       }, 3000);
     }, 1200);

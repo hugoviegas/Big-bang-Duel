@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "runs": 100,
+    "mode": "advanced"
+  },
+  "agg": {
+    "aggressor_vs_punisher": {
+      "runs": 100,
+      "winsA": 44,
+      "winsB": 36,
+      "avgTurns": 14.7,
+      "badMoves": {
+        "A": 434,
+        "B": 518
+      }
+    },
+    "aggressor_vs_counter_trap": {
+      "runs": 100,
+      "winsA": 36,
+      "winsB": 49,
+      "avgTurns": 13.23,
+      "badMoves": {
+        "A": 411,
+        "B": 413
+      }
+    },
+    "ammo_hoarder_vs_punisher": {
+      "runs": 100,
+      "winsA": 42,
+      "winsB": 33,
+      "avgTurns": 13.56,
+      "badMoves": {
+        "A": 415,
+        "B": 436
+      }
+    }
+  }
+}
