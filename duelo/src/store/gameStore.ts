@@ -255,11 +255,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       opponent: {
         ...initialState.opponent,
         id: isOnline
-          ? (isHost
-              ? currentUser?.uid
-                ? `pending_guest_for_${currentUser.uid}`
-                : "pending_guest"
-              : "pending_host")
+          ? isHost
+            ? currentUser?.uid
+              ? `pending_guest_for_${currentUser.uid}`
+              : "pending_guest"
+            : "pending_host"
           : initialState.opponent.id,
         life,
         maxLife: life,
@@ -358,6 +358,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         state.opponent.classMasteryLevel ?? 1,
         state.player.shieldUsesLeft,
         state.opponent.shieldUsesLeft,
+        state.player.doubleShotsLeft,
+        state.opponent.doubleShotsLeft,
         pLife,
         oLife,
         state.player.maxLife,
@@ -384,6 +386,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           guestAbilityTriggered: result.opponentAbilityTriggered ?? null,
           hostShieldUsed: result.playerShieldUsed ?? false,
           guestShieldUsed: result.opponentShieldUsed ?? false,
+          hostDoubleShotReloaded: result.playerDoubleShotReloaded ?? false,
+          guestDoubleShotReloaded: result.opponentDoubleShotReloaded ?? false,
         },
       }).catch((e) =>
         console.error("[resolveTurn] RTDB lastTurnResult write error:", e),
@@ -444,14 +448,17 @@ export const useGameStore = create<GameStore>()((set, get) => ({
                 (currentState.player.dodgeStreak ?? 0) + 1,
               )
             : 0,
-        doubleShotsLeft:
-          pCard === "double_shot"
+        doubleShotsLeft: Math.min(
+          3,
+          (pCard === "double_shot"
             ? Math.max(
                 0,
                 (currentState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES) -
                   1,
               )
-            : (currentState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES),
+            : (currentState.player.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES)) +
+            (result.playerDoubleShotReloaded ? 1 : 0),
+        ),
         shieldUsesLeft: result.playerShieldUsed
           ? Math.max(0, (currentState.player.shieldUsesLeft ?? 2) - 1)
           : (currentState.player.shieldUsesLeft ?? 2),
@@ -469,14 +476,17 @@ export const useGameStore = create<GameStore>()((set, get) => ({
                 (currentState.opponent.dodgeStreak ?? 0) + 1,
               )
             : 0,
-        doubleShotsLeft:
-          oCard === "double_shot"
+        doubleShotsLeft: Math.min(
+          3,
+          (oCard === "double_shot"
             ? Math.max(
                 0,
                 (currentState.opponent.doubleShotsLeft ??
                   MAX_DOUBLE_SHOT_USES) - 1,
               )
-            : (currentState.opponent.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES),
+            : (currentState.opponent.doubleShotsLeft ?? MAX_DOUBLE_SHOT_USES)) +
+            (result.opponentDoubleShotReloaded ? 1 : 0),
+        ),
         shieldUsesLeft: result.opponentShieldUsed
           ? Math.max(0, (currentState.opponent.shieldUsesLeft ?? 2) - 1)
           : (currentState.opponent.shieldUsesLeft ?? 2),
@@ -779,6 +789,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               opponentAbilityTriggered: htr.hostAbilityTriggered || undefined,
               playerShieldUsed: htr.guestShieldUsed ?? false,
               opponentShieldUsed: htr.hostShieldUsed ?? false,
+              playerDoubleShotReloaded: htr.guestDoubleShotReloaded ?? false,
+              opponentDoubleShotReloaded: htr.hostDoubleShotReloaded ?? false,
             };
             _waitingForHostResult = false;
             setTimeout(() => get().resolveTurn(), 100);
@@ -821,6 +833,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           opponentAbilityTriggered: htr.hostAbilityTriggered || undefined,
           playerShieldUsed: htr.guestShieldUsed ?? false,
           opponentShieldUsed: htr.hostShieldUsed ?? false,
+          playerDoubleShotReloaded: htr.guestDoubleShotReloaded ?? false,
+          opponentDoubleShotReloaded: htr.hostDoubleShotReloaded ?? false,
         };
         _waitingForHostResult = false;
 

@@ -83,7 +83,7 @@ export const CLASS_INFO: Record<
     name: "Sanguinário",
     abilityName: "Bala Fantasma",
     description:
-      "Ao usar Tiro Duplo, tem {chance}% de consumir apenas 1 munição. A chance escala com a maestria da classe.",
+      "Ao usar qualquer carta, tem {chance}% de recarregar 1 carga de Tiro Duplo (máx 2x por partida). Nunca ultrapassa 3 cargas ao mesmo tempo.",
     iconWebp: "/assets/class_icons/sanguinario_icon.webp",
     iconPng: "/assets/class_icons/png/sanguinario_icon.png",
     color: "text-orange-400",

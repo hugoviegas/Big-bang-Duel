@@ -95,7 +95,7 @@ const CLASS_MASTERY_ABILITY_CHANCE: Record<CharacterClass, readonly number[]> =
     sorrateiro: [0.03, 0.06, 0.09, 0.12, 0.15],
     ricochete: [0.06, 0.12, 0.18, 0.24, 0.3],
     suporte: [0.03, 0.06, 0.09, 0.12, 0.15],
-    sanguinario: [0.08, 0.16, 0.24, 0.32, 0.4],
+    sanguinario: [0.03, 0.06, 0.09, 0.12, 0.15],
   };
 
 const CHARACTER_UNLOCK_RULES: Record<string, CharacterUnlockRule> = {

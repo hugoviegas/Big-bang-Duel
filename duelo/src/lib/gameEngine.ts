@@ -57,8 +57,8 @@ export function checkWinner(
  *
  * @param pClass   - player's character class (for ability rolls)
  * @param oClass   - opponent's character class (for ability rolls)
- * @param pShields - player's remaining Curandeiro passive uses this match
- * @param oShields - opponent's remaining Curandeiro passive uses this match
+ * @param pShields - player's remaining capped passive uses this match
+ * @param oShields - opponent's remaining capped passive uses this match
  */
 export function resolveCards(
   pCard: CardType,
@@ -73,6 +73,8 @@ export function resolveCards(
   oMasteryLevel: number = 1,
   pShields: number = 0,
   oShields: number = 0,
+  pDoubleShotsLeft?: number,
+  oDoubleShotsLeft?: number,
   pLifeCurrent?: number,
   oLifeCurrent?: number,
   pMaxLife?: number,
@@ -196,6 +198,8 @@ export function resolveCards(
   let opponentAbilityTriggered: string | undefined;
   let playerShieldUsed = false;
   let opponentShieldUsed = false;
+  let playerDoubleShotReloaded = false;
+  let opponentDoubleShotReloaded = false;
 
   const playerChance = pClass
     ? getClassAbilityChance(pClass, pMasteryLevel)
@@ -302,20 +306,26 @@ export function resolveCards(
   }
 
   // ── SANGUINÁRIO: Bala Fantasma ───────────────────────────────────────────
-  // When using double_shot, chance to consume only 1 ammo instead of 2.
-  // (base cost was already set to -2; adding +1 makes it effectively -1)
-  if (pClass === "sanguinario" && pCard === "double_shot") {
+  // On any card, chance to recover 1 double_shot stack.
+  // Limited to 2 activations per match (reuses pShields/oShields cap)
+  // and never exceeds 3 stacks at once.
+  const safePDoubleShotsLeft = pDoubleShotsLeft ?? MAX_DOUBLE_SHOT_USES;
+  const safeODoubleShotsLeft = oDoubleShotsLeft ?? MAX_DOUBLE_SHOT_USES;
+
+  if (pClass === "sanguinario" && pShields > 0 && safePDoubleShotsLeft < 3) {
     if (Math.random() < playerChance) {
-      actualPAmmoChange += 1; // offsets one bullet of the -2 cost
+      playerShieldUsed = true;
+      playerDoubleShotReloaded = true;
       playerAbilityTriggered = "Bala Fantasma";
-      narrative += " BALA FANTASMA! Apenas 1 munição consumida!";
+      narrative += " BALA FANTASMA! Você recuperou 1 carga de Tiro Duplo!";
     }
   }
-  if (oClass === "sanguinario" && oCard === "double_shot") {
+  if (oClass === "sanguinario" && oShields > 0 && safeODoubleShotsLeft < 3) {
     if (Math.random() < opponentChance) {
-      actualOAmmoChange += 1;
+      opponentShieldUsed = true;
+      opponentDoubleShotReloaded = true;
       opponentAbilityTriggered = "Bala Fantasma";
-      narrative += " BALA FANTASMA do oponente!";
+      narrative += " BALA FANTASMA do oponente! +1 carga de Tiro Duplo!";
     }
   }
 
@@ -327,11 +337,7 @@ export function resolveCards(
   const safePMaxLife = pMaxLife ?? safePLifeCurrent;
   const safeOMaxLife = oMaxLife ?? safeOLifeCurrent;
 
-  if (
-    pClass === "suporte" &&
-    pShields > 0 &&
-    safePLifeCurrent < safePMaxLife
-  ) {
+  if (pClass === "suporte" && pShields > 0 && safePLifeCurrent < safePMaxLife) {
     if (Math.random() < playerChance) {
       // Negative life loss means net healing, clamped by state layer max life.
       pLifeLost -= 1;
@@ -340,11 +346,7 @@ export function resolveCards(
       narrative += " CURA ATIVADA! Você recuperou 1 HP!";
     }
   }
-  if (
-    oClass === "suporte" &&
-    oShields > 0 &&
-    safeOLifeCurrent < safeOMaxLife
-  ) {
+  if (oClass === "suporte" && oShields > 0 && safeOLifeCurrent < safeOMaxLife) {
     if (Math.random() < opponentChance) {
       oLifeLost -= 1;
       opponentShieldUsed = true;
@@ -366,5 +368,7 @@ export function resolveCards(
     opponentAbilityTriggered,
     playerShieldUsed,
     opponentShieldUsed,
+    playerDoubleShotReloaded,
+    opponentDoubleShotReloaded,
   };
 }

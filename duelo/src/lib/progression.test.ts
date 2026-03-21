@@ -167,8 +167,8 @@ describe("progression - Class mastery", () => {
     expect(getClassAbilityChance("suporte", 1)).toBe(0.03);
     expect(getClassAbilityChance("suporte", 5)).toBe(0.15);
 
-    expect(getClassAbilityChance("sanguinario", 1)).toBe(0.08);
-    expect(getClassAbilityChance("sanguinario", 5)).toBe(0.4);
+    expect(getClassAbilityChance("sanguinario", 1)).toBe(0.03);
+    expect(getClassAbilityChance("sanguinario", 5)).toBe(0.15);
   });
 });
 

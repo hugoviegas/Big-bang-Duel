@@ -8,7 +8,7 @@ export type AttackTimer = 2 | 3 | 5 | 10 | 30;
  *  - estrategista: recarga tem chance de dar +2 munições ao invés de +1.
  *  - sorrateiro:   qualquer carta tem chance de esquivar de tiros inimigos.
  *  - ricochete:    contra-golpe tem chance de dobrar o dano de retorno.
- *  - sanguinario:  tiro duplo tem chance de consumir apenas 1 munição.
+ *  - sanguinario:  qualquer carta tem chance de recarregar 1 carga de tiro duplo (máx 2x por partida).
  *  - suporte:      Curandeiro: ao usar qualquer carta tem chance de recuperar 1 HP (máx 2x por partida).
  */
 export type CharacterClass =
@@ -84,7 +84,7 @@ export interface PlayerState {
   doubleShotsLeft: number; // remaining double_shot uses this round (max 3)
   characterClass: CharacterClass; // passive ability class
   classMasteryLevel?: number; // passive ability mastery level (1-5)
-  shieldUsesLeft: number; // Curandeiro class: remaining heal activations this match (max 2)
+  shieldUsesLeft: number; // remaining capped passive activations this match (Curandeiro/Sanguinário, max 2)
   avatarPicture?: string; // custom profile picture (independent of character)
 }
 
@@ -126,10 +126,14 @@ export interface TurnResult {
   playerAbilityTriggered?: string;
   /** Name of the ability that triggered this turn for the opponent. */
   opponentAbilityTriggered?: string;
-  /** True if the player's Curandeiro passive was used this turn. */
+  /** True if the player's capped passive was used this turn (Curandeiro/Sanguinário). */
   playerShieldUsed?: boolean;
-  /** True if the opponent's Curandeiro passive was used this turn. */
+  /** True if the opponent's capped passive was used this turn (Curandeiro/Sanguinário). */
   opponentShieldUsed?: boolean;
+  /** True if the player recovered 1 double_shot stack from Sanguinário passive. */
+  playerDoubleShotReloaded?: boolean;
+  /** True if the opponent recovered 1 double_shot stack from Sanguinário passive. */
+  opponentDoubleShotReloaded?: boolean;
 }
 
 /** Unique player code in format #XXXXXXXX (hex uppercase). */
@@ -407,6 +411,8 @@ export interface Room {
     guestAbilityTriggered?: string | null;
     hostShieldUsed?: boolean;
     guestShieldUsed?: boolean;
+    hostDoubleShotReloaded?: boolean;
+    guestDoubleShotReloaded?: boolean;
   };
   // Reconnect window: set when a player leaves; cleared when they rejoin
   hostLeftAt?: number;
