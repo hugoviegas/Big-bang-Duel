@@ -29,56 +29,56 @@
 .battle-nine-tl {
   grid-column: 1;
   grid-row: 1;
-  background-image: url("/assets/ui/battle_header/corner_TL.png");
+  background-image: url("/assets/ui/battle_header/corner_TL.webp");
   background-size: 100% 100%;
 }
 
 .battle-nine-tr {
   grid-column: 3;
   grid-row: 1;
-  background-image: url("/assets/ui/battle_header/corner_TR.png");
+  background-image: url("/assets/ui/battle_header/corner_TR.webp");
   background-size: 100% 100%;
 }
 
 .battle-nine-bl {
   grid-column: 1;
   grid-row: 3;
-  background-image: url("/assets/ui/battle_header/corner_BL.png");
+  background-image: url("/assets/ui/battle_header/corner_BL.webp");
   background-size: 100% 100%;
 }
 
 .battle-nine-br {
   grid-column: 3;
   grid-row: 3;
-  background-image: url("/assets/ui/battle_header/corner_BR.png");
+  background-image: url("/assets/ui/battle_header/corner_BR.webp");
   background-size: 100% 100%;
 }
 
 .battle-nine-top {
   grid-column: 2;
   grid-row: 1;
-  background-image: url("/assets/ui/battle_header/edge_top.png");
+  background-image: url("/assets/ui/battle_header/edge_top.webp");
   background-size: 100% 100%;
 }
 
 .battle-nine-bottom {
   grid-column: 2;
   grid-row: 3;
-  background-image: url("/assets/ui/battle_header/edge_bottom.png");
+  background-image: url("/assets/ui/battle_header/edge_bottom.webp");
   background-size: 100% 100%;
 }
 
 .battle-nine-left {
   grid-column: 1;
   grid-row: 2;
-  background-image: url("/assets/ui/battle_header/edge_left.png");
+  background-image: url("/assets/ui/battle_header/edge_left.webp");
   background-size: 100% 100%;
 }
 
 .battle-nine-right {
   grid-column: 3;
   grid-row: 2;
-  background-image: url("/assets/ui/battle_header/edge_right.png");
+  background-image: url("/assets/ui/battle_header/edge_right.webp");
   background-size: 100% 100%;
 }
 
@@ -86,7 +86,7 @@
   grid-column: 2;
   grid-row: 2;
   position: relative;
-  background-image: url("/assets/ui/battle_header/center.png");
+  background-image: url("/assets/ui/battle_header/center.webp");
   background-size: 100% 100%;
   overflow: hidden;
 }
