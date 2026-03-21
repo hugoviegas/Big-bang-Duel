@@ -33,14 +33,13 @@ const charVariants = {
   counter: { scale: [1, 1.2, 0.95, 1.1, 1], transition: { duration: 0.5 } },
 };
 
-export function Character({
-  player,
-  isRight: _isRight = false,
-}: CharacterProps) {
+export function Character({ player, isRight = false }: CharacterProps) {
   const imgSrc = getCharacterImage(player.avatar);
 
   return (
-    <div className="relative flex flex-col items-center justify-end">
+    <div
+      className={`relative flex flex-col items-center justify-end ${isRight ? "translate-x-0.5 md:translate-x-1" : "-translate-x-0.5 md:-translate-x-1"}`}
+    >
       <motion.img
         key={player.avatar + "-" + player.life}
         src={imgSrc}
@@ -48,10 +47,10 @@ export function Character({
         variants={charVariants}
         animate={player.currentAnimation}
         initial="idle"
-        className="w-[35vw] max-w-[180px] sm:max-w-[220px] md:max-w-[260px] aspect-[3/4] object-contain filter drop-shadow-2xl z-10"
+        className="w-[42vw] max-w-[188px] sm:max-w-[230px] md:max-w-[275px] lg:max-w-[320px] aspect-[3/4] object-cover rounded-md filter drop-shadow-2xl z-10"
       />
       {/* Shadow under character */}
-      <div className="w-[20vw] max-w-[90px] h-2 sm:h-3 bg-black/30 rounded-full blur-sm -mt-1 sm:-mt-2" />
+      <div className="w-[23vw] max-w-[110px] h-2 sm:h-3 bg-black/30 rounded-full blur-sm -mt-1 sm:-mt-2" />
     </div>
   );
 }

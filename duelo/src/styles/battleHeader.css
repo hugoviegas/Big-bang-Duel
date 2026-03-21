@@ -29,56 +29,56 @@
 .battle-nine-tl {
   grid-column: 1;
   grid-row: 1;
-  background-image: url("/assets/ui/battle_header/corner_TL.png");
+  background: linear-gradient(135deg, #6b3410 0%, #3b2010 100%);
   background-size: 100% 100%;
 }
 
 .battle-nine-tr {
   grid-column: 3;
   grid-row: 1;
-  background-image: url("/assets/ui/battle_header/corner_TR.png");
+  background: linear-gradient(45deg, #6b3410 0%, #3b2010 100%);
   background-size: 100% 100%;
 }
 
 .battle-nine-bl {
   grid-column: 1;
   grid-row: 3;
-  background-image: url("/assets/ui/battle_header/corner_BL.png");
+  background: linear-gradient(225deg, #6b3410 0%, #3b2010 100%);
   background-size: 100% 100%;
 }
 
 .battle-nine-br {
   grid-column: 3;
   grid-row: 3;
-  background-image: url("/assets/ui/battle_header/corner_BR.png");
+  background: linear-gradient(315deg, #6b3410 0%, #3b2010 100%);
   background-size: 100% 100%;
 }
 
 .battle-nine-top {
   grid-column: 2;
   grid-row: 1;
-  background-image: url("/assets/ui/battle_header/edge_top.png");
+  background: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.05));
   background-size: 100% 100%;
 }
 
 .battle-nine-bottom {
   grid-column: 2;
   grid-row: 3;
-  background-image: url("/assets/ui/battle_header/edge_bottom.png");
+  background: linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.15));
   background-size: 100% 100%;
 }
 
 .battle-nine-left {
   grid-column: 1;
   grid-row: 2;
-  background-image: url("/assets/ui/battle_header/edge_left.png");
+  background: linear-gradient(90deg, rgba(0,0,0,0.12), rgba(0,0,0,0.02));
   background-size: 100% 100%;
 }
 
 .battle-nine-right {
   grid-column: 3;
   grid-row: 2;
-  background-image: url("/assets/ui/battle_header/edge_right.png");
+  background: linear-gradient(90deg, rgba(0,0,0,0.02), rgba(0,0,0,0.12));
   background-size: 100% 100%;
 }
 
@@ -86,7 +86,7 @@
   grid-column: 2;
   grid-row: 2;
   position: relative;
-  background-image: url("/assets/ui/battle_header/center.png");
+  background: linear-gradient(180deg, #3b2010 0%, #6b3410 100%);
   background-size: 100% 100%;
   overflow: hidden;
 }

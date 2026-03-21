@@ -1,34 +1,15 @@
 import { useEffect, useState } from "react";
 import { useGameStore } from "../../store/gameStore";
-import { Character } from "./Character";
-import { CardHand } from "./CardHand";
-import { TurnResultOverlay } from "./TurnResult";
-import { GameOver } from "./GameOver";
-import { GamePauseMenu } from "./GamePauseMenu";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMatchSync } from "../../hooks/useFirebase";
 import { useFirebaseRoom } from "../../hooks/useFirebase";
-import { WoodenBattleHeader } from "./WoodenBattleHeader";
 import { ref, get as rtdbGet } from "firebase/database";
 import { rtdb } from "../../lib/firebase";
 import { useAuthStore } from "../../store/authStore";
+import { BattleUILayout } from "./BattleUILayout";
 
 export function GameArena() {
-  const {
-    player,
-    opponent,
-    turn,
-    phase,
-    lastResult,
-    isOnline,
-    roomStatus,
-    bestOf3,
-    playerStars,
-    opponentStars,
-    currentRound,
-    roundWinnerId,
-    hideOpponentAmmo,
-  } = useGameStore();
+  const { opponent, phase, lastResult, isOnline, roomStatus } = useGameStore();
   const navigate = useNavigate();
   const { roomId } = useParams<{ roomId?: string }>();
 
@@ -46,7 +27,6 @@ export function GameArena() {
       return;
     }
 
-    // Mark intentional leave so the auto-reconnect in menu.tsx doesn't fire
     sessionStorage.setItem(`bbd_left_${roomId}`, "1");
 
     try {
@@ -63,18 +43,15 @@ export function GameArena() {
     navigate("/menu");
   };
 
-  // Guard: if we land on /game without a roomId (solo) while state is idle, redirect to menu
   useEffect(() => {
     if (!roomId && useGameStore.getState().phase === "idle") {
       navigate("/menu", { replace: true });
     }
   }, [roomId, navigate]);
 
-  // Track previous room status to detect entry
   useEffect(() => {
     if (roomStatus === "in_progress" && opponent.displayName !== "El Diablo") {
-      // Just joined
-      setShowJoinMessage(true);
+      requestAnimationFrame(() => setShowJoinMessage(true));
       const t = setTimeout(() => setShowJoinMessage(false), 3000);
       return () => clearTimeout(t);
     }
@@ -104,7 +81,6 @@ export function GameArena() {
           console.log("Share failed:", err);
         }
       } else {
-        // Fallback to copy link
         navigator.clipboard.writeText(shareUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -117,9 +93,7 @@ export function GameArena() {
     const checkAndJoin = async () => {
       const state = useGameStore.getState();
 
-      // If we have a roomId but the game isn't initialized
       if (roomId && state.phase === "idle") {
-        // Read room data first to determine mode and role
         const roomRef = ref(rtdb, `rooms/${roomId}`);
         const snap = await rtdbGet(roomRef);
         if (!snap.exists()) return;
@@ -132,7 +106,6 @@ export function GameArena() {
           ? (roomData.hostAvatar ?? "marshal")
           : (roomData.guestAvatar ?? user?.avatar ?? "marshal");
 
-        // Try to join (or verify already in)
         const success = await joinRoom(roomId);
         if (success) {
           state.initializeGame(
@@ -180,7 +153,7 @@ export function GameArena() {
 
   return (
     <div
-      className={`relative w-full min-h-[100svh] bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center overflow-hidden ${isShaking ? "screen-shake" : ""}`}
+      className={`relative w-full h-[100svh] bg-[url('/assets/ui/bg_desert_portrait.webp')] md:bg-[url('/assets/ui/bg_desert_landscape.webp')] bg-cover bg-center overflow-hidden ${isShaking ? "screen-shake" : ""}`}
     >
       {/* Atmosphere overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none" />
@@ -200,37 +173,26 @@ export function GameArena() {
         />
       ))}
 
-      {/* Main Layout */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col h-[100svh] pb-[180px] sm:pb-[200px]">
-        <WoodenBattleHeader
-          player={player}
-          opponent={opponent}
-          bestOf3={bestOf3}
-          playerStars={playerStars}
-          opponentStars={opponentStars}
-          currentRound={currentRound}
-          turn={turn}
-          hideOpponentAmmo={hideOpponentAmmo}
-          onPause={() => {
-            if (!isOnline) {
-              setShowPauseMenu(true);
-            } else {
+      {/* New Modern Battle UI */}
+      <div className="relative z-10 w-full h-full">
+        <BattleUILayout
+          isOnline={isOnline}
+          roomStatus={roomStatus}
+          onPause={() => setShowPauseMenu(true)}
+          onQuit={() => {
+            if (isOnline) {
               void handleBackToMenuOnline();
+              return;
             }
+            useGameStore.getState().quitGame();
+            navigate("/menu");
           }}
+          showPauseMenu={showPauseMenu}
+          setShowPauseMenu={setShowPauseMenu}
         />
-
-        {/* ===== ARENA — CHARACTERS ===== */}
-        <div className="flex-1 flex items-center justify-between px-3 sm:px-6 md:px-12 lg:px-16 relative">
-          <Character player={player} />
-          <Character player={opponent} isRight />
-        </div>
       </div>
 
-      {/* ===== CARD HAND (Fixed Bottom) ===== */}
-      {!(isOnline && roomStatus === "waiting") && <CardHand />}
-
-      {/* ===== OVERLAYS ===== */}
+      {/* Join message overlay */}
       {showJoinMessage && (
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 z-50 animate-fade-up bg-black/80 backdrop-blur-sm border-2 border-gold px-8 py-3 rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.4)] pointer-events-none">
           <span className="font-western text-gold text-xl md:text-2xl text-glow-gold">
@@ -239,88 +201,7 @@ export function GameArena() {
         </div>
       )}
 
-      {(phase === "resolving" || phase === "animating") && lastResult && (
-        <TurnResultOverlay result={lastResult} />
-      )}
-      {phase === "game_over" && <GameOver />}
-
-      {/* ROUND OVER interstitial (best-of-3) */}
-      {phase === "round_over" && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md pointer-events-none">
-          <div className="flex flex-col items-center gap-4 animate-fade-up">
-            {roundWinnerId === player.id ? (
-              <>
-                <span className="font-western text-5xl text-green-400 text-glow-gold">
-                  ROUND VENCIDO!
-                </span>
-                <span className="font-stats text-sand/70 uppercase tracking-widest text-sm">
-                  Próximo round em breve...
-                </span>
-              </>
-            ) : roundWinnerId === opponent.id ? (
-              <>
-                <span className="font-western text-5xl text-red-400">
-                  ROUND PERDIDO!
-                </span>
-                <span className="font-stats text-sand/70 uppercase tracking-widest text-sm">
-                  Próximo round em breve...
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="font-western text-5xl text-gold">EMPATE!</span>
-                <span className="font-stats text-sand/70 uppercase tracking-widest text-sm">
-                  Próximo round em breve...
-                </span>
-              </>
-            )}
-            {/* Stars recap */}
-            <div className="flex items-center gap-6 mt-2">
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-stats text-[10px] text-sand/50 uppercase">
-                  {player.displayName}
-                </span>
-                <div className="flex gap-1">
-                  {[0, 1].map((i) => (
-                    <svg
-                      key={i}
-                      viewBox="0 0 24 24"
-                      className={`w-6 h-6 ${i < playerStars ? "text-gold" : "text-sand/20"}`}
-                    >
-                      <path
-                        fill="currentColor"
-                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                      />
-                    </svg>
-                  ))}
-                </div>
-              </div>
-              <span className="font-western text-gold/50 text-xl">VS</span>
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-stats text-[10px] text-sand/50 uppercase">
-                  {opponent.displayName}
-                </span>
-                <div className="flex gap-1">
-                  {[0, 1].map((i) => (
-                    <svg
-                      key={i}
-                      viewBox="0 0 24 24"
-                      className={`w-6 h-6 ${i < opponentStars ? "text-red-400" : "text-sand/20"}`}
-                    >
-                      <path
-                        fill="currentColor"
-                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                      />
-                    </svg>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WAITING OVERLAY */}
+      {/* Waiting Overlay */}
       {isOnline && roomStatus === "waiting" && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 text-center">
           <div className="w-16 h-16 border-4 border-gold/20 border-t-gold rounded-full animate-spin mb-8" />
@@ -387,16 +268,6 @@ export function GameArena() {
           </button>
         </div>
       )}
-
-      {/* Pause Menu (Solo mode only) */}
-      <GamePauseMenu
-        isOpen={showPauseMenu}
-        onClose={() => setShowPauseMenu(false)}
-        onQuit={() => {
-          useGameStore.getState().quitGame();
-          navigate("/menu");
-        }}
-      />
     </div>
   );
 }

@@ -318,6 +318,13 @@ export interface PlayerProfile {
   onlinePlayersDefeated?: string[];
   perfectWins?: number;
   highLifeWins?: number;
+  /** UI preferences persisted per-player: hideInfoTexts and useConfirmButton. */
+  uiPreferences?: UIPreferences;
+}
+
+export interface UIPreferences {
+  hideInfoTexts: boolean;
+  useConfirmButton: boolean;
 }
 
 export interface LeaderboardEntry {
@@ -417,4 +424,17 @@ export interface Room {
   // Reconnect window: set when a player leaves; cleared when they rejoin
   hostLeftAt?: number;
   guestLeftAt?: number;
+  // Emoji quick-chat sync
+  hostEmojiEvent?: {
+    emoji: string;
+    sentAt: number;
+    nonce: string;
+  };
+  guestEmojiEvent?: {
+    emoji: string;
+    sentAt: number;
+    nonce: string;
+  };
+  hostEmojiSentAt?: number;
+  guestEmojiSentAt?: number;
 }

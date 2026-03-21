@@ -148,6 +148,39 @@ export function useFirebaseRoom() {
     });
   };
 
+  const submitEmoji = async (
+    roomId: string,
+    emoji: string,
+  ): Promise<boolean> => {
+    if (!user) return false;
+    const roomRef = ref(rtdb, `rooms/${roomId}`);
+    const snapshot = await get(roomRef);
+    if (!snapshot.exists()) return false;
+
+    const room = snapshot.val() as Room;
+    const isHost = user.uid === room.hostId;
+    const role = isHost ? "host" : "guest";
+    const now = Date.now();
+    const lastSentAt = (room as any)[`${role}EmojiSentAt`] as
+      | number
+      | undefined;
+
+    if (lastSentAt && now - lastSentAt < 4000) {
+      return false;
+    }
+
+    await update(roomRef, {
+      [`${role}EmojiEvent`]: {
+        emoji,
+        sentAt: now,
+        nonce: `${role}-${now}-${Math.random().toString(36).slice(2, 8)}`,
+      },
+      [`${role}EmojiSentAt`]: now,
+    });
+
+    return true;
+  };
+
   const getUserRooms = async () => {
     if (!user) return [];
     const roomsRef = ref(rtdb, "rooms");
@@ -393,6 +426,7 @@ export function useFirebaseRoom() {
     createRoom,
     joinRoom,
     submitChoice,
+    submitEmoji,
     getUserRooms,
     getPublicRooms,
     quickMatch,

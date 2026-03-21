@@ -15,7 +15,9 @@ import {
   setOnlinePresence,
   subscribeToPlayerProfile,
   ensurePlayerHasStats,
+  migratePlayerUIPreferences,
 } from "../lib/firebaseService";
+import { syncPreferencesFromFirebase } from "../components/game/uiPreferences";
 import {
   calculateProgression,
   normalizeCurrencies,
@@ -257,6 +259,12 @@ export const useAuthStore = create<AuthState>()(
           // Check if profile already exists in Firestore
           const existing = await getPlayerProfile(current.uid);
           if (existing) {
+            // Migrate old accounts to have UI preferences
+            await migratePlayerUIPreferences(current.uid);
+
+            // Sync preferences from Firebase to localStorage
+            syncPreferencesFromFirebase(existing.uiPreferences);
+
             // Firebase is the source of truth - use Firebase data exclusively
             get().setUser({
               uid: current.uid,

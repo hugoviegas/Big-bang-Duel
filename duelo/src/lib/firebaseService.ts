@@ -40,6 +40,7 @@ import type {
   MatchSummary,
   ClassMasteryProgress,
   CharacterClass,
+  UIPreferences,
 } from "../types";
 import {
   evaluateAchievements,
@@ -135,6 +136,11 @@ export async function createPlayerProfile(
       // Strip undefined values (Firestore rejects `undefined` fields)
       const payload = stripUndefinedShallow({
         ...normalized,
+        // Ensure UI preferences are always set with defaults
+        uiPreferences: normalized.uiPreferences || {
+          hideInfoTexts: false,
+          useConfirmButton: true,
+        },
         createdAt: profile.createdAt || Date.now(),
         lastSeen: Date.now(),
       });
@@ -202,6 +208,11 @@ async function ensurePlayerProfileForMatch(uid: string): Promise<void> {
     createdAt: Date.now(),
     lastSeen: Date.now(),
     onlineStatus: "online",
+    // Include default UI preferences
+    uiPreferences: {
+      hideInfoTexts: false,
+      useConfirmButton: true,
+    },
   };
 
   await createPlayerProfile(fallbackProfile);
@@ -251,6 +262,59 @@ export async function findPlayerByCode(
   );
   if (snap.empty) return null;
   return snap.docs[0].data() as PlayerProfile;
+}
+
+// ─── UI Preferences ──────────────────────────────────────────────────────────
+
+/** Returns default UI preferences for new players. */
+function getDefaultUIPreferences(): UIPreferences {
+  return {
+    hideInfoTexts: false,
+    useConfirmButton: true,
+  };
+}
+
+/** Update UI preferences for a player in Firestore. */
+export async function updateUIPreferences(
+  uid: string,
+  prefs: UIPreferences,
+): Promise<void> {
+  await updateDoc(doc(db, "players", uid), {
+    uiPreferences: {
+      hideInfoTexts: prefs.hideInfoTexts,
+      useConfirmButton: prefs.useConfirmButton,
+    },
+    lastSeen: Date.now(),
+  } as Record<string, unknown>);
+  invalidateCache(`profile:${uid}`);
+}
+
+/**
+ * Migrate existing player profiles to include uiPreferences if missing.
+ * Called during ensureProfile to add default preferences to old accounts.
+ */
+export async function migratePlayerUIPreferences(uid: string): Promise<void> {
+  try {
+    const profileRef = doc(db, "players", uid);
+    const snap = await getDoc(profileRef);
+
+    if (!snap.exists()) return;
+
+    const profile = snap.data() as PlayerProfile;
+
+    // Only migrate if preferences don't exist
+    if (!profile.uiPreferences) {
+      await updateDoc(profileRef, {
+        uiPreferences: getDefaultUIPreferences(),
+        lastSeen: Date.now(),
+      } as Record<string, unknown>);
+      invalidateCache(`profile:${uid}`);
+      console.log("✓ Migrated UI preferences for:", uid);
+    }
+  } catch (error) {
+    // Silent fail - preferences are optional
+    console.warn("Could not migrate UI preferences:", error);
+  }
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
