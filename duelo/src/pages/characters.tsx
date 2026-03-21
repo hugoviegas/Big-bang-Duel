@@ -22,6 +22,7 @@ import {
   getClassMasteryUpgradeCost,
   resolveCharacterUnlockStatus,
   normalizeCurrencies,
+  hasEvolvableClass,
 } from "../lib/progression";
 import {
   buyCharacterInShop,
@@ -698,7 +699,9 @@ function CharacterModal({
 ══════════════════════════════════════════════════════════════════════ */
 export default function CharactersPage() {
   const user = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const { loadPreferences, saveCharacter } = useUserPreferences();
+
   const progression = calculateProgression(user?.progression?.xpTotal ?? 0);
   const currencies = normalizeCurrencies(user?.currencies);
   const unlocks = normalizeUnlocks(user?.unlocks);
@@ -706,6 +709,9 @@ export default function CharactersPage() {
   const allAchievementsCompleted = hasCompletedAllAchievements(
     user?.achievements,
   );
+  
+  // Check if any class can be evolved
+  const hasEvolvable = hasEvolvableClass(classMastery, currencies.gold);
   const unlockedSet = useMemo(
     () => new Set(unlocks.charactersUnlocked),
     [unlocks.charactersUnlocked],
@@ -783,6 +789,14 @@ export default function CharactersPage() {
     setMessage("");
 
     const response = await buyClassMasteryLevel(user.uid, charClass);
+
+    if (response.ok && response.classMastery && response.currencies) {
+      // Update store with both fields at once to avoid race conditions
+      updateUser({
+        classMastery: response.classMastery,
+        currencies: response.currencies,
+      });
+    }
 
     setUpgradingClass(null);
     setMessage(response.message);
@@ -889,13 +903,16 @@ export default function CharactersPage() {
         </button>
         <button
           onClick={() => setTab("classes")}
-          className={`rounded-lg py-2 font-stats text-[11px] uppercase tracking-wider border transition-all ${
+          className={`relative rounded-lg py-2 font-stats text-[11px] uppercase tracking-wider border transition-all ${
             tab === "classes"
               ? "bg-gold/20 border-gold/50 text-gold"
               : "bg-black/30 border-transparent text-sand/60"
           }`}
         >
           Classes
+          {hasEvolvable && (
+            <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-black bg-gold" />
+          )}
         </button>
       </div>
 

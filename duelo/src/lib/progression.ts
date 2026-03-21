@@ -314,6 +314,62 @@ export function getClassMasteryUpgradeCost(nextLevel: number): number | null {
   );
 }
 
+/**
+ * Checks if the player has any class available to evolve.
+ * A class can be evolved only if:
+ * - It's not at the maximum level (5)
+ * - Player has accumulated enough mastery points to reach the next level
+ * - The upgrade cost for the next level exists
+ * - The player has enough gold for the upgrade
+ * 
+ * This logic mirrors exactly what ClassMasteryCard uses to show/enable the upgrade button.
+ * 
+ * @param classMastery - The player's class mastery progress
+ * @param availableGold - Current gold balance
+ * @returns true if at least one class can be evolved
+ */
+export function hasEvolvableClass(
+  classMastery: Partial<ClassMasteryProgress> | undefined,
+  availableGold: number,
+): boolean {
+  if (!classMastery) return false;
+  
+  const CLASSES = [
+    "atirador",
+    "estrategista",
+    "sorrateiro",
+    "ricochete",
+    "sanguinario",
+    "suporte",
+  ] as const;
+
+  for (const cls of CLASSES) {
+    const state = classMastery[cls];
+    if (!state) continue;
+
+    // Can't evolve if already at max level
+    if (state.level >= CLASS_MASTERY_LEVEL_CAP) continue;
+
+    // Next level would be state.level + 1
+    const nextLevel = state.level + 1;
+    
+    // Get the points threshold needed for the next level
+    const nextThreshold = CLASS_MASTERY_THRESHOLDS[nextLevel - 1] ?? 0;
+    
+    // Player must have enough points to progress to next level
+    if (state.points < nextThreshold) continue;
+    
+    const cost = getClassMasteryUpgradeCost(nextLevel);
+
+    // Can evolve if cost exists and player has enough gold
+    if (cost !== null && availableGold >= cost) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function getMostPlayedClass(
   mastery: Partial<ClassMasteryProgress> | undefined,
   tieBreakerClass?: CharacterClass,
