@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { CHARACTERS, RARITY_LABELS } from "../lib/characters";
+import {
+  CHARACTERS,
+  RARITY_LABELS,
+  getClassIconSources,
+  CLASS_INFO,
+} from "../lib/characters";
 import { useAuthStore } from "../store/authStore";
 import { buyCharacterInShop } from "../lib/firebaseService";
 import {
@@ -28,6 +33,22 @@ export default function ShopPage() {
     () => new Set(unlocks.charactersUnlocked),
     [unlocks.charactersUnlocked],
   );
+
+  const [sortMode, setSortMode] = useState<
+    "price-asc" | "price-desc" | "alpha"
+  >("price-asc");
+
+  const sortedCharacters = useMemo(() => {
+    const list = [...CHARACTERS];
+    if (sortMode === "price-asc") {
+      list.sort((a, b) => a.value - b.value || a.name.localeCompare(b.name));
+    } else if (sortMode === "price-desc") {
+      list.sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
+    } else {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return list;
+  }, [sortMode]);
 
   const handleBuyCharacter = async (characterId: string) => {
     if (!user) return;
@@ -110,8 +131,27 @@ export default function ShopPage() {
           Personagens
         </h2>
 
+        <div className="flex items-center justify-between mb-3 gap-3">
+          <div className="font-stats text-[12px] text-sand/60">Ordenar por</div>
+          <div className="flex items-center gap-2">
+            <select
+              value={sortMode}
+              onChange={(e) =>
+                setSortMode(
+                  e.target.value as "price-asc" | "price-desc" | "alpha",
+                )
+              }
+              className="bg-black/25 border border-sand/20 rounded px-3 py-1 text-sm text-sand"
+            >
+              <option value="price-asc">Preço ↑</option>
+              <option value="price-desc">Preço ↓</option>
+              <option value="alpha">Nome</option>
+            </select>
+          </div>
+        </div>
+
         <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
-          {CHARACTERS.map((char) => {
+          {sortedCharacters.map((char) => {
             const unlockStatus = resolveCharacterUnlockStatus(
               char.id,
               progression.level,
@@ -140,12 +180,26 @@ export default function ShopPage() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="font-western text-sm text-sand-light truncate">
-                    {char.name}
+                  <div className="flex items-center justify-between">
+                    <div className="font-western text-sm text-sand-light truncate">
+                      {char.name}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={getClassIconSources(char.characterClass).png}
+                        alt={CLASS_INFO[char.characterClass].name}
+                        className="w-5 h-5 object-contain"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-2 mt-1">
                     <span className="font-stats text-[10px] text-sand/50 uppercase tracking-wider">
                       {RARITY_LABELS[char.rarity]}
+                    </span>
+                    <span className="text-sand/40">•</span>
+                    <span className="font-stats text-[10px] text-sand/50 uppercase tracking-wider">
+                      {CLASS_INFO[char.characterClass].name}
                     </span>
                     <span className="text-sand/40">•</span>
                     <span className="font-stats text-[10px] text-gold flex items-center gap-1">
