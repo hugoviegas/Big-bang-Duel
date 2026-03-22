@@ -93,6 +93,7 @@ export interface GameState {
   mode: GameMode;
   phase: GamePhase;
   turn: number;
+  turnStartedAt?: number | null;
   player: PlayerState;
   opponent: PlayerState;
   lastResult: TurnResult | null;

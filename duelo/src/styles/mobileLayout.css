@@ -268,15 +268,30 @@
 }
 
 .nav-icon {
-  font-size: 20px;
-  line-height: 1;
-  color: #f5e6c8;
-  transition: color 0.15s ease-out;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.nav-item.active .nav-icon {
-  color: #f0d070;
-  filter: drop-shadow(0 0 4px rgba(240, 208, 112, 0.5));
+.nav-icon-image {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  opacity: 0.78;
+  filter: saturate(0.75) brightness(0.92);
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out,
+    filter 0.2s ease-out;
+}
+
+.nav-item.active .nav-icon-image {
+  opacity: 1;
+  transform: translateY(-1px) scale(1.05);
+  filter: saturate(1.12) brightness(1.08)
+    drop-shadow(0 0 5px rgba(240, 208, 112, 0.45));
 }
 
 .nav-label {

@@ -85,7 +85,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
   const [onlineTurnStartedAt, setOnlineTurnStartedAt] = useState<number | null>(
     null,
   );
-  const [onlineNow, setOnlineNow] = useState<number>(Date.now());
+  const [onlineNow, setOnlineNow] = useState<number>(0);
 
   const autoFiredRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -116,7 +116,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
       if (!state.cardId || !state.dragging) return;
       try {
         e.preventDefault();
-      } catch (err) {
+      } catch {
         // Ignore passive event listener errors
       }
     };
@@ -126,7 +126,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
       if (!state.dragging) return;
       try {
         e.preventDefault();
-      } catch (err) {
+      } catch {
         // Ignore passive event listener errors
       }
     };
@@ -146,7 +146,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
 
   useEffect(() => {
     if (!isOnline || !roomId) {
-      setOnlineTurnStartedAt(null);
+      setTimeout(() => setOnlineTurnStartedAt(null), 0);
       return;
     }
 
@@ -359,7 +359,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     setIsDropZoneActive(inside);
   };
 
-  const handleTouchEnd = (cardId: CardType) => {
+  const handleTouchEnd = (e: React.TouchEvent, cardId: CardType) => {
     const state = touchDragStateRef.current;
 
     if (state.dragging) {
@@ -378,7 +378,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
       return;
     }
 
-    const now = Date.now();
+    const now = e.timeStamp;
     const prev = lastTapRef.current;
     if (prev && prev.cardId === cardId && now - prev.at < 320) {
       handleDoubleClick(cardId);
@@ -409,23 +409,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     phase === "selecting" &&
     player.selectedCard !== null;
 
-  const timerRatio =
-    attackTimer > 0
-      ? Math.max(0, Math.min(effectiveTimeLeft / attackTimer, 1))
-      : 1;
-  const timerPercent = Math.round(timerRatio * 100);
-  const timerClass =
-    timerRatio <= 0.3
-      ? "bg-gradient-to-r from-red-700 to-red-500"
-      : timerRatio <= 0.6
-        ? "bg-gradient-to-r from-orange-600 to-yellow-500"
-        : "bg-gradient-to-r from-emerald-600 to-green-500";
-  const timerTextClass =
-    timerRatio <= 0.3
-      ? "text-red-400"
-      : timerRatio <= 0.6
-        ? "text-yellow-400"
-        : "text-emerald-400";
+  
 
   const handleConfirm = () => {
     if (!player.selectedCard || phase !== "selecting") return;
@@ -503,25 +487,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
 
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black via-black/90 to-transparent pt-5 md:pt-6 pb-4 md:pb-5 px-3 md:px-4 overflow-visible">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-4 flex items-center justify-center gap-3">
-            <div className="flex-1 max-w-xs">
-              <div className="relative h-2 bg-black/60 rounded-full overflow-hidden border border-gold/20">
-                <motion.div
-                  initial={{ width: "100%" }}
-                  animate={{ width: `${timerPercent}%` }}
-                  transition={{ duration: 0.2 }}
-                  className={`h-full transition-all ${timerClass}`}
-                />
-              </div>
-            </div>
-            <div className="text-center min-w-[52px]">
-              <span
-                className={`text-xl md:text-2xl font-western drop-shadow-lg ${timerTextClass}`}
-              >
-                {effectiveTimeLeft}
-              </span>
-            </div>
-          </div>
+          {/* Timer removed: using header timer instead */}
 
           <div
             className={`mb-3 rounded-xl border-2 border-dashed px-3 py-2 text-center transition-all ${
@@ -597,7 +563,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
                   onDoubleClick={() => handleDoubleClick(cId)}
                   onTouchStart={(e) => handleTouchStart(e, cId)}
                   onTouchMove={handleTouchMove}
-                  onTouchEnd={() => handleTouchEnd(cId)}
+                  onTouchEnd={(e) => handleTouchEnd(e, cId)}
                   draggable={isAvailable && phase === "selecting"}
                   className="cursor-grab active:cursor-grabbing touch-none"
                 >

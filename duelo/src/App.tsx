@@ -13,6 +13,7 @@ import ProfilePage from "./pages/profile";
 import AchievementsPage from "./pages/achievements";
 import FriendsPage from "./pages/friends";
 import ShopPage from "./pages/shop";
+import MissionsPage from "./pages/missions";
 import DesignSystemPage from "./pages/design-system";
 import MatchHistoryPage from "./pages/matchHistory";
 import { AssetPreloader } from "./components/common/AssetPreloader";
@@ -201,6 +202,14 @@ function App() {
           element={
             <MobilePage>
               <OnlinePage />
+            </MobilePage>
+          }
+        />
+        <Route
+          path="/missions"
+          element={
+            <MobilePage>
+              <MissionsPage />
             </MobilePage>
           }
         />

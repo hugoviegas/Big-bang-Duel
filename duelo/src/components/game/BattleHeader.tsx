@@ -1,10 +1,12 @@
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import {
   resolveAvatarPicture,
   getClassIconSources,
   CLASS_INFO,
 } from "../../lib/characters";
 import type { PlayerState, CharacterClass } from "../../types";
+import { useGameStore } from "../../store/gameStore";
 
 interface BattleHeaderProps {
   player: PlayerState;
@@ -27,27 +29,48 @@ export function BattleHeader({
   currentRound,
   hideOpponentAmmo,
 }: BattleHeaderProps) {
+  const phase = useGameStore((s) => s.phase);
+  const attackTimer = useGameStore((s) => s.attackTimer);
+  const isOnline = useGameStore((s) => s.isOnline);
+  const turnStartedAt = useGameStore((s) => s.turnStartedAt ?? null);
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="relative z-20 w-full bg-gradient-to-b from-black/85 via-black/65 to-transparent backdrop-blur-md border-b border-gold/25 py-2 md:py-3 px-3 md:px-6"
+      className="relative z-20 w-full bg-gradient-to-b from-black/85 via-black/65 to-transparent backdrop-blur-md border-b border-gold/25 py-3 md:py-4 px-3 md:px-6"
       style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" }}
     >
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gold to-transparent" />
 
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-start justify-between gap-2 md:gap-4">
-          <div className="flex-1 flex items-center gap-2 md:gap-3 min-w-0">
-            <PlayerCard player={player} />
+        <div className="flex items-start justify-between gap-2 md:gap-3">
+          <div className="flex-1 flex gap-2 md:gap-3 min-w-0">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="flex items-start gap-2 md:gap-3 shrink-0"
+            >
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden border-2 border-gold/50 shadow-lg">
+                <img
+                  src={resolveAvatarPicture(
+                    player.avatar,
+                    player.avatarPicture,
+                  )}
+                  alt={player.displayName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </motion.div>
             <HealthBar player={player} hideOpponentAmmo={hideOpponentAmmo} />
           </div>
 
-          <div className="shrink-0 flex flex-col items-center gap-1 pt-1">
+          <div className="shrink-0 flex flex-col items-center gap-1 pt-0">
             <motion.div
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.2 }}
               className="px-2.5 md:px-3.5 py-1.5 rounded-lg bg-gradient-to-b from-gold/20 to-gold/5 border border-gold/40"
             >
               <div className="text-center leading-none">
@@ -79,8 +102,24 @@ export function BattleHeader({
             )}
           </div>
 
-          <div className="flex-1 flex items-center gap-2 md:gap-3 flex-row-reverse min-w-0">
-            <PlayerCard player={opponent} isOpponent />
+          <div className="flex-1 flex gap-2 md:gap-3 flex-row-reverse items-start min-w-0">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="flex items-start gap-2 md:gap-3 shrink-0"
+            >
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden border-2 border-gold/50 shadow-lg">
+                <img
+                  src={resolveAvatarPicture(
+                    opponent.avatar,
+                    opponent.avatarPicture,
+                  )}
+                  alt={opponent.displayName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </motion.div>
             <HealthBar
               player={opponent}
               isOpponent
@@ -88,36 +127,116 @@ export function BattleHeader({
             />
           </div>
         </div>
+
+        <div className="mt-1 flex items-center justify-between gap-2 md:gap-3">
+          <span className="min-h-[1.8rem] max-w-28 md:max-w-36 whitespace-nowrap overflow-hidden text-ellipsis text-[14px] md:text-sm font-stats font-medium text-sand/95 leading-tight">
+            {player.displayName}
+          </span>
+          <span className="min-h-[1.8rem] max-w-28 md:max-w-36 whitespace-nowrap overflow-hidden text-ellipsis text-right text-[14px] md:text-sm font-stats font-medium text-sand/95 leading-tight">
+            {opponent.displayName}
+          </span>
+        </div>
       </div>
+
+      <HeaderTurnTimer
+        phase={phase}
+        totalSeconds={attackTimer}
+        isOnline={isOnline}
+        turn={turn}
+        turnStartedAt={turnStartedAt}
+      />
     </motion.header>
   );
 }
 
-function PlayerCard({
-  player,
-  isOpponent,
+function HeaderTurnTimer({
+  phase,
+  totalSeconds,
+  isOnline,
+  turn,
+  turnStartedAt,
 }: {
-  player: PlayerState;
-  isOpponent?: boolean;
+  phase: string;
+  totalSeconds: number;
+  isOnline: boolean;
+  turn: number;
+  turnStartedAt: number | null;
 }) {
-  const avatar = resolveAvatarPicture(player.avatar, player.avatarPicture);
+  const [progress, setProgress] = useState(1);
+  const localTurnStartRef = useRef<number>(0);
+  const showTimer = phase === "selecting";
+
+  useEffect(() => {
+    if (!showTimer) return;
+    localTurnStartRef.current = Date.now();
+  }, [showTimer, turn]);
+
+  useEffect(() => {
+    if (!showTimer || !totalSeconds || totalSeconds <= 0) return;
+
+    let raf = 0;
+    const baseStart =
+      isOnline && turnStartedAt ? turnStartedAt : localTurnStartRef.current;
+    if (!baseStart) return;
+
+    const duration = totalSeconds * 1000;
+
+    const step = () => {
+      const elapsed = Math.max(0, Date.now() - baseStart);
+      const ratio = Math.max(0, Math.min(1 - elapsed / duration, 1));
+      setProgress(ratio);
+      raf = requestAnimationFrame(step);
+    };
+
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [showTimer, totalSeconds, isOnline, turnStartedAt]);
+
+  const ratio = Math.max(0, Math.min(progress, 1));
+  const timeLeft = Math.max(0, ratio * totalSeconds);
+
+  // Smooth color interpolation from green -> yellow -> red
+  const getBarColor = () => {
+    if (ratio > 0.6) {
+      // Green to yellow: 1.0 -> 0.6
+      const t = (ratio - 0.6) / 0.4; // 0 to 1
+      return `rgb(${Math.round(74 + t * 56)}, ${Math.round(222 - t * 64)}, 100)`;
+    } else if (ratio > 0.3) {
+      // Yellow to orange/red: 0.6 -> 0.3
+      const t = (ratio - 0.3) / 0.3; // 0 to 1
+      return `rgb(${Math.round(180 + t * 76)}, ${Math.round(83 - t * 28)}, ${Math.round(5 - t * 5)})`;
+    } else {
+      // Deep red: 0.3 -> 0.0
+      return `rgb(220, 38, 38)`;
+    }
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: isOpponent ? 20 : -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.2 }}
-      className="relative"
-    >
-      <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden border-2 border-gold/50 shadow-lg">
-        {/* Avatar principal */}
-        <img
-          src={avatar}
-          alt={player.displayName}
-          className="w-full h-full object-cover"
-        />
-      </div>
-    </motion.div>
+    <AnimatePresence>
+      {showTimer && (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 4 }}
+          transition={{ duration: 0.2 }}
+          className="absolute left-0 right-0 bottom-0 px-2"
+        >
+          <div className="h-[3px] md:h-1 bg-black/45 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full"
+              style={{
+                width: `${ratio * 100}%`,
+                backgroundColor: getBarColor(),
+              }}
+              transition={{ type: "tween", duration: 0 }}
+            />
+          </div>
+          <div className="mt-0.5 text-center text-[10px] md:text-[11px] font-stats text-sand/75">
+            {timeLeft.toFixed(1)}s
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -247,58 +366,32 @@ function AmmoIndicator({
       {Array.from({ length: maxAmmo }).map((_, i) => (
         <motion.div
           key={i}
-          animate={
-            i < ammo ? { scale: [1, 1.2, 1] } : { scale: 1, opacity: 0.3 }
-          }
-          transition={{
-            duration: 1.6,
-            delay: i * 0.1,
-            repeat: i < ammo ? Infinity : 0,
-          }}
+          animate={{ opacity: i < ammo ? 1 : 0.35 }}
+          transition={{ duration: 0.2 }}
           className="relative"
           title={i < ammo ? "Munição carregada" : "Sem munição"}
         >
-          {/* Desenho de munição (cartuchos) */}
-          <svg
-            viewBox="0 0 20 36"
-            className={`w-3 h-6 md:w-3.5 md:h-7 transition-all ${
-              i < ammo
-                ? "drop-shadow-[0_0_5px_rgba(212,175,55,0.9)]"
-                : "opacity-30"
-            }`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {/* Ponta (projétil) - Dourada/Laranja */}
-            <g fill={i < ammo ? "#E8A028" : "#B8956F"}>
-              <path d="M 10 2 L 14 8 L 10 10 L 6 8 Z" />
-            </g>
-            {/* Cilindro superior (latão) - Marrom */}
-            <g fill={i < ammo ? "#8B6F47" : "#6B5340"} stroke="none">
-              <rect x="6" y="10" width="8" height="14" rx="1" />
-            </g>
-            {/* Base/cartucho - Marrom mais escuro */}
-            <g fill={i < ammo ? "#6B5340" : "#4A3F32"} stroke="none">
-              <rect x="7" y="24" width="6" height="8" rx="0.5" />
-              <ellipse cx="10" cy="24" rx="3" ry="1.5" />
-              <ellipse cx="10" cy="32" rx="3" ry="1" />
-            </g>
-            {/* Brilho na ponta */}
-            {i < ammo && (
-              <rect
-                x="8.5"
-                y="11"
-                width="1"
-                height="10"
-                fill="#F4D03F"
-                opacity="0.5"
-                rx="0.5"
-              />
-            )}
-          </svg>
+          <picture>
+            <source
+              srcSet={
+                i < ammo
+                  ? "/assets/ui/ammunation_icon.webp"
+                  : "/assets/ui/ammunation_empty_icon.webp"
+              }
+              type="image/webp"
+            />
+            <img
+              src={
+                i < ammo
+                  ? "/assets/ui/png/ammunation_icon.png"
+                  : "/assets/ui/png/ammunation_empty_icon.png"
+              }
+              alt={i < ammo ? "Munição carregada" : "Sem munição"}
+              className={`w-3 h-6 md:w-3.5 md:h-7 object-contain ${
+                i < ammo ? "drop-shadow-[0_0_4px_rgba(212,175,55,0.6)]" : ""
+              }`}
+            />
+          </picture>
         </motion.div>
       ))}
     </div>

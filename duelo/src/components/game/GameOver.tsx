@@ -358,7 +358,7 @@ export function GameOver() {
                     type="image/webp"
                   />
                   <img
-                    src="/assets/ui/gold_coin.png"
+                    src="/assets/ui/png/gold_coin.png"
                     alt="gold"
                     className="w-4 h-4"
                   />
@@ -399,7 +399,7 @@ export function GameOver() {
                       type="image/webp"
                     />
                     <img
-                      src="/assets/ui/trophie_icon.png"
+                      src="/assets/ui/png/trophie_icon.png"
                       alt="trophy"
                       className="w-4 h-4"
                     />

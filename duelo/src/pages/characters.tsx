@@ -669,7 +669,7 @@ function CharacterModal({
                       type="image/webp"
                     />
                     <img
-                      src="/assets/ui/gold_coin.png"
+                      src="/assets/ui/png/gold_coin.png"
                       alt="gold"
                       className="w-4 h-4"
                     />
@@ -709,7 +709,7 @@ export default function CharactersPage() {
   const allAchievementsCompleted = hasCompletedAllAchievements(
     user?.achievements,
   );
-  
+
   // Check if any class can be evolved
   const hasEvolvable = hasEvolvableClass(classMastery, currencies.gold);
   const unlockedSet = useMemo(

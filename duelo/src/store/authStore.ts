@@ -11,6 +11,7 @@ import type {
 import {
   createPlayerProfile,
   getPlayerProfile,
+  getPlayerProfileFromServer,
   generateUniquePlayerCode,
   setOnlinePresence,
   subscribeToPlayerProfile,
@@ -312,6 +313,69 @@ export const useAuthStore = create<AuthState>()(
             // NOTE: global migration disabled on client to avoid permission errors.
             // Admin-only bulk migrations should run via server-side/admin SDK.
 
+            return;
+          }
+
+          // Critical safety check: only create when the server explicitly says
+          // the profile does not exist. This avoids account reset when local
+          // cache is empty after "Clear site data" or during offline startup.
+          let existingOnServer: PlayerProfile | null = null;
+          try {
+            existingOnServer = await getPlayerProfileFromServer(current.uid);
+          } catch (serverReadError) {
+            console.warn(
+              "[authStore] ensureProfile: server check unavailable; skipping profile creation to avoid overwrite",
+              serverReadError,
+            );
+            return;
+          }
+
+          if (existingOnServer) {
+            // Server profile exists: hydrate from server and stop.
+            get().setUser({
+              uid: current.uid,
+              email: current.email,
+              isGuest: current.isGuest,
+              expiresAt: current.expiresAt,
+              playerCode: existingOnServer.playerCode ?? current.playerCode,
+              avatar: existingOnServer.avatar ?? current.avatar,
+              avatarPicture:
+                existingOnServer.avatarPicture ?? current.avatarPicture,
+              wins: existingOnServer.wins ?? 0,
+              losses: existingOnServer.losses ?? 0,
+              draws: existingOnServer.draws ?? 0,
+              totalGames: existingOnServer.totalGames ?? 0,
+              winRate: existingOnServer.winRate ?? 0,
+              statsByMode:
+                existingOnServer.statsByMode ??
+                normalizeStatsByModeFromUser(current),
+              progression:
+                existingOnServer.progression ?? calculateProgression(0),
+              currencies: existingOnServer.currencies ?? normalizeCurrencies({}),
+              ranked: existingOnServer.ranked ?? normalizeRanked({}),
+              unlocks: existingOnServer.unlocks ?? normalizeUnlocks({}),
+              classMastery:
+                existingOnServer.classMastery ??
+                normalizeClassMastery(undefined),
+              displayName: existingOnServer.displayName ?? current.displayName,
+              preferences: current.preferences,
+              createdAt: current.createdAt,
+              lastSeen: existingOnServer.lastSeen
+                ? new Date(existingOnServer.lastSeen)
+                : new Date(),
+              onlineStatus: existingOnServer.onlineStatus ?? "online",
+              achievements: existingOnServer.achievements ?? {},
+              characterStats: existingOnServer.characterStats ?? {},
+              favoriteCharacter: existingOnServer.favoriteCharacter,
+              winStreak: existingOnServer.winStreak ?? 0,
+              perfectWins: existingOnServer.perfectWins ?? 0,
+              highLifeWins: existingOnServer.highLifeWins ?? 0,
+              opponentsFaced: existingOnServer.opponentsFaced ?? [],
+              onlinePlayersDefeated:
+                existingOnServer.onlinePlayersDefeated ?? [],
+            });
+            set({ _profileEnsuredAt: Date.now() });
+            setOnlinePresence(current.uid, "online");
             return;
           }
 

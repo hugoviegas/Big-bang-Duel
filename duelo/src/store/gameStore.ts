@@ -191,6 +191,7 @@ const initialState: GameState = {
   mode: "beginner",
   phase: "idle",
   turn: 1,
+  turnStartedAt: null,
   player: {
     id: "player1",
     displayName: "Pistoleiro",
@@ -304,6 +305,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       isHost: isOnline ? isHost : false,
       roomId: roomId || null,
       phase: "selecting",
+      turnStartedAt: Date.now(),
       attackTimer,
       bestOf3: config.bestOf3 ?? false,
       hideOpponentAmmo: shouldHideAmmo,
@@ -625,9 +627,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
                 lastTurnResult: null,
                 turn: afterAnimState.turn + 1,
 
-
                 turnStartedAt: matchOver ? null : Date.now(),
-
 
                 status: matchOver ? "finished" : "in_progress",
               });
@@ -688,9 +688,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
               lastTurnResult: null,
               turn: afterAnimState.turn + 1,
 
-
               turnStartedAt: afterAnimState.winnerId ? null : Date.now(),
-
 
               status: afterAnimState.winnerId ? "finished" : "in_progress",
             });
@@ -706,6 +704,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
           set((curr) => ({
             phase: "selecting" as const,
             turn: curr.turn + 1,
+            turnStartedAt: Date.now(),
             player: {
               ...curr.player,
               selectedCard: null,
@@ -740,7 +739,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
             }
           }
         }
-      }, 3000);
+      }, 5000);
     }, 1200);
   },
 
@@ -766,6 +765,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         mode: roomData.mode || state.mode,
         roomId: roomData.id,
         roomStatus: roomData.status,
+        turnStartedAt: roomData.turnStartedAt ?? state.turnStartedAt ?? null,
         attackTimer: roomData.config?.attackTimer ?? state.attackTimer,
         bestOf3: roomData.config?.bestOf3 ?? state.bestOf3,
         hideOpponentAmmo:
@@ -935,6 +935,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       isOnline: true,
       isHost: isHost,
       turn: roomData.turn ?? curr.turn,
+      turnStartedAt: roomData.turnStartedAt ?? curr.turnStartedAt ?? null,
       // Sync room config
       attackTimer: roomData.config?.attackTimer ?? curr.attackTimer,
       bestOf3: roomData.config?.bestOf3 ?? curr.bestOf3,
@@ -1035,6 +1036,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     _waitingForHostResult = false;
     set((curr) => ({
       turn: 1,
+      turnStartedAt: Date.now(),
       winnerId: null,
       roundWinnerId: null,
       lastResult: null,
@@ -1067,14 +1069,12 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       },
     }));
 
-
-
-
     const after = get();
     if (after.isOnline && after.isHost && after.roomId) {
       const roomRef = ref(rtdb, `rooms/${after.roomId}`);
       update(roomRef, {
         turn: 1,
+        turnStartedAt: Date.now(),
         currentRound: after.currentRound,
         hostChoice: null,
         guestChoice: null,
@@ -1119,6 +1119,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       ...initialState,
       mode: saved.mode,
       turn: saved.turn,
+      turnStartedAt: Date.now(),
       phase: "selecting",
       isOnline: false,
       isHost: false,
@@ -1170,9 +1171,3 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     set(initialState);
   },
 }));
-
-
-
-
-
-

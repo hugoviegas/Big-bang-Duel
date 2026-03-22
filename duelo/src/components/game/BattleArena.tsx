@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Character } from "./Character";
-import { useEffect, useState } from "react";
 import { getClassIconSources } from "../../lib/characters";
 import type { CharacterClass, PlayerState, TurnResult } from "../../types";
 
@@ -54,38 +53,15 @@ const ABILITY_CLASS: Record<string, CharacterClass> = {
   Escudo: "suporte",
 };
 
-function AbilityBadge({
-  label,
-  isOpponent,
-}: {
-  label: string;
-  isOpponent?: boolean;
-}) {
-  const cls = ABILITY_CLASS[label];
-  const icon = cls ? getClassIconSources(cls) : null;
-
-  return (
-    <div
-      className={`mt-2 px-2.5 py-1.5 rounded-lg border backdrop-blur-sm flex items-center gap-1.5 max-w-[150px] ${
-        isOpponent
-          ? "bg-red-500/12 border-red-400/35 text-red-300"
-          : "bg-gold/12 border-gold/35 text-gold"
-      }`}
-    >
-      {icon ? (
-        <picture>
-          <source srcSet={icon.webp} type="image/webp" />
-          <img src={icon.png} alt={label} className="w-4 h-4 rounded-sm" />
-        </picture>
-      ) : (
-        <span className="text-sm">⚡</span>
-      )}
-      <span className="font-stats text-[10px] uppercase tracking-wide truncate">
-        {label}
-      </span>
-    </div>
-  );
-}
+const ABILITY_DESCRIPTIONS: Record<string, string> = {
+  "Tiro Crítico": "Ataque com dano amplificado neste turno.",
+  "Recarga Dupla": "Ação de recarga trouxe munição extra.",
+  "Esquiva Fantasma": "Desvio com bônus defensivo ativado.",
+  Ricochete: "O disparo desviou e voltou com pressão adicional.",
+  "Bala Fantasma": "Efeito ofensivo especial ignorou parte da defesa.",
+  Cura: "Recuperou vida durante a troca de ações.",
+  Escudo: "Absorveu parte do dano recebido no turno.",
+};
 
 function ResultCard({
   cardId,
@@ -123,48 +99,67 @@ function ResultCard({
   );
 }
 
-function TurnTimerBar({ tickKey }: { tickKey?: number | null }) {
-  const RESULT_DISPLAY_TIME = 3; // 3 seconds to close result and go to next turn
-  const [timeLeft, setTimeLeft] = useState<number>(RESULT_DISPLAY_TIME);
-
-  useEffect(() => {
-    setTimeLeft(RESULT_DISPLAY_TIME);
-  }, [tickKey]);
-
-  useEffect(() => {
-    if (timeLeft <= 0) return;
-    let raf = 0;
-    const start = performance.now();
-    const duration = RESULT_DISPLAY_TIME * 1000;
-    function step(now: number) {
-      const elapsed = now - start;
-      const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1000));
-      setTimeLeft(remaining);
-      if (elapsed < duration) raf = requestAnimationFrame(step);
-    }
-    // only run the visual timer when in selecting or when overlay appears
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tickKey]);
-
-  const ratio = Math.max(0, Math.min(timeLeft / RESULT_DISPLAY_TIME, 1));
-  const pct = Math.round(ratio * 100);
-  const barClass =
-    ratio <= 0.3
-      ? "bg-gradient-to-r from-red-700 to-red-500"
-      : ratio <= 0.6
-        ? "bg-gradient-to-r from-orange-600 to-yellow-500"
-        : "bg-gradient-to-r from-emerald-600 to-green-500";
+function AbilitySummaryCard({
+  label,
+  side,
+}: {
+  label: string;
+  side: "player" | "opponent";
+}) {
+  const cls = ABILITY_CLASS[label];
+  const icon = cls ? getClassIconSources(cls) : null;
+  const description = ABILITY_DESCRIPTIONS[label] ?? "Efeito especial ativado.";
+  const isOpponent = side === "opponent";
 
   return (
-    <div className="w-full">
-      <div className="w-full h-2 bg-black/25 rounded-full overflow-hidden">
-        <div className={`${barClass} h-2`} style={{ width: `${pct}%` }} />
+    <div
+      className={`rounded-xl border px-3 py-3 backdrop-blur-sm ${
+        isOpponent
+          ? "bg-red-500/14 border-red-400/35"
+          : "bg-gold/14 border-gold/35"
+      }`}
+    >
+      <div
+        className={`flex items-center gap-2 ${isOpponent ? "justify-end" : "justify-start"}`}
+      >
+        {!isOpponent && icon ? (
+          <picture>
+            <source srcSet={icon.webp} type="image/webp" />
+            <img src={icon.png} alt={label} className="w-5 h-5 rounded-sm" />
+          </picture>
+        ) : null}
+        <div
+          className={`flex flex-col ${isOpponent ? "items-end" : "items-start"}`}
+        >
+          <span
+            className={`font-stats text-[10px] uppercase tracking-wide ${
+              isOpponent ? "text-red-300" : "text-gold"
+            }`}
+          >
+            {isOpponent ? "Oponente ativou" : "Você ativou"}
+          </span>
+          <span
+            className={`font-stats text-xs uppercase ${
+              isOpponent ? "text-red-200" : "text-sand"
+            }`}
+          >
+            {label}
+          </span>
+        </div>
+        {isOpponent && icon ? (
+          <picture>
+            <source srcSet={icon.webp} type="image/webp" />
+            <img src={icon.png} alt={label} className="w-5 h-5 rounded-sm" />
+          </picture>
+        ) : null}
       </div>
-      <div className="mt-1 text-[11px] text-sand/60 text-right">
-        {timeLeft}s
-      </div>
+      <p
+        className={`mt-2 text-[11px] leading-snug ${
+          isOpponent ? "text-red-100/85 text-right" : "text-sand/85"
+        }`}
+      >
+        {description}
+      </p>
     </div>
   );
 }
@@ -248,22 +243,6 @@ export function BattleArena({
             </motion.div>
           )}
         </AnimatePresence>
-
-        <AnimatePresence>
-          {showTurnCards &&
-            playerEmoji &&
-            turnResult?.playerAbilityTriggered && (
-              <AbilityBadge label={turnResult.playerAbilityTriggered} />
-            )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showTurnCards &&
-            !playerEmoji &&
-            turnResult?.playerAbilityTriggered && (
-              <AbilityBadge label={turnResult.playerAbilityTriggered} />
-            )}
-        </AnimatePresence>
       </motion.div>
 
       {showTurnCards && (
@@ -276,7 +255,7 @@ export function BattleArena({
         >
           <div className="w-full max-w-sm sm:max-w-2xl lg:max-w-3xl bg-gradient-to-b from-black/95 to-black/85 backdrop-blur-xl border-2 border-gold/40 rounded-3xl shadow-[0_0_50px_rgba(255,234,120,0.4),inset_0_0_20px_rgba(255,234,120,0.1)] overflow-y-auto max-h-[85vh]">
             <div className="p-4 sm:p-6 md:p-8">
-              {/* Damage summary + time bar (compact) */}
+              {/* Damage summary */}
               <div className="mb-3 sm:mb-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 flex items-center gap-3 min-w-0">
@@ -286,7 +265,7 @@ export function BattleArena({
                       </span>
                       <span className="text-[11px] text-sand/70 truncate">
                         {turnResult
-                          ? `Dano causado: ${turnResult.opponentLifeLost}`
+                          ? `Dano causado: ${Math.max(0, turnResult.opponentLifeLost)}`
                           : ""}
                       </span>
                     </div>
@@ -303,16 +282,11 @@ export function BattleArena({
                       </span>
                       <span className="text-[11px] text-sand/70 truncate">
                         {turnResult
-                          ? `Dano recebido: ${turnResult.playerLifeLost}`
+                          ? `Dano recebido: ${Math.max(0, turnResult.playerLifeLost)}`
                           : ""}
                       </span>
                     </div>
                   </div>
-                </div>
-
-                {/* Time bar */}
-                <div className="mt-3">
-                  <TurnTimerBar tickKey={turnResult?.turn ?? null} />
                 </div>
               </div>
 
@@ -375,23 +349,38 @@ export function BattleArena({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.25 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 bg-black/40 border border-gold/20 rounded-2xl p-3 sm:p-4"
+                  className="mt-1 bg-black/45 border border-gold/25 rounded-2xl p-3 sm:p-4"
                 >
-                  {turnResult?.playerAbilityTriggered && (
-                    <div className="flex justify-center items-center">
-                      <AbilityBadge label={turnResult.playerAbilityTriggered} />
-                    </div>
-                  )}
-                  {turnResult?.opponentAbilityTriggered && (
-                    <div className="flex justify-center items-center">
-                      <AbilityBadge
-                        label={turnResult.opponentAbilityTriggered}
-                        isOpponent
+                  <div
+                    className={`grid gap-3 ${
+                      turnResult?.playerAbilityTriggered &&
+                      turnResult?.opponentAbilityTriggered
+                        ? "grid-cols-1 sm:grid-cols-2"
+                        : "grid-cols-1"
+                    }`}
+                  >
+                    {turnResult?.playerAbilityTriggered && (
+                      <AbilitySummaryCard
+                        label={turnResult.playerAbilityTriggered}
+                        side="player"
                       />
-                    </div>
-                  )}
+                    )}
+                    {turnResult?.opponentAbilityTriggered && (
+                      <AbilitySummaryCard
+                        label={turnResult.opponentAbilityTriggered}
+                        side="opponent"
+                      />
+                    )}
+                  </div>
+                  {turnResult?.playerAbilityTriggered &&
+                    turnResult?.opponentAbilityTriggered && (
+                      <div className="mt-3 text-center font-stats text-[10px] uppercase tracking-wider text-sand/60">
+                        Efeitos simultâneos neste turno
+                      </div>
+                    )}
                 </motion.div>
               )}
+
             </div>
           </div>
         </motion.div>
@@ -480,15 +469,6 @@ export function BattleArena({
                 )}
               </AnimatePresence>
             </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showTurnCards && turnResult?.opponentAbilityTriggered && (
-            <AbilityBadge
-              label={turnResult.opponentAbilityTriggered}
-              isOpponent
-            />
           )}
         </AnimatePresence>
       </motion.div>

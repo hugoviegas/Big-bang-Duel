@@ -5,6 +5,7 @@
 import {
   doc,
   getDoc,
+  getDocFromServer,
   setDoc,
   updateDoc,
   deleteField,
@@ -128,11 +129,29 @@ export async function createPlayerProfile(
   profile: PlayerProfile,
 ): Promise<void> {
   const normalized = profileWithNormalizedStats(profile);
+  const profileRef = doc(db, "players", profile.uid);
   const MAX_RETRIES = 3;
   let attempt = 0;
   while (true) {
     try {
       attempt++;
+      // Safety guard: never overwrite an existing server profile.
+      // After "Clear site data", local cache can be empty/stale; creating
+      // blindly could reset a real account if existence was misdetected.
+      const serverSnap = await getDocFromServer(profileRef);
+      if (serverSnap.exists()) {
+        const existing = profileWithNormalizedStats(
+          serverSnap.data() as PlayerProfile,
+        );
+        cacheSet(`profile:${profile.uid}`, existing, 5 * 60_000);
+        await upsertLeaderboardEntry(existing);
+        console.warn(
+          "[createPlayerProfile] Profile already exists on server; skipped create:",
+          profile.uid,
+        );
+        return;
+      }
+
       // Strip undefined values (Firestore rejects `undefined` fields)
       const payload = stripUndefinedShallow({
         ...normalized,
@@ -144,10 +163,7 @@ export async function createPlayerProfile(
         createdAt: profile.createdAt || Date.now(),
         lastSeen: Date.now(),
       });
-      await setDoc(
-        doc(db, "players", profile.uid),
-        payload as Record<string, unknown>,
-      );
+      await setDoc(profileRef, payload as Record<string, unknown>);
       await upsertLeaderboardEntry(normalized);
       // Populate cache immediately so the next read is instant
       cacheSet(`profile:${profile.uid}`, normalized, 5 * 60_000);
@@ -233,6 +249,23 @@ export async function getPlayerProfile(
     cacheSet(key, result, 5 * 60_000); // cache for 5 minutes
     // Bootstrap leaderboard doc for legacy users that only have players/{uid}.
     upsertLeaderboardEntry(result).catch(() => {});
+  }
+  return result;
+}
+
+/**
+ * Fetches a player profile directly from server (no local cache fallback).
+ * Returns null only when the profile truly does not exist on server.
+ */
+export async function getPlayerProfileFromServer(
+  uid: string,
+): Promise<PlayerProfile | null> {
+  const snap = await getDocFromServer(doc(db, "players", uid));
+  const result = snap.exists()
+    ? profileWithNormalizedStats(snap.data() as PlayerProfile)
+    : null;
+  if (result) {
+    cacheSet(`profile:${uid}`, result, 5 * 60_000);
   }
   return result;
 }

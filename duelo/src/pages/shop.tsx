@@ -58,7 +58,7 @@ export default function ShopPage() {
             <picture>
               <source srcSet="/assets/ui/gold_coin.webp" type="image/webp" />
               <img
-                src="/assets/ui/gold_coin.png"
+                src="/assets/ui/png/gold_coin.png"
                 alt="gold"
                 className="w-12 h-12 inline-block"
               />
@@ -76,7 +76,7 @@ export default function ShopPage() {
             <picture>
               <source srcSet="/assets/ui/ruby_coin.webp" type="image/webp" />
               <img
-                src="/assets/ui/ruby_coin.png"
+                src="/assets/ui/png/ruby_coin.png"
                 alt="ruby"
                 className="w-12 h-12 inline-block"
               />
@@ -179,7 +179,7 @@ export default function ShopPage() {
                             type="image/webp"
                           />
                           <img
-                            src="/assets/ui/gold_coin.png"
+                            src="/assets/ui/png/gold_coin.png"
                             alt="gold"
                             className="w-4 h-4 inline-block"
                           />

@@ -1,7 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { resolveAvatarPicture } from "../../lib/characters";
-import { Edit, Settings, LogOut, Heart, Trophy, History } from "lucide-react";
+import {
+  Edit,
+  Settings,
+  LogOut,
+  Heart,
+  Trophy,
+  History,
+  Wifi,
+} from "lucide-react";
 import { useFriendsStore } from "../../store/friendsStore";
 import { ACHIEVEMENTS, normalizeAchievements } from "../../lib/achievements";
 
@@ -75,6 +83,10 @@ export function ProfileDropdown({
           Amigos
           {pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ""}
         </span>
+      </div>
+      <div className="dropdown-item" onClick={() => handleNav("/online")}>
+        <Wifi size={20} className="dropdown-item-icon" />
+        <span className="dropdown-item-text">Online</span>
       </div>
       <div className="dropdown-item" onClick={() => handleNav("/achievements")}>
         <Trophy size={20} className="dropdown-item-icon" />
