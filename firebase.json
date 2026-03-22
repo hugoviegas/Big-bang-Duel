@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "source": "functions"
+  },
   "database": {
     "rules": "duelo/realtime.rules.json"
   },

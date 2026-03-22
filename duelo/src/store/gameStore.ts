@@ -306,6 +306,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       roomId: roomId || null,
       phase: "selecting",
       turnStartedAt: Date.now(),
+      matchStartTime: Date.now(),
       attackTimer,
       bestOf3: config.bestOf3 ?? false,
       hideOpponentAmmo: shouldHideAmmo,

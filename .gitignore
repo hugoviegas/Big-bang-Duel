@@ -15,3 +15,5 @@ duelo/.github
 duelo/.specify
 .firebaserc
 duelo/public/assets/ui/png/*
+functions/node_modules
+functions/lib

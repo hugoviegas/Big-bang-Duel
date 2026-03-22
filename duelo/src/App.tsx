@@ -6,6 +6,7 @@ import { loadStrategies } from "./lib/strategyLoader";
 import IndexPage from "./pages/index";
 import MenuPage from "./pages/menu";
 import GamePage from "./pages/game";
+import { autoAssignMissionsIfNeeded } from "./lib/missionsAutoAssign";
 import OnlinePage from "./pages/online";
 import LeaderboardPage from "./pages/leaderboard";
 import CharactersPage from "./pages/characters";
@@ -14,6 +15,7 @@ import AchievementsPage from "./pages/achievements";
 import FriendsPage from "./pages/friends";
 import ShopPage from "./pages/shop";
 import MissionsPage from "./pages/missions";
+import AdminMissionsPage from "./pages/AdminMissionsPage";
 import DesignSystemPage from "./pages/design-system";
 import MatchHistoryPage from "./pages/matchHistory";
 import { AssetPreloader } from "./components/common/AssetPreloader";
@@ -144,6 +146,8 @@ function App() {
       // new users and validates fields for existing ones. Runs at most once
       // every 5 minutes per session (guarded inside ensureProfile).
       store.ensureProfile().catch(() => {});
+      // Auto-assign missions if needed (remove expired, assign new)
+      autoAssignMissionsIfNeeded(firebaseUser.uid).catch(() => {});
     });
     return unsub;
   }, []);
@@ -210,6 +214,14 @@ function App() {
           element={
             <MobilePage>
               <MissionsPage />
+            </MobilePage>
+          }
+        />
+        <Route
+          path="/admin/missions"
+          element={
+            <MobilePage>
+              <AdminMissionsPage />
             </MobilePage>
           }
         />

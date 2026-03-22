@@ -48,7 +48,7 @@ export function TopBar() {
         <button className="avatar-ring" onClick={toggleDropdown}>
           <img src={avatarPic} alt={activeChar.name} />
           {headerUnclaimed > 0 && (
-            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-600 rounded-full ring-2 ring-black animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-600 rounded-full ring-2 ring-black animate-pulse shadow-[0_0_8px_#ff0000]" />
           )}
         </button>
 

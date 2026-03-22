@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import {
@@ -5,6 +6,8 @@ import {
   normalizeClassMastery,
 } from "../../lib/progression";
 import { normalizeCurrencies } from "../../lib/progression";
+import { db } from "../../lib/firebase";
+import { collection, query, onSnapshot } from "firebase/firestore";
 
 const NAV_ITEMS = [
   {
@@ -42,6 +45,7 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [missionsCount, setMissionsCount] = useState(0);
 
   // Get class mastery and gold from auth store, ensuring proper normalization
   const user = useAuthStore((state) => state.user);
@@ -49,14 +53,30 @@ export function BottomNav() {
   const currencies = normalizeCurrencies(user?.currencies);
   const hasEvolvable = hasEvolvableClass(classMastery, currencies.gold);
 
+  // Subscribe to missions count
+  useEffect(() => {
+    if (!user?.uid) return;
+    const q = query(collection(db, "players", user.uid, "missions"));
+    const unsub = onSnapshot(q, (snap) => {
+      const pending = snap.docs.filter((d) => {
+        const m = d.data();
+        return m.completed && !m.claimed;
+      }).length;
+      setMissionsCount(pending);
+    });
+    return () => unsub();
+  }, [user?.uid]);
+
   return (
     <>
       <div className="bottom-nav">
         {NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.path;
 
-          // Show notification dot only for Cards tab if there are evolvable classes
-          const showNotification = item.path === "/characters" && hasEvolvable;
+          // Show notification dot for Cards if there are evolvable classes, Missions if there are claimable rewards
+          const showNotification =
+            (item.path === "/characters" && hasEvolvable) ||
+            (item.path === "/missions" && missionsCount > 0);
 
           return (
             <button
@@ -73,7 +93,11 @@ export function BottomNav() {
                   decoding="async"
                 />
                 {showNotification && (
-                  <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-black bg-gold" />
+                  <span
+                    className={`absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-black ${
+                      item.path === "/missions" ? "bg-gold" : "bg-gold"
+                    }`}
+                  />
                 )}
               </span>
               <span className="nav-label">{item.label}</span>

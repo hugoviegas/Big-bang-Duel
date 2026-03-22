@@ -140,6 +140,7 @@ export function GameOver() {
       opponentCharacterId: opponent.avatar,
       opponentUid: opponent.id, // Firebase UID of opponent (may be undefined for offline/solo matches)
       remainingLife: player.life, // Player's remaining life at end of match
+      matchStartTime: useGameStore.getState().matchStartTime ?? undefined,
     };
 
     // Persist to Firestore - Firebase is the source of truth

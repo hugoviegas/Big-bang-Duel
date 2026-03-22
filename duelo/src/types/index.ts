@@ -94,6 +94,7 @@ export interface GameState {
   phase: GamePhase;
   turn: number;
   turnStartedAt?: number | null;
+  matchStartTime?: number | null;
   player: PlayerState;
   opponent: PlayerState;
   lastResult: TurnResult | null;
@@ -229,10 +230,26 @@ export interface MatchSummary {
   successfulDodges: number;
   /** Successful counters (opponent shot but player countered). */
   successfulCounters: number;
+  /** Successful shots (player shot and dealt damage). */
+  successfulShots: number;
+  /** Successful double shots (player double shot and dealt damage). */
+  successfulDoubleShots: number;
   damageTaken: number;
   damageDealt: number;
   /** Player remaining life when match ended. */
   remainingLife: number;
+  /** Duration of the match in seconds */
+  durationSeconds?: number;
+  /** The class used by the player in this match */
+  classUsed?: CharacterClass;
+  /** Breakdowns on how many times each card type was used */
+  cardUsageBreakdown?: {
+    shot: number;
+    double_shot: number;
+    reload: number;
+    dodge: number;
+    counter: number;
+  };
   timestamp: number;
 }
 
@@ -286,6 +303,20 @@ export interface User {
   perfectWins?: number;
   /** Count of wins with 2+ remaining life. */
   highLifeWins?: number;
+  /** Role to identify admins */
+  role?: "admin" | "user";
+  /** Specific permissions for the admin panel */
+  adminPermissions?: string[];
+  /** Missions actively assigned to the user */
+  activeMissions?: Record<string, MissionInstance>;
+  /** IDs of missions whose rewards have been claimed */
+  claimedMissions?: string[];
+  /** Counters for completed missions per category */
+  missionStats?: {
+    dailyCompleted: number;
+    weeklyCompleted: number;
+    monthlyCompleted: number;
+  };
 }
 
 export interface PlayerProfile {
@@ -319,6 +350,20 @@ export interface PlayerProfile {
   onlinePlayersDefeated?: string[];
   perfectWins?: number;
   highLifeWins?: number;
+  /** Role to identify admins */
+  role?: "admin" | "user";
+  /** Specific permissions for the admin panel */
+  adminPermissions?: string[];
+  /** Missions actively assigned to the user */
+  activeMissions?: Record<string, MissionInstance>;
+  /** IDs of missions whose rewards have been claimed */
+  claimedMissions?: string[];
+  /** Counters for completed missions per category */
+  missionStats?: {
+    dailyCompleted: number;
+    weeklyCompleted: number;
+    monthlyCompleted: number;
+  };
   /** UI preferences persisted per-player: infoDisplayMode (0=show all, 1=button only, 2=hide all). */
   uiPreferences?: UIPreferences;
 }
@@ -438,4 +483,42 @@ export interface Room {
   };
   hostEmojiSentAt?: number;
   guestEmojiSentAt?: number;
+}
+
+// ─── Mission System ──────────────────────────────────────────────────────────
+
+export type MissionCategory = "daily" | "weekly" | "monthly";
+export type MissionDifficulty = "easy" | "medium" | "hard" | "hard_prolonged";
+
+export interface MissionReward {
+  gold: number;
+  ruby?: number;
+}
+
+export interface MissionObjective {
+  type: string;
+  target: number;
+  metric: string; // Used to fetch the correct value from MatchSummary
+}
+
+export interface MissionTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: MissionCategory;
+  difficulty: MissionDifficulty;
+  objective: MissionObjective;
+  reward: MissionReward;
+  updatedAt: number;
+}
+
+export interface MissionInstance extends MissionTemplate {
+  uid: string;
+  assignedAt: number;
+  expiresAt: number;
+  progress: number;
+  completed: boolean;
+  completedAt?: number;
+  claimed: boolean;
+  claimedAt?: number;
 }

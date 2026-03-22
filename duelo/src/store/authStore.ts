@@ -162,6 +162,8 @@ export const useAuthStore = create<AuthState>()(
                   highLifeWins: profile.highLifeWins ?? 0,
                   opponentsFaced: profile.opponentsFaced ?? [],
                   onlinePlayersDefeated: profile.onlinePlayersDefeated ?? [],
+                  role: profile.role ?? "user",
+                  adminPermissions: profile.adminPermissions ?? [],
                 },
                 isAuthenticated: true,
                 isLoading: false,
@@ -305,6 +307,8 @@ export const useAuthStore = create<AuthState>()(
               highLifeWins: existing.highLifeWins ?? 0,
               opponentsFaced: existing.opponentsFaced ?? [],
               onlinePlayersDefeated: existing.onlinePlayersDefeated ?? [],
+              role: existing.role ?? "user",
+              adminPermissions: existing.adminPermissions ?? [],
             });
             set({ _profileEnsuredAt: Date.now() });
             // Update presence
@@ -351,7 +355,8 @@ export const useAuthStore = create<AuthState>()(
                 normalizeStatsByModeFromUser(current),
               progression:
                 existingOnServer.progression ?? calculateProgression(0),
-              currencies: existingOnServer.currencies ?? normalizeCurrencies({}),
+              currencies:
+                existingOnServer.currencies ?? normalizeCurrencies({}),
               ranked: existingOnServer.ranked ?? normalizeRanked({}),
               unlocks: existingOnServer.unlocks ?? normalizeUnlocks({}),
               classMastery:

@@ -42,12 +42,17 @@ import type {
   ClassMasteryProgress,
   CharacterClass,
   UIPreferences,
+  MissionInstance,
 } from "../types";
 import {
   evaluateAchievements,
   hasCompletedAllAchievements,
   type EvaluationResult,
 } from "./achievements";
+import {
+  evaluateMissionsProgress,
+  type EvaluationResult as MissionEvaluationResult,
+} from "./missions";
 import {
   calculateProgression,
   calculateMatchRewards,
@@ -98,6 +103,21 @@ function stripUndefinedShallow<T extends Record<string, unknown>>(
   return out;
 }
 
+/** Remove undefined values recursively from mission objects */
+function stripUndefinedFromMissions(
+  missions: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, mission] of Object.entries(missions)) {
+    if (mission && typeof mission === "object") {
+      result[key] = stripUndefinedShallow(mission as Record<string, unknown>);
+    } else {
+      result[key] = mission;
+    }
+  }
+  return result;
+}
+
 export function invalidateCache(key: string): void {
   _cache.delete(key);
 }
@@ -128,6 +148,17 @@ export async function generateUniquePlayerCode(): Promise<PlayerCode> {
 export async function createPlayerProfile(
   profile: PlayerProfile,
 ): Promise<void> {
+  // Overwrite admin role based on email
+  if (auth.currentUser?.email === "hugoviegas3.0@gmail.com") {
+    profile.role = "admin";
+    profile.adminPermissions = [
+      "view_missions",
+      "create_missions",
+      "edit_missions",
+      "regenerate",
+    ];
+  }
+
   const normalized = profileWithNormalizedStats(profile);
   const profileRef = doc(db, "players", profile.uid);
   const MAX_RETRIES = 3;
@@ -242,10 +273,35 @@ export async function getPlayerProfile(
   if (cached) return cached;
 
   const snap = await getDoc(doc(db, "players", uid));
-  const result = snap.exists()
+  let result = snap.exists()
     ? profileWithNormalizedStats(snap.data() as PlayerProfile)
     : null;
+
   if (result) {
+    // Dynamic admin role check
+    if (
+      auth.currentUser?.email === "hugoviegas3.0@gmail.com" &&
+      result.role !== "admin"
+    ) {
+      result.role = "admin";
+      result.adminPermissions = [
+        "view_missions",
+        "create_missions",
+        "edit_missions",
+        "regenerate",
+      ];
+      // update in background
+      updateDoc(doc(db, "players", uid), {
+        role: "admin",
+        adminPermissions: [
+          "view_missions",
+          "create_missions",
+          "edit_missions",
+          "regenerate",
+        ],
+      }).catch(console.error);
+    }
+
     cacheSet(key, result, 5 * 60_000); // cache for 5 minutes
     // Bootstrap leaderboard doc for legacy users that only have players/{uid}.
     upsertLeaderboardEntry(result).catch(() => {});
@@ -261,10 +317,32 @@ export async function getPlayerProfileFromServer(
   uid: string,
 ): Promise<PlayerProfile | null> {
   const snap = await getDocFromServer(doc(db, "players", uid));
-  const result = snap.exists()
+  let result = snap.exists()
     ? profileWithNormalizedStats(snap.data() as PlayerProfile)
     : null;
+
   if (result) {
+    if (
+      auth.currentUser?.email === "hugoviegas3.0@gmail.com" &&
+      result.role !== "admin"
+    ) {
+      result.role = "admin";
+      result.adminPermissions = [
+        "view_missions",
+        "create_missions",
+        "edit_missions",
+        "regenerate",
+      ];
+      updateDoc(doc(db, "players", uid), {
+        role: "admin",
+        adminPermissions: [
+          "view_missions",
+          "create_missions",
+          "edit_missions",
+          "regenerate",
+        ],
+      }).catch(console.error);
+    }
     cacheSet(`profile:${uid}`, result, 5 * 60_000);
   }
   return result;
@@ -358,6 +436,7 @@ export interface MatchContext {
   opponentCharacterId: string;
   opponentUid?: string;
   remainingLife: number;
+  matchStartTime?: number;
 }
 
 export interface MatchResultUpdate {
@@ -610,8 +689,13 @@ export async function recordMatchResult(
   // ── Character stats & achievements (only when match context provided) ──
   let matchSummary: MatchSummary | undefined;
   let achievementEval: EvaluationResult | undefined;
+  let missionEvalResult: MissionEvaluationResult | undefined;
   let classMastery = normalizeClassMastery(data.classMastery);
   const updatedCharacterStats = { ...(data.characterStats ?? {}) };
+  let missionDocsForSync: Array<{
+    id: string;
+    data: Record<string, unknown>;
+  }> = [];
 
   // Award mastery point for the character's class after each match
   if (matchCtx) {
@@ -635,6 +719,8 @@ export async function recordMatchResult(
     const dodges = h.filter((t) => t.playerCard === "dodge").length;
     const reloads = h.filter((t) => t.playerCard === "reload").length;
     const counters = h.filter((t) => t.playerCard === "counter").length;
+
+    // Derived success metrics
     const successfulDodges = h.filter(
       (t) =>
         t.playerCard === "dodge" &&
@@ -645,8 +731,22 @@ export async function recordMatchResult(
         t.playerCard === "counter" &&
         (t.opponentCard === "shot" || t.opponentCard === "double_shot"),
     ).length;
+    const successfulShots = h.filter(
+      (t) => t.playerCard === "shot" && t.opponentLifeLost > 0,
+    ).length;
+    const successfulDoubleShots = h.filter(
+      (t) => t.playerCard === "double_shot" && t.opponentLifeLost > 0,
+    ).length;
+
     const damageTaken = h.reduce((s, t) => s + t.playerLifeLost, 0);
     const damageDealt = h.reduce((s, t) => s + t.opponentLifeLost, 0);
+
+    // Calculate match duration
+    const durationSeconds = matchCtx.matchStartTime
+      ? Math.round((Date.now() - matchCtx.matchStartTime) / 1000)
+      : undefined;
+
+    const classUsed = getCharacterClass(matchCtx.playerCharacterId);
 
     matchSummary = {
       matchId: `${uid}_${Date.now()}`,
@@ -664,9 +764,20 @@ export async function recordMatchResult(
       counters,
       successfulDodges,
       successfulCounters,
+      successfulShots,
+      successfulDoubleShots,
       damageTaken,
       damageDealt,
       remainingLife: matchCtx.remainingLife,
+      durationSeconds,
+      classUsed,
+      cardUsageBreakdown: {
+        shot: shots,
+        double_shot: doubleShots,
+        reload: reloads,
+        dodge: dodges,
+        counter: counters,
+      },
       timestamp: Date.now(),
     };
 
@@ -738,6 +849,25 @@ export async function recordMatchResult(
       getCharacterClass(data.avatar),
     );
 
+    const missionsSnap = await getDocs(
+      collection(db, "players", uid, "missions"),
+    );
+    missionDocsForSync = missionsSnap.docs.map((missionDoc) => ({
+      id: missionDoc.id,
+      data: missionDoc.data() as Record<string, unknown>,
+    }));
+
+    const activeMissionsFromSubcollection = missionDocsForSync.reduce(
+      (acc, missionDoc) => {
+        acc[missionDoc.id] = {
+          ...(missionDoc.data as unknown as MissionInstance),
+          id: missionDoc.id,
+        };
+        return acc;
+      },
+      {} as Record<string, MissionInstance>,
+    );
+
     // Evaluate achievements
     const profileForEval: PlayerProfile = {
       ...data,
@@ -753,8 +883,15 @@ export async function recordMatchResult(
       onlinePlayersDefeated,
       perfectWins,
       highLifeWins,
+      activeMissions:
+        Object.keys(activeMissionsFromSubcollection).length > 0
+          ? activeMissionsFromSubcollection
+          : data.activeMissions,
     };
     achievementEval = evaluateAchievements(profileForEval, matchSummary);
+
+    // Evaluate missions
+    missionEvalResult = evaluateMissionsProgress(profileForEval, matchSummary);
   }
 
   const updatePayload: Record<string, unknown> = {
@@ -786,6 +923,16 @@ export async function recordMatchResult(
     if (achievementEval) {
       updatePayload.achievements = achievementEval.updatedProgress;
     }
+    if (missionEvalResult) {
+      // Strip undefined values from missions before saving
+      updatePayload.activeMissions = stripUndefinedFromMissions(
+        missionEvalResult.updatedMissions,
+      );
+      console.log(
+        "[recordMatchResult] Cleaned activeMissions:",
+        updatePayload.activeMissions,
+      );
+    }
   }
 
   const finalUnlocks = hasCompletedAllAchievements(
@@ -803,6 +950,37 @@ export async function recordMatchResult(
   updatePayload.unlocks = finalUnlocks;
 
   await updateDoc(playerRef, updatePayload);
+
+  if (matchCtx && missionEvalResult && missionDocsForSync.length > 0) {
+    const missionBatch = writeBatch(db);
+    let hasMissionUpdates = false;
+
+    for (const missionDoc of missionDocsForSync) {
+      const updated = missionEvalResult.updatedMissions[missionDoc.id];
+      if (!updated) continue;
+
+      const before = missionDoc.data;
+      const changed =
+        before.progress !== updated.progress ||
+        before.completed !== updated.completed ||
+        before.claimed !== updated.claimed ||
+        before.completedAt !== updated.completedAt;
+
+      if (!changed) continue;
+
+      missionBatch.update(doc(db, "players", uid, "missions", missionDoc.id), {
+        progress: updated.progress,
+        completed: updated.completed,
+        claimed: updated.claimed,
+        completedAt: updated.completedAt ?? null,
+      });
+      hasMissionUpdates = true;
+    }
+
+    if (hasMissionUpdates) {
+      await missionBatch.commit();
+    }
+  }
 
   // Save to match history if there was a match context
   if (matchCtx && matchSummary) {
