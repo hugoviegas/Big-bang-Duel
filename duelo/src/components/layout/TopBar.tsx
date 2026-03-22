@@ -46,10 +46,7 @@ export function TopBar() {
       <div className="top-bar">
         {/* Avatar */}
         <button className="avatar-ring" onClick={toggleDropdown}>
-          <img
-            src={avatarPic}
-            alt={activeChar.name}
-          />
+          <img src={avatarPic} alt={activeChar.name} />
           {headerUnclaimed > 0 && (
             <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-600 rounded-full ring-2 ring-black animate-pulse" />
           )}
@@ -57,15 +54,13 @@ export function TopBar() {
 
         {/* Profile Info */}
         <div className="profile-info">
-          <div className="profile-name-row">
-            <span
-              className="profile-name cursor-pointer hover:text-gold transition-colors"
-              onClick={() => navigate("/profile")}
-            >
-              {user.displayName}
-            </span>
-            <span className="level-badge">Nv {level}</span>
-          </div>
+          <span
+            className="profile-name cursor-pointer hover:text-gold transition-colors"
+            onClick={() => navigate("/profile")}
+          >
+            {user.displayName}
+          </span>
+          <span className="profile-level">Nv {level}</span>
         </div>
 
         {/* Gold */}
