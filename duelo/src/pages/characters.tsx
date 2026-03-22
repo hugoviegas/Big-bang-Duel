@@ -30,30 +30,38 @@ import {
 } from "../lib/firebaseService";
 import { hasCompletedAllAchievements } from "../lib/achievements";
 
-const CHARACTER_PRICE_GOLD = 1000;
 type TabType = "characters" | "classes";
 
 /* ─── Rarity visual helpers ──────────────────────────────────────────── */
 const RARITY_BORDER: Record<CharacterDef["rarity"], string> = {
   common: "border-sand/20",
   rare: "border-sky-400/40",
+  epic: "border-purple-400/40",
   legendary: "border-gold/50",
+  titanic: "border-red-500/50",
 };
 const RARITY_BORDER_ACTIVE: Record<CharacterDef["rarity"], string> = {
   common: "border-sand/60",
   rare: "border-sky-400",
+  epic: "border-purple-400",
   legendary: "border-gold",
+  titanic: "border-red-500",
 };
 const RARITY_GLOW: Record<CharacterDef["rarity"], string> = {
   common: "",
   rare: "shadow-[0_0_20px_rgba(56,189,248,0.20)]",
+  epic: "shadow-[0_0_25px_rgba(168,85,247,0.25)]",
   legendary: "shadow-[0_0_40px_rgba(234,179,8,0.28)]",
+  titanic: "shadow-[0_0_50px_rgba(220,38,38,0.30)]",
 };
 const RARITY_ATMOSPHERE: Record<CharacterDef["rarity"], string> = {
   common: "",
   rare: "bg-[radial-gradient(ellipse_at_50%_85%,rgba(56,189,248,0.09),transparent_65%)]",
+  epic: "bg-[radial-gradient(ellipse_at_50%_85%,rgba(168,85,247,0.11),transparent_65%)]",
   legendary:
     "bg-[radial-gradient(ellipse_at_50%_85%,rgba(234,179,8,0.12),transparent_65%)]",
+  titanic:
+    "bg-[radial-gradient(ellipse_at_50%_85%,rgba(220,38,38,0.13),transparent_65%)]",
 };
 
 /* ─── Class colour palette ──────────────────────────────────────────── */
@@ -381,11 +389,13 @@ function ConfirmPurchaseModal({
   onConfirm,
   onCancel,
   loading,
+  playerGold,
 }: {
   char: CharacterDef;
   onConfirm: () => void;
   onCancel: () => void;
   loading: boolean;
+  playerGold: number;
 }) {
   const modal = (
     <motion.div
@@ -393,7 +403,7 @@ function ConfirmPurchaseModal({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
-      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80"
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 p-4"
       onClick={onCancel}
     >
       <motion.div
@@ -401,39 +411,115 @@ function ConfirmPurchaseModal({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="bg-black border-2 border-gold/40 rounded-2xl p-6 max-w-xs w-full mx-4"
+        className="card-wood rounded-2xl p-6 max-w-sm w-full border border-gold/30 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-western text-gold text-xl tracking-wider mb-2">
-          Confirmar Compra
-        </h3>
-        <p className="font-sans text-gray-300 text-sm mb-4">
-          Deseja comprar{" "}
-          <span className="font-bold text-white">{char.name}</span> por{" "}
-          <span className="font-bold text-gold">
-            {CHARACTER_PRICE_GOLD.toLocaleString("pt-BR")} Gold
-          </span>
-          ?
-        </p>
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="font-western text-2xl text-gold mb-1">
+            Confirmar Compra
+          </h2>
+          <p className="font-stats text-xs text-sand/60 uppercase tracking-widest">
+            Deseja adquirir este personagem?
+          </p>
+        </div>
 
-        <div className="flex gap-3 mt-6">
+        {/* Character Card */}
+        <div className="rounded-xl bg-black/50 p-4 border border-sand/20 flex gap-4">
+          <div className="w-20 h-20 rounded-lg overflow-hidden border border-sand/30 bg-black/30 flex-shrink-0">
+            <img
+              src={char.profileImage}
+              alt={char.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          <div className="flex-1">
+            <h3 className="font-western text-sm text-sand-light mb-1">
+              {char.name}
+            </h3>
+            <p className="font-stats text-[11px] text-sand/60 mb-2">
+              {char.title}
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-stats uppercase tracking-wider border border-gold/40 text-gold bg-gold/10">
+                {RARITY_LABELS[char.rarity]}
+              </span>
+              <span className="text-sand/40">•</span>
+              <span className="font-stats text-[10px] text-gold flex items-center gap-1">
+                <picture>
+                  <source
+                    srcSet="/assets/ui/gold_coin.webp"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/assets/ui/png/gold_coin.png"
+                    alt="gold"
+                    className="w-3 h-3"
+                  />
+                </picture>
+                {char.value.toLocaleString("pt-BR")}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Cost and Balance */}
+        <div className="rounded-xl bg-black/30 p-3 space-y-2 border border-sand/15">
+          <div className="flex items-center justify-between">
+            <span className="font-stats text-xs text-sand/70">Custo:</span>
+            <span className="font-stats text-sm text-gold font-semibold flex items-center gap-1">
+              <picture>
+                <source srcSet="/assets/ui/gold_coin.webp" type="image/webp" />
+                <img
+                  src="/assets/ui/png/gold_coin.png"
+                  alt="gold"
+                  className="w-4 h-4"
+                />
+              </picture>
+              {char.value.toLocaleString("pt-BR")}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-stats text-xs text-sand/70">Seu Ouro:</span>
+            <span
+              className={`font-stats text-sm font-semibold ${
+                playerGold >= char.value ? "text-green-400" : "text-red-400"
+              }`}
+            >
+              {playerGold.toLocaleString("pt-BR")}
+            </span>
+          </div>
+          <div className="h-px bg-sand/20 my-2" />
+          <div className="flex items-center justify-between">
+            <span className="font-stats text-xs text-sand/70">
+              Após Compra:
+            </span>
+            <span className="font-stats text-sm text-sand-light font-semibold">
+              {(playerGold - char.value).toLocaleString("pt-BR")}
+            </span>
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-3 pt-2">
           <button
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 py-2 rounded-lg border border-sand/30 text-sand/70 font-western text-sm tracking-wider hover:bg-black/50 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2 rounded-lg border border-sand/30 text-sand font-stats text-sm uppercase tracking-wider transition-colors hover:border-sand/50 hover:bg-sand/5 disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
+            disabled={playerGold < char.value || loading}
             onClick={onConfirm}
-            disabled={loading}
-            className="flex-1 py-2 rounded-lg bg-green-950/50 border border-green-500/50 text-green-300 font-western text-sm tracking-wider hover:bg-green-950/70 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className={`flex-1 px-4 py-2 rounded-lg font-stats text-sm uppercase tracking-wider transition-colors border ${
+              playerGold >= char.value && !loading
+                ? "border-gold/50 text-gold bg-gold/10 hover:bg-gold/20"
+                : "border-sand/20 text-sand/40 bg-black/20"
+            }`}
           >
-            {loading ? (
-              <div className="w-3 h-3 border border-green-400/50 border-t-green-300 rounded-full animate-spin" />
-            ) : (
-              "Comprar"
-            )}
+            {loading ? "Comprando..." : "Confirmar"}
           </button>
         </div>
       </motion.div>
@@ -674,7 +760,7 @@ function CharacterModal({
                       className="w-4 h-4"
                     />
                   </picture>
-                  Comprar {CHARACTER_PRICE_GOLD.toLocaleString("pt-BR")}
+                  Comprar {char.value.toLocaleString("pt-BR")}
                 </>
               )}
             </button>
@@ -1065,6 +1151,7 @@ export default function CharactersPage() {
           <ConfirmPurchaseModal
             char={confirmPurchase}
             loading={buying === confirmPurchase.id}
+            playerGold={currencies.gold}
             onConfirm={() => handleBuyCharacter(confirmPurchase)}
             onCancel={() => setConfirmPurchase(null)}
           />

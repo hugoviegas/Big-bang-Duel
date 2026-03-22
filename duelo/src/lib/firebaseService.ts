@@ -64,7 +64,7 @@ import {
   awardClassMasteryPoint,
   type MatchRewardSummary,
 } from "./progression";
-import { getCharacterClass } from "./characters";
+import { getCharacterClass, getCharacter } from "./characters";
 
 // ─── In-Memory TTL Cache ────────────────────────────────────────────────────
 // Prevents redundant Firestore reads within a single session.
@@ -959,7 +959,9 @@ export async function syncAchievementsRetroactively(
   return { updated: changedCount > 0, count: changedCount };
 }
 
-const CHARACTER_PRICE_GOLD = 1000;
+// Character shop price is now defined per-character in `src/lib/characters.ts`.
+// The previous hardcoded constant was kept for backwards compatibility in
+// older players, but purchase logic will resolve price per-character.
 
 export async function buyCharacterInShop(
   uid: string,
@@ -1013,10 +1015,15 @@ export async function buyCharacterInShop(
     };
   }
 
-  if (currencies.gold < CHARACTER_PRICE_GOLD) {
+  // Resolve the actual character price from definitions so backend
+  // matches the dynamic values shown in the frontend UI.
+  const charDef = getCharacter(characterId);
+  const price = charDef?.value ?? 1000;
+
+  if (currencies.gold < price) {
     return {
       ok: false,
-      message: "Gold insuficiente para comprar.",
+      message: `Gold insuficiente para comprar. Necessário: ${price.toLocaleString("pt-BR")}.`,
       currencies,
       unlocks,
     };
@@ -1024,7 +1031,7 @@ export async function buyCharacterInShop(
 
   const nextCurrencies = {
     ...currencies,
-    gold: currencies.gold - CHARACTER_PRICE_GOLD,
+    gold: Math.max(0, currencies.gold - price),
   };
   const nextUnlocks = normalizeUnlocks({
     ...unlocks,

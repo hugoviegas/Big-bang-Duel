@@ -20,7 +20,9 @@ export interface CharacterDef {
    *  Used as fallback when profileImage is not available.
    */
   avatarCropY: string;
-  rarity: "common" | "rare" | "legendary";
+  rarity: "common" | "rare" | "epic" | "legendary" | "titanic";
+  /** Rarity value in currency */
+  value: number;
   /** Passive ability class — determines which special mechanic this character uses. */
   characterClass: CharacterClass;
   // ── Placeholders for future features ─────────────────────────────────────
@@ -120,7 +122,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/the_marshal.webp",
     profileImage: "/assets/characters_profile/the_marshal_profile.webp",
     avatarCropY: "10%",
-    rarity: "rare",
+    rarity: "common",
+    value: 1000,
     characterClass: "atirador",
   },
   {
@@ -131,7 +134,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/the_skull.webp",
     profileImage: "/assets/characters_profile/the_skull_profile.webp",
     avatarCropY: "10%",
-    rarity: "rare",
+    rarity: "common",
+    value: 1000,
     characterClass: "sanguinario",
   },
   {
@@ -142,7 +146,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/la_dama.webp",
     profileImage: "/assets/characters_profile/la_dama_profile.webp",
     avatarCropY: "10%",
-    rarity: "legendary",
+    rarity: "common",
+    value: 1000,
     characterClass: "sorrateiro",
   },
 
@@ -156,6 +161,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/alucard_profile.webp",
     avatarCropY: "12%",
     rarity: "legendary",
+    value: 5000,
     characterClass: "sanguinario",
   },
   {
@@ -166,18 +172,20 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/detective_hopps_idle.webp",
     profileImage: "/assets/characters_profile/detective_hopps_profile.webp",
     avatarCropY: "12%",
-    rarity: "rare",
+    rarity: "epic",
+    value: 3000,
     characterClass: "estrategista",
   },
   {
     id: "mokey_king",
     name: "Monkey King",
     title: "O Rei dos Macacos",
-    description: "Ágil, malandro e impossível de acertar.",
+    description: "Ágil, malandro e impossivel de acertar.",
     image: "/assets/characters/mokey_king_idle.webp",
     profileImage: "/assets/characters_profile/mokey_king_profile.webp",
     avatarCropY: "10%",
-    rarity: "legendary",
+    rarity: "rare",
+    value: 2000,
     characterClass: "sorrateiro",
   },
   {
@@ -188,7 +196,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/pe_de_pano_idle.webp",
     profileImage: "/assets/characters_profile/pe_de_pano_profile.webp",
     avatarCropY: "10%",
-    rarity: "common",
+    rarity: "rare",
+    value: 2000,
     characterClass: "suporte",
   },
   {
@@ -199,7 +208,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/serpent_queen_idle.webp",
     profileImage: "/assets/characters_profile/serpent_queen_profile.webp",
     avatarCropY: "12%",
-    rarity: "legendary",
+    rarity: "epic",
+    value: 3000,
     characterClass: "sorrateiro",
   },
   {
@@ -211,6 +221,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/spider_noir_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
+    value: 2000,
     characterClass: "sorrateiro",
   },
   {
@@ -222,6 +233,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/stormtrooper_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
+    value: 1000,
     characterClass: "atirador",
   },
   {
@@ -233,6 +245,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_cowboy_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
+    value: 1000,
     characterClass: "suporte",
   },
   {
@@ -244,6 +257,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_jedi_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
+    value: 5000,
     characterClass: "ricochete",
   },
   {
@@ -254,7 +268,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/the_mandalorian_idle.webp",
     profileImage: "/assets/characters_profile/the_mandalorian_profile.webp",
     avatarCropY: "10%",
-    rarity: "legendary",
+    rarity: "rare",
+    value: 2000,
     characterClass: "suporte",
   },
   {
@@ -265,7 +280,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/the_outlaw_idle.webp",
     profileImage: "/assets/characters_profile/the_outlaw_profile.webp",
     avatarCropY: "10%",
-    rarity: "common",
+    rarity: "epic",
+    value: 3000,
     characterClass: "ricochete",
   },
   {
@@ -276,7 +292,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/the_rango_idle.webp",
     profileImage: "/assets/characters_profile/the_rango_profile.webp",
     avatarCropY: "12%",
-    rarity: "rare",
+    rarity: "legendary",
+    value: 5000,
     characterClass: "atirador",
   },
   {
@@ -287,7 +304,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/the_scrapper_idle.webp",
     profileImage: "/assets/characters_profile/the_scrapper_profile.webp",
     avatarCropY: "10%",
-    rarity: "rare",
+    rarity: "epic",
+    value: 3000,
     characterClass: "suporte",
   },
   {
@@ -299,6 +317,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_sheriff_profile.webp",
     avatarCropY: "10%",
     rarity: "common",
+    value: 1000,
     characterClass: "atirador",
   },
   {
@@ -310,6 +329,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/the_witcher_profile.webp",
     avatarCropY: "10%",
     rarity: "legendary",
+    value: 5000,
     characterClass: "estrategista",
   },
   {
@@ -321,6 +341,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/tigress_blaze_profile.webp",
     avatarCropY: "12%",
     rarity: "rare",
+    value: 2000,
     characterClass: "ricochete",
   },
   {
@@ -332,7 +353,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/the_razor_idle.webp",
     profileImage: "/assets/characters_profile/the_razor_profile.webp",
     avatarCropY: "12%",
-    rarity: "rare",
+    rarity: "titanic",
+    value: 10000,
     characterClass: "estrategista",
   },
   {
@@ -343,7 +365,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/ben.webp",
     profileImage: "/assets/characters_profile/Ben_profile.webp",
     avatarCropY: "12%",
-    rarity: "rare",
+    rarity: "legendary",
+    value: 5000,
     characterClass: "sanguinario",
   },
   {
@@ -354,7 +377,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/cooper.webp",
     profileImage: "/assets/characters_profile/cooper_profile.webp",
     avatarCropY: "12%",
-    rarity: "common",
+    rarity: "legendary",
+    value: 5000,
     characterClass: "sorrateiro",
   },
   {
@@ -366,7 +390,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/genio.webp",
     profileImage: "/assets/characters_profile/o_genio_profile.webp",
     avatarCropY: "10%",
-    rarity: "rare",
+    rarity: "legendary",
+    value: 5000,
     characterClass: "estrategista",
   },
   {
@@ -377,7 +402,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/o galo.webp",
     profileImage: "/assets/characters_profile/o_galo_profile.webp",
     avatarCropY: "12%",
-    rarity: "legendary",
+    rarity: "epic",
+    value: 3000,
     characterClass: "ricochete",
   },
   {
@@ -388,7 +414,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/the toon.webp",
     profileImage: "/assets/characters_profile/the_toon_profile.webp",
     avatarCropY: "12%",
-    rarity: "common",
+    rarity: "titanic",
+    value: 10000,
     characterClass: "estrategista",
   },
   {
@@ -399,7 +426,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/la belle.webp",
     profileImage: "/assets/characters_profile/la_belle_profile.webp",
     avatarCropY: "12%",
-    rarity: "rare",
+    rarity: "common",
+    value: 1000,
     characterClass: "suporte",
   },
   {
@@ -411,7 +439,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/o panda.webp",
     profileImage: "/assets/characters_profile/o_panda_profile.webp",
     avatarCropY: "12%",
-    rarity: "legendary",
+    rarity: "common",
+    value: 1000,
     characterClass: "ricochete",
   },
   {
@@ -424,6 +453,7 @@ export const CHARACTERS: CharacterDef[] = [
     profileImage: "/assets/characters_profile/tai_lung_profile.webp",
     avatarCropY: "12%",
     rarity: "legendary",
+    value: 5000,
     characterClass: "sanguinario",
   },
   {
@@ -435,7 +465,8 @@ export const CHARACTERS: CharacterDef[] = [
     image: "/assets/characters/norris.webp",
     profileImage: "/assets/characters_profile/norris_profile.webp",
     avatarCropY: "12%",
-    rarity: "legendary",
+    rarity: "titanic",
+    value: 10000,
     characterClass: "sanguinario",
   },
 ];
@@ -518,11 +549,23 @@ export function getCharacterClass(id: string): CharacterClass {
 export const RARITY_STYLES: Record<CharacterDef["rarity"], string> = {
   common: "border-sand/40 text-sand",
   rare: "border-sky-500/60 text-sky-300",
+  epic: "border-purple-500/70 text-purple-300",
   legendary: "border-gold/70 text-gold",
+  titanic: "border-red-600/80 text-red-400",
 };
 
 export const RARITY_LABELS: Record<CharacterDef["rarity"], string> = {
   common: "COMUM",
   rare: "RARO",
+  epic: "ÉPICO",
   legendary: "LENDÁRIO",
+  titanic: "TITÂNICO",
+};
+
+export const RARITY_VALUES: Record<CharacterDef["rarity"], number> = {
+  common: 1000,
+  rare: 2000,
+  epic: 3000,
+  legendary: 5000,
+  titanic: 10000,
 };
