@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { useSound } from "../../hooks/useSound";
 import { motion } from "framer-motion";
-import {
-  getUIPreferences,
-  setHideInfoTexts,
-  setUseConfirmButton,
-} from "./uiPreferences";
 
 interface GamePauseMenuProps {
   isOpen: boolean;
@@ -16,7 +11,6 @@ interface GamePauseMenuProps {
 export function GamePauseMenu({ isOpen, onClose, onQuit }: GamePauseMenuProps) {
   const { toggleMute, isMuted } = useSound();
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
-  const [prefs, setPrefs] = useState(getUIPreferences());
   const [vibrationEnabled, setVibrationEnabled] = useState(
     localStorage.getItem("vibration-enabled") !== "false",
   );
@@ -29,18 +23,6 @@ export function GamePauseMenu({ isOpen, onClose, onQuit }: GamePauseMenuProps) {
 
   const handleQuitConfirm = () => {
     onQuit();
-  };
-
-  const handleInfoTextsToggle = () => {
-    const next = !prefs.hideInfoTexts;
-    setHideInfoTexts(next);
-    setPrefs((prev) => ({ ...prev, hideInfoTexts: next }));
-  };
-
-  const handleConfirmButtonToggle = () => {
-    const next = !prefs.useConfirmButton;
-    setUseConfirmButton(next);
-    setPrefs((prev) => ({ ...prev, useConfirmButton: next }));
   };
 
   if (!isOpen) return null;
@@ -119,56 +101,6 @@ export function GamePauseMenu({ isOpen, onClose, onQuit }: GamePauseMenuProps) {
                 <div
                   className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${
                     vibrationEnabled ? "left-7" : "left-1"
-                  }`}
-                />
-              </button>
-            </div>
-
-            <div className="flex justify-between items-center bg-black/35 px-4 py-3 rounded-xl border border-gold/20">
-              <div>
-                <span className="font-western text-sm text-sand-light tracking-wider uppercase">
-                  TEXTOS E DICAS
-                </span>
-                <p className="font-stats text-[10px] text-sand/50">
-                  Oculta descricoes e dicas da interface
-                </p>
-              </div>
-              <button
-                onClick={handleInfoTextsToggle}
-                className={`w-14 h-7 rounded-full border-2 relative transition-all duration-300 ${
-                  !prefs.hideInfoTexts
-                    ? "bg-green-600 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
-                    : "bg-gray-600 border-gray-500"
-                }`}
-              >
-                <div
-                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${
-                    !prefs.hideInfoTexts ? "left-7" : "left-1"
-                  }`}
-                />
-              </button>
-            </div>
-
-            <div className="flex justify-between items-center bg-black/35 px-4 py-3 rounded-xl border border-gold/20">
-              <div>
-                <span className="font-western text-sm text-sand-light tracking-wider uppercase">
-                  BOTAO CONFIRMAR
-                </span>
-                <p className="font-stats text-[10px] text-sand/50">
-                  Se desativar, joga por arrastar/soltar e duplo clique
-                </p>
-              </div>
-              <button
-                onClick={handleConfirmButtonToggle}
-                className={`w-14 h-7 rounded-full border-2 relative transition-all duration-300 ${
-                  prefs.useConfirmButton
-                    ? "bg-green-600 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
-                    : "bg-gray-600 border-gray-500"
-                }`}
-              >
-                <div
-                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 ${
-                    prefs.useConfirmButton ? "left-7" : "left-1"
                   }`}
                 />
               </button>

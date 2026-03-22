@@ -272,7 +272,7 @@ export function BattleArena({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none p-3"
+          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-3"
         >
           <div className="w-full max-w-sm sm:max-w-2xl lg:max-w-3xl bg-gradient-to-b from-black/95 to-black/85 backdrop-blur-xl border-2 border-gold/40 rounded-3xl shadow-[0_0_50px_rgba(255,234,120,0.4),inset_0_0_20px_rgba(255,234,120,0.1)] overflow-y-auto max-h-[85vh]">
             <div className="p-4 sm:p-6 md:p-8">

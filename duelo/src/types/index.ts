@@ -318,13 +318,12 @@ export interface PlayerProfile {
   onlinePlayersDefeated?: string[];
   perfectWins?: number;
   highLifeWins?: number;
-  /** UI preferences persisted per-player: hideInfoTexts and useConfirmButton. */
+  /** UI preferences persisted per-player: infoDisplayMode (0=show all, 1=button only, 2=hide all). */
   uiPreferences?: UIPreferences;
 }
 
 export interface UIPreferences {
-  hideInfoTexts: boolean;
-  useConfirmButton: boolean;
+  infoDisplayMode: 0 | 1 | 2; // 0 = SHOW_INFO, 1 = BUTTON_ONLY, 2 = HIDE_ALL
 }
 
 export interface LeaderboardEntry {

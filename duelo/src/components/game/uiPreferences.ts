@@ -1,45 +1,46 @@
 export const UI_PREFS_UPDATED_EVENT = "bbd-ui-prefs-updated";
 
-const KEY_HIDE_INFO_TEXTS = "bbd-ui-hide-info-texts";
-const KEY_USE_CONFIRM_BUTTON = "bbd-ui-use-confirm-button";
+const KEY_INFO_DISPLAY_MODE = "bbd-ui-info-display-mode";
+
+// Info display modes
+export const INFO_DISPLAY_MODES = {
+  SHOW_INFO: 0,     // Mostra dicas, descrição da carta e botão confirmar
+  BUTTON_ONLY: 1,   // Apenas botão de confirmar
+  HIDE_ALL: 2,      // Esconde tudo
+} as const;
+
+export type InfoDisplayMode = (typeof INFO_DISPLAY_MODES)[keyof typeof INFO_DISPLAY_MODES];
 
 export interface UIPreferences {
-  hideInfoTexts: boolean;
-  useConfirmButton: boolean;
+  infoDisplayMode: InfoDisplayMode;
 }
 
-function getBool(key: string, defaultValue: boolean): boolean {
+function getNumber(key: string, defaultValue: number): number {
   const raw = localStorage.getItem(key);
   if (raw === null) return defaultValue;
-  return raw === "true";
+  const num = parseInt(raw, 10);
+  return isNaN(num) ? defaultValue : num;
 }
 
-function setBool(key: string, value: boolean): void {
-  localStorage.setItem(key, value ? "true" : "false");
+function setNumber(key: string, value: number): void {
+  localStorage.setItem(key, String(value));
 }
 
 export function getUIPreferences(): UIPreferences {
+  const modeNum = getNumber(KEY_INFO_DISPLAY_MODE, INFO_DISPLAY_MODES.SHOW_INFO);
+  // Ensure it's a valid mode (0, 1, or 2)
+  const validMode = (modeNum === 0 || modeNum === 1 || modeNum === 2 ? modeNum : INFO_DISPLAY_MODES.SHOW_INFO) as InfoDisplayMode;
   return {
-    hideInfoTexts: getBool(KEY_HIDE_INFO_TEXTS, false),
-    useConfirmButton: getBool(KEY_USE_CONFIRM_BUTTON, true),
+    infoDisplayMode: validMode,
   };
 }
 
-export function setHideInfoTexts(value: boolean): void {
-  setBool(KEY_HIDE_INFO_TEXTS, value);
+export function setInfoDisplayMode(value: InfoDisplayMode): void {
+  setNumber(KEY_INFO_DISPLAY_MODE, value);
   window.dispatchEvent(new CustomEvent(UI_PREFS_UPDATED_EVENT));
   // Async save to Firebase (fire and forget)
   savePrefsToDB().catch((err) =>
-    console.warn("[uiPreferences] Failed to save hideInfoTexts:", err),
-  );
-}
-
-export function setUseConfirmButton(value: boolean): void {
-  setBool(KEY_USE_CONFIRM_BUTTON, value);
-  window.dispatchEvent(new CustomEvent(UI_PREFS_UPDATED_EVENT));
-  // Async save to Firebase (fire and forget)
-  savePrefsToDB().catch((err) =>
-    console.warn("[uiPreferences] Failed to save useConfirmButton:", err),
+    console.warn("[uiPreferences] Failed to save infoDisplayMode:", err),
   );
 }
 
@@ -51,8 +52,7 @@ export function syncPreferencesFromFirebase(
   prefs: UIPreferences | undefined,
 ): void {
   if (!prefs) return;
-  setBool(KEY_HIDE_INFO_TEXTS, prefs.hideInfoTexts);
-  setBool(KEY_USE_CONFIRM_BUTTON, prefs.useConfirmButton);
+  setNumber(KEY_INFO_DISPLAY_MODE, prefs.infoDisplayMode);
   window.dispatchEvent(new CustomEvent(UI_PREFS_UPDATED_EVENT));
 }
 
@@ -80,7 +80,9 @@ async function savePrefsToDB(): Promise<void> {
 
     const { updateUIPreferences } = await import("../../lib/firebaseService");
     const prefs = getPreferencesForFirebase();
-    await updateUIPreferences(uid, prefs);
+    // Cast to the types expected by Firestore
+    const prefsForDB = prefs as any;
+    await updateUIPreferences(uid, prefsForDB);
     console.log("[uiPreferences] Saved to Firebase:", prefs);
   } catch (err) {
     console.warn("[uiPreferences] Failed to save to DB:", err);

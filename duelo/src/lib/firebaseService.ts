@@ -210,8 +210,7 @@ async function ensurePlayerProfileForMatch(uid: string): Promise<void> {
     onlineStatus: "online",
     // Include default UI preferences
     uiPreferences: {
-      hideInfoTexts: false,
-      useConfirmButton: true,
+      infoDisplayMode: 0,  // SHOW_INFO
     },
   };
 
@@ -269,8 +268,7 @@ export async function findPlayerByCode(
 /** Returns default UI preferences for new players. */
 function getDefaultUIPreferences(): UIPreferences {
   return {
-    hideInfoTexts: false,
-    useConfirmButton: true,
+    infoDisplayMode: 0,  // SHOW_INFO
   };
 }
 
@@ -281,8 +279,7 @@ export async function updateUIPreferences(
 ): Promise<void> {
   await updateDoc(doc(db, "players", uid), {
     uiPreferences: {
-      hideInfoTexts: prefs.hideInfoTexts,
-      useConfirmButton: prefs.useConfirmButton,
+      infoDisplayMode: prefs.infoDisplayMode,
     },
     lastSeen: Date.now(),
   } as Record<string, unknown>);

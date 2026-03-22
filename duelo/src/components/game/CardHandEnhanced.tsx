@@ -14,8 +14,9 @@ import type { CardType } from "../../types";
 import {
   UI_PREFS_UPDATED_EVENT,
   getUIPreferences,
-  setHideInfoTexts,
-  setUseConfirmButton,
+  setInfoDisplayMode,
+  INFO_DISPLAY_MODES,
+  type InfoDisplayMode,
 } from "./uiPreferences";
 
 const CARD_DETAILS: Record<
@@ -404,7 +405,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
   );
 
   const confirmButtonEnabled =
-    prefs.useConfirmButton &&
+    prefs.infoDisplayMode !== INFO_DISPLAY_MODES.HIDE_ALL &&
     phase === "selecting" &&
     player.selectedCard !== null;
 
@@ -427,7 +428,6 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
         : "text-emerald-400";
 
   const handleConfirm = () => {
-    if (!prefs.useConfirmButton) return;
     if (!player.selectedCard || phase !== "selecting") return;
 
     if (!isOnline) {
@@ -457,19 +457,31 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
     }
   };
 
-  const shouldShowInfoPanel = !prefs.hideInfoTexts && !!player.selectedCard;
+  // Determine what should be shown based on info display mode
+  const shouldShowInfoText = prefs.infoDisplayMode === INFO_DISPLAY_MODES.SHOW_INFO;
+  const shouldShowButton = prefs.infoDisplayMode !== INFO_DISPLAY_MODES.HIDE_ALL;
+  const shouldShowInfoPanel = shouldShowButton && !!player.selectedCard;
   const selectedCard = player.selectedCard;
 
+  const getToggleModeLabel = (): string => {
+    switch (prefs.infoDisplayMode) {
+      case INFO_DISPLAY_MODES.SHOW_INFO:
+        return "Apenas botão";
+      case INFO_DISPLAY_MODES.BUTTON_ONLY:
+        return "Ocultar info";
+      case INFO_DISPLAY_MODES.HIDE_ALL:
+        return "Mostrar info";
+      default:
+        return "Alternar";
+    }
+  };
+
   const toggleInfoAndConfirm = () => {
-    const showingInfos = !prefs.hideInfoTexts;
-    const nextHideInfos = showingInfos;
-    const nextUseConfirm = !nextHideInfos;
-    setHideInfoTexts(nextHideInfos);
-    setUseConfirmButton(nextUseConfirm);
+    const nextMode = ((prefs.infoDisplayMode + 1) % 3) as InfoDisplayMode;
+    setInfoDisplayMode(nextMode);
     setPrefs((prev) => ({
       ...prev,
-      hideInfoTexts: nextHideInfos,
-      useConfirmButton: nextUseConfirm,
+      infoDisplayMode: nextMode,
     }));
   };
 
@@ -531,16 +543,18 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
                 exit={{ opacity: 0, y: 8 }}
                 className="mb-2 flex flex-col md:flex-row items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/35 backdrop-blur-md"
               >
-                <div className="flex-1 text-center md:text-left">
-                  <h3 className="font-western text-gold mb-0.5 text-sm md:text-base">
-                    {CARD_DETAILS[selectedCard].label}
-                  </h3>
-                  <p className="font-stats text-sand/75 text-[11px] md:text-sm">
-                    {CARD_DETAILS[selectedCard].description}
-                  </p>
-                </div>
+                {shouldShowInfoText && (
+                  <div className="flex-1 text-center md:text-left">
+                    <h3 className="font-western text-gold mb-0.5 text-sm md:text-base">
+                      {CARD_DETAILS[selectedCard].label}
+                    </h3>
+                    <p className="font-stats text-sand/75 text-[11px] md:text-sm">
+                      {CARD_DETAILS[selectedCard].description}
+                    </p>
+                  </div>
+                )}
 
-                {prefs.useConfirmButton && (
+                {shouldShowButton && (
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.96 }}
@@ -559,7 +573,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
             )}
           </AnimatePresence>
 
-          {!prefs.hideInfoTexts && (
+          {shouldShowInfoText && (
             <div className="text-center mb-2">
               <p className="font-stats text-sand/45 text-[10px] md:text-xs uppercase tracking-wider">
                 Dicas: clique, duplo clique para jogar, ou arraste e solte
@@ -626,7 +640,7 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
               onClick={toggleInfoAndConfirm}
               className="px-3 py-1 rounded-md border border-gold/35 bg-black/40 text-gold/90 font-stats text-[10px] md:text-xs uppercase tracking-widest"
             >
-              {prefs.hideInfoTexts ? "Mostrar infos" : "Ocultar infos"}
+              {getToggleModeLabel()}
             </button>
           </div>
         </div>
