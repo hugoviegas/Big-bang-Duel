@@ -210,7 +210,7 @@ async function ensurePlayerProfileForMatch(uid: string): Promise<void> {
     onlineStatus: "online",
     // Include default UI preferences
     uiPreferences: {
-      infoDisplayMode: 0,  // SHOW_INFO
+      infoDisplayMode: 0, // SHOW_INFO
     },
   };
 
@@ -268,7 +268,7 @@ export async function findPlayerByCode(
 /** Returns default UI preferences for new players. */
 function getDefaultUIPreferences(): UIPreferences {
   return {
-    infoDisplayMode: 0,  // SHOW_INFO
+    infoDisplayMode: 0, // SHOW_INFO
   };
 }
 

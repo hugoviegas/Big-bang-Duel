@@ -4,12 +4,13 @@ const KEY_INFO_DISPLAY_MODE = "bbd-ui-info-display-mode";
 
 // Info display modes
 export const INFO_DISPLAY_MODES = {
-  SHOW_INFO: 0,     // Mostra dicas, descrição da carta e botão confirmar
-  BUTTON_ONLY: 1,   // Apenas botão de confirmar
-  HIDE_ALL: 2,      // Esconde tudo
+  SHOW_INFO: 0, // Mostra dicas, descrição da carta e botão confirmar
+  BUTTON_ONLY: 1, // Apenas botão de confirmar
+  HIDE_ALL: 2, // Esconde tudo
 } as const;
 
-export type InfoDisplayMode = (typeof INFO_DISPLAY_MODES)[keyof typeof INFO_DISPLAY_MODES];
+export type InfoDisplayMode =
+  (typeof INFO_DISPLAY_MODES)[keyof typeof INFO_DISPLAY_MODES];
 
 export interface UIPreferences {
   infoDisplayMode: InfoDisplayMode;
@@ -27,9 +28,16 @@ function setNumber(key: string, value: number): void {
 }
 
 export function getUIPreferences(): UIPreferences {
-  const modeNum = getNumber(KEY_INFO_DISPLAY_MODE, INFO_DISPLAY_MODES.SHOW_INFO);
+  const modeNum = getNumber(
+    KEY_INFO_DISPLAY_MODE,
+    INFO_DISPLAY_MODES.SHOW_INFO,
+  );
   // Ensure it's a valid mode (0, 1, or 2)
-  const validMode = (modeNum === 0 || modeNum === 1 || modeNum === 2 ? modeNum : INFO_DISPLAY_MODES.SHOW_INFO) as InfoDisplayMode;
+  const validMode = (
+    modeNum === 0 || modeNum === 1 || modeNum === 2
+      ? modeNum
+      : INFO_DISPLAY_MODES.SHOW_INFO
+  ) as InfoDisplayMode;
   return {
     infoDisplayMode: validMode,
   };

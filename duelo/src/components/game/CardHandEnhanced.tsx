@@ -458,8 +458,10 @@ export function CardHandEnhanced({ onPause }: CardHandEnhancedProps) {
   };
 
   // Determine what should be shown based on info display mode
-  const shouldShowInfoText = prefs.infoDisplayMode === INFO_DISPLAY_MODES.SHOW_INFO;
-  const shouldShowButton = prefs.infoDisplayMode !== INFO_DISPLAY_MODES.HIDE_ALL;
+  const shouldShowInfoText =
+    prefs.infoDisplayMode === INFO_DISPLAY_MODES.SHOW_INFO;
+  const shouldShowButton =
+    prefs.infoDisplayMode !== INFO_DISPLAY_MODES.HIDE_ALL;
   const shouldShowInfoPanel = shouldShowButton && !!player.selectedCard;
   const selectedCard = player.selectedCard;
 
