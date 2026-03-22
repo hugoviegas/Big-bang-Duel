@@ -74,14 +74,16 @@
   gap: 6px;
   position: relative;
   z-index: 10;
-  box-shadow: 
+  box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Make sure browsers that don't support env() still have a sensible layout */
 @supports not (padding: env(safe-area-inset-top)) {
-  .top-bar { padding-top: 16px; }
+  .top-bar {
+    padding-top: 16px;
+  }
 }
 
 /* ── Avatar Ring ──────────────────────────────────────────── */
