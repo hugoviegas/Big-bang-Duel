@@ -4,6 +4,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInAnonymously,
+  signInWithPopup,
+  GoogleAuthProvider,
   updateProfile,
 } from "firebase/auth";
 import { auth } from "../../lib/firebase";
@@ -192,6 +194,32 @@ export function LoginScreen() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setErrorMsg("");
+
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      // The root Firebase auth listener is the single source of truth for
+      // session state and profile hydration/creation.
+      navigate("/menu", { replace: true });
+    } catch (error: unknown) {
+      console.error("Google login error:", error);
+      const code =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string"
+          ? error.code
+          : "";
+      setErrorMsg(getAuthErrorMessage(code));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   function getAuthErrorMessage(code: string): string {
     switch (code) {
       case "auth/email-already-in-use":
@@ -208,6 +236,17 @@ export function LoginScreen() {
         return "Muitas tentativas. Tente novamente mais tarde.";
       case "auth/operation-not-allowed":
         return "Método de login não habilitado. Contate o suporte.";
+      case "auth/popup-closed-by-user":
+      case "auth/cancelled-popup-request":
+        return "Login cancelado. Tente novamente quando estiver pronto.";
+      case "auth/popup-blocked":
+        return "O navegador bloqueou a janela de login. Permita pop-ups e tente novamente.";
+      case "auth/unauthorized-domain":
+        return "Este endereço não está autorizado para login. Contate o suporte.";
+      case "auth/account-exists-with-different-credential":
+        return "Este email já usa outro método de login. Entre com o método original.";
+      case "auth/network-request-failed":
+        return "Não foi possível conectar ao serviço de login. Verifique sua internet.";
       default:
         return "Erro ao autenticar. Tente novamente.";
     }
@@ -342,7 +381,12 @@ export function LoginScreen() {
         </button>
 
         {/* Google OAuth */}
-        <button className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all font-stats font-bold text-gray-700 shadow-md hover:shadow-lg">
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={isSubmitting}
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all font-stats font-bold text-gray-700 shadow-md hover:shadow-lg disabled:opacity-60"
+        >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -361,7 +405,7 @@ export function LoginScreen() {
               fill="#EA4335"
             />
           </svg>
-          Entrar com Google
+          {isSubmitting ? "ENTRANDO..." : "Entrar com Google"}
         </button>
       </div>
     </div>

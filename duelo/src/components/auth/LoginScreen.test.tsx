@@ -7,6 +7,7 @@ import { LoginScreen } from "./LoginScreen";
 const mockNavigate = vi.fn();
 const mockSetUser = vi.fn();
 const mockSignInWithEmailAndPassword = vi.fn();
+const mockSignInWithPopup = vi.fn();
 const mockCreateUserWithEmailAndPassword = vi.fn();
 const mockSignInAnonymously = vi.fn();
 const mockUpdateProfile = vi.fn();
@@ -29,6 +30,8 @@ vi.mock("firebase/auth", () => ({
     mockCreateUserWithEmailAndPassword(...args),
   signInWithEmailAndPassword: (...args: unknown[]) =>
     mockSignInWithEmailAndPassword(...args),
+  signInWithPopup: (...args: unknown[]) => mockSignInWithPopup(...args),
+  GoogleAuthProvider: class GoogleAuthProvider {},
   signInAnonymously: (...args: unknown[]) => mockSignInAnonymously(...args),
   updateProfile: (...args: unknown[]) => mockUpdateProfile(...args),
 }));
@@ -160,6 +163,79 @@ describe("LoginScreen", () => {
           isGuest: true,
         }),
       );
+      expect(mockNavigate).toHaveBeenCalledWith("/menu", { replace: true });
+    });
+  });
+
+  it("logs in with Google from an explicit click without creating a profile", async () => {
+    mockSignInWithPopup.mockResolvedValue({
+      user: {
+        uid: "google-uid",
+        email: "google@test.com",
+        displayName: "Google Player",
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <LoginScreen />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Entrar com Google" }));
+
+    await waitFor(() => {
+      expect(mockSignInWithPopup).toHaveBeenCalledWith(
+        { app: "test-auth" },
+        expect.anything(),
+      );
+      expect(mockNavigate).toHaveBeenCalledWith("/menu", { replace: true });
+    });
+    expect(mockCreatePlayerProfile).not.toHaveBeenCalled();
+  });
+
+  it("shows a friendly message when Google login is cancelled", async () => {
+    mockSignInWithPopup.mockRejectedValue({
+      code: "auth/popup-closed-by-user",
+    });
+
+    render(
+      <MemoryRouter>
+        <LoginScreen />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Entrar com Google" }));
+
+    expect(
+      await screen.findByText(
+        "Login cancelado. Tente novamente quando estiver pronto.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("prevents repeated Google submissions while the request is pending", async () => {
+    let resolveLogin: (() => void) | undefined;
+    mockSignInWithPopup.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveLogin = resolve;
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <LoginScreen />
+      </MemoryRouter>,
+    );
+
+    const googleButton = screen.getByRole("button", { name: "Entrar com Google" });
+    fireEvent.click(googleButton);
+    fireEvent.click(googleButton);
+
+    expect(mockSignInWithPopup).toHaveBeenCalledTimes(1);
+
+    resolveLogin?.();
+    await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/menu", { replace: true });
     });
   });
