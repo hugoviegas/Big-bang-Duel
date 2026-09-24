@@ -76,6 +76,8 @@ interface AuthState {
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
   setLoading: (isLoading: boolean) => void;
   logout: () => void;
+  /** Removes the current anonymous guest identity without touching permanent accounts. */
+  resetGuestSession: () => Promise<void>;
   /** Ensures the user has a Firestore profile with a unique player code. */
   ensureProfile: () => Promise<void>;
   /** Returns a PlayerProfile snapshot of the current user. */
@@ -245,6 +247,30 @@ export const useAuthStore = create<AuthState>()(
           _profileEnsuredAt: 0,
         });
         localStorage.removeItem("bbd-auth-storage"); // Force clear on logout
+      },
+      resetGuestSession: async () => {
+        const currentUser = get().user;
+        if (!currentUser || !currentUser.isGuest) return;
+
+        try {
+          const anyWindow = globalThis as GlobalWithProfileUnsub;
+          if (anyWindow.__bbd_profile_unsub) {
+            anyWindow.__bbd_profile_unsub();
+            anyWindow.__bbd_profile_unsub = null;
+          }
+          setOnlinePresence(currentUser.uid, "offline");
+          await signOut(auth);
+        } catch (error) {
+          void error;
+        }
+
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          _profileEnsuredAt: 0,
+        });
+        localStorage.removeItem("bbd-auth-storage");
       },
 
       ensureProfile: async () => {

@@ -9,7 +9,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { toggleMute, isMuted } = useSound();
-  const { user, setUser } = useAuthStore();
+  const { user, setUser, resetGuestSession } = useAuthStore();
   const [tempName, setTempName] = useState(user?.displayName || '');
 
   useEffect(() => {
@@ -108,8 +108,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* Guest Registration */}
           {user?.isGuest && (
             <div className="bg-black/40 px-4 py-3 rounded-xl border border-red-west/30 mt-4">
-              <h3 className="font-western text-gold mb-2 tracking-wider">SALVAR CONTA</h3>
-              <p className="text-xs font-stats text-sand/70 mb-3">Sua conta de convidado expira em 7 dias. Cadastre-se para não perder seu progresso!</p>
+              <h3 className="font-western text-gold mb-2 tracking-wider">SAVE PROGRESS</h3>
+              <p className="text-xs font-stats text-sand/70 mb-3">Guest progress is stored locally for this browser. Link a permanent account to keep it safe.</p>
               <form 
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -123,7 +123,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       ...rest,
                       email: target.email.value,
                     });
-                    alert('Conta registrada com sucesso!');
+                    alert('Your guest progress is ready to be linked to a permanent account.');
                   }
                 }}
                 className="space-y-2"
@@ -132,7 +132,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   type="email" 
                   name="email"
                   required
-                  placeholder="Seu email" 
+                  placeholder="Your email" 
                   className="w-full input-parchment py-1.5 px-3 text-sm"
                 />
                 <input 
@@ -140,13 +140,25 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   name="password"
                   required
                   minLength={6}
-                  placeholder="Senha (min 6 char)" 
+                  placeholder="Password (min 6 chars)" 
                   className="w-full input-parchment py-1.5 px-3 text-sm"
                 />
                 <button type="submit" className="w-full btn-western text-xs py-1.5 mt-2 bg-green-800 hover:bg-green-700">
-                  REGISTRAR CONTA
+                  SAVE PROGRESS
                 </button>
               </form>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Reset the current guest session? This only clears the anonymous guest identity.')) {
+                    void resetGuestSession();
+                    onClose();
+                  }
+                }}
+                className="w-full mt-3 btn-western btn-danger py-1.5 text-xs"
+              >
+                RESET GUEST SESSION
+              </button>
             </div>
           )}
         </div>

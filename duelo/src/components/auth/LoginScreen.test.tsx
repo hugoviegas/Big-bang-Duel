@@ -10,6 +10,7 @@ const mockSignInWithEmailAndPassword = vi.fn();
 const mockSignInWithPopup = vi.fn();
 const mockCreateUserWithEmailAndPassword = vi.fn();
 const mockSignInAnonymously = vi.fn();
+const mockSendPasswordResetEmail = vi.fn();
 const mockUpdateProfile = vi.fn();
 const mockGenerateUniquePlayerCode = vi.fn();
 const mockCreatePlayerProfile = vi.fn();
@@ -33,6 +34,7 @@ vi.mock("firebase/auth", () => ({
   signInWithPopup: (...args: unknown[]) => mockSignInWithPopup(...args),
   GoogleAuthProvider: class GoogleAuthProvider {},
   signInAnonymously: (...args: unknown[]) => mockSignInAnonymously(...args),
+  sendPasswordResetEmail: (...args: unknown[]) => mockSendPasswordResetEmail(...args),
   updateProfile: (...args: unknown[]) => mockUpdateProfile(...args),
 }));
 
@@ -164,6 +166,39 @@ describe("LoginScreen", () => {
         }),
       );
       expect(mockNavigate).toHaveBeenCalledWith("/menu", { replace: true });
+    });
+  });
+
+  it("shows the guest and password-reset entry points", () => {
+    render(
+      <MemoryRouter>
+        <LoginScreen />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/Play as Guest/i)).toBeInTheDocument();
+    expect(screen.getByText(/Forgot password/i)).toBeInTheDocument();
+  });
+
+  it("resets a password with the configured Firebase flow", async () => {
+    mockSendPasswordResetEmail.mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <LoginScreen />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("pistoleiro@oeste.com"), {
+      target: { value: "user@test.com" },
+    });
+    fireEvent.click(screen.getByText(/Forgot password/i));
+
+    await waitFor(() => {
+      expect(mockSendPasswordResetEmail).toHaveBeenCalledWith(
+        { app: "test-auth" },
+        "user@test.com",
+      );
     });
   });
 

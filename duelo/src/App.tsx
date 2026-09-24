@@ -35,6 +35,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function GuestRestrictedRoute({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  const isGuest = !!user?.isGuest;
+
+  if (isGuest) {
+    return <Navigate to="/menu" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 /** Wraps a page in MobileLayout + ProtectedRoute */
 function MobilePage({ children }: { children: React.ReactNode }) {
   return (
@@ -204,9 +215,11 @@ function App() {
         <Route
           path="/online"
           element={
-            <MobilePage>
-              <OnlinePage />
-            </MobilePage>
+            <GuestRestrictedRoute>
+              <MobilePage>
+                <OnlinePage />
+              </MobilePage>
+            </GuestRestrictedRoute>
           }
         />
         <Route
@@ -228,9 +241,11 @@ function App() {
         <Route
           path="/leaderboard"
           element={
-            <MobilePage>
-              <LeaderboardPage />
-            </MobilePage>
+            <GuestRestrictedRoute>
+              <MobilePage>
+                <LeaderboardPage />
+              </MobilePage>
+            </GuestRestrictedRoute>
           }
         />
         <Route
@@ -244,17 +259,21 @@ function App() {
         <Route
           path="/profile"
           element={
-            <MobilePage>
-              <ProfilePage />
-            </MobilePage>
+            <GuestRestrictedRoute>
+              <MobilePage>
+                <ProfilePage />
+              </MobilePage>
+            </GuestRestrictedRoute>
           }
         />
         <Route
           path="/profile/:uid"
           element={
-            <MobilePage>
-              <ProfilePage />
-            </MobilePage>
+            <GuestRestrictedRoute>
+              <MobilePage>
+                <ProfilePage />
+              </MobilePage>
+            </GuestRestrictedRoute>
           }
         />
         <Route
@@ -268,25 +287,31 @@ function App() {
         <Route
           path="/friends"
           element={
-            <MobilePage>
-              <FriendsPage />
-            </MobilePage>
+            <GuestRestrictedRoute>
+              <MobilePage>
+                <FriendsPage />
+              </MobilePage>
+            </GuestRestrictedRoute>
           }
         />
         <Route
           path="/match-history"
           element={
-            <MobilePage>
-              <MatchHistoryPage />
-            </MobilePage>
+            <GuestRestrictedRoute>
+              <MobilePage>
+                <MatchHistoryPage />
+              </MobilePage>
+            </GuestRestrictedRoute>
           }
         />
         <Route
           path="/shop"
           element={
-            <MobilePage>
-              <ShopPage />
-            </MobilePage>
+            <GuestRestrictedRoute>
+              <MobilePage>
+                <ShopPage />
+              </MobilePage>
+            </GuestRestrictedRoute>
           }
         />
         <Route
