@@ -84,6 +84,71 @@ npm run test:ci
 
 ---
 
+## 📸 Visual QA Harness (Playwright)
+
+Screenshots of every route and three solo-battle states at six viewports
+(320×640, 375×812, 768×1024, 1024×768, 1440×900, 844×390). Each redesign
+ticket uses it for before/after evidence.
+
+### Commands
+
+```bash
+cd duelo
+npx playwright install chromium   # first time only
+npm run test:visual               # compare against baselines
+npm run test:visual:update        # rewrite baselines
+npx playwright show-report        # browse diffs after a failed run
+```
+
+- Specs: `e2e/visual/screens.visual.ts`. Fixtures (auth seeding, battle states, viewports): `e2e/visual/fixtures.ts`.
+- Baselines: `e2e/__screenshots__/<screen>-<WxH>-<platform>.png`. Baselines are per OS (`win32`, `linux`, `darwin`) because font rendering differs. On a new OS run `npm run test:visual:update` once.
+- `npm run test:e2e` runs only the `chromium` smoke project. `test:visual` runs only the `visual` project.
+- Baselines record the current UI, defects included. A visual ticket updates them in the same PR.
+
+### Auth bypass (test-only)
+
+The `visual` project starts its own dev server: `vite --mode visual` on port 4174. That mode loads `duelo/.env.visual`:
+
+- `VITE_VISUAL_HARNESS=true` turns the harness on.
+- `VITE_FIREBASE_*` hold a fake `demo-bbd-visual` project. No real credentials, and no `.env` is needed on a clean clone.
+
+When `import.meta.env.DEV && VITE_VISUAL_HARNESS === "true"`:
+
+1. `src/main.tsx` imports `src/lib/visualHarness.ts`. It disables Firestore and RTDB networking, skips framer-motion animations and exposes the stores on `window.__BBD_VISUAL__`.
+2. `src/App.tsx` skips the `onAuthStateChanged` listener.
+3. The fixtures write a fixture user into the persisted `bbd-auth-storage` localStorage key, so `ProtectedRoute` lets the page render.
+
+Real auth is untouched. `vite build` sets `DEV` to false, so both branches and the harness module are dropped from production bundles, even with `VITE_VISUAL_HARNESS` set. To check:
+
+```bash
+npm run build
+grep -rE "__BBD_VISUAL__|visualHarness" dist   # expect no output
+```
+
+### Determinism
+
+- Clock fixed at `2026-01-15T15:00-03:00`. `Math.random` is seeded. Locale is `pt-BR` and the timezone `America/Sao_Paulo`.
+- Every request except `127.0.0.1` and Google Fonts is aborted. Firestore-driven values show the empty offline state, for example "Falha ao computar recompensa" on Game Over.
+- `/assets/audio/*` returns 204, since the audio files are missing (D3).
+- CSS animations are disabled at capture time. Dust particles are masked. Lazy images are forced to load. Chromium runs with `--disable-checker-imaging` so large icons paint in the same frame.
+
+### Sessions and screens
+
+- `login` is shot logged out, with no auth seed.
+- All other routes are shot as an authenticated user.
+- Routes guests can open (`menu`, `characters`, `missions`, `achievements`) get an extra `-guest` shot.
+- `game-direct` loads `/game` with no match, which currently redirects to `/menu`.
+- `battle-selecting`, `battle-animating` and `battle-game-over` seed `gameStore` through `window.__BBD_VISUAL__` and open `/game` client-side.
+
+### Attaching before/after screenshots to a ticket
+
+1. On `main` (before), run `npm run test:visual` and confirm it passes. The committed baselines are the "before".
+2. On the ticket branch, make the change and run `npm run test:visual`. Failing screens show the diff in `test-results/**/<screen>-{expected,actual,diff}.png`.
+3. Run `npm run test:visual:update` and commit the changed baselines with the ticket.
+4. In the PR, list the affected screens with each `expected` (before) and `actual` (after) image, or link the changed files under `e2e/__screenshots__/` (GitHub shows an image diff).
+
+---
+
 ## 📁 Test File Structure
 
 ```
