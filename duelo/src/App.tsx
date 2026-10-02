@@ -97,6 +97,12 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Visual QA harness (dev server only): the Playwright fixtures seed the
+    // persisted auth store, so skip the listener that would clear it.
+    if (import.meta.env.DEV && import.meta.env.VITE_VISUAL_HARNESS === "true") {
+      return;
+    }
+
     // Listen to Firebase Auth state changes.
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       const store = useAuthStore.getState();
