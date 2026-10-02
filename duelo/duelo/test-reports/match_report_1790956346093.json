@@ -1,0 +1,638 @@
+{
+  "meta": {
+    "personaA": "aggressor",
+    "personaB": "punisher",
+    "mode": "advanced",
+    "turns": 8
+  },
+  "final": {
+    "botA": {
+      "life": 0,
+      "ammo": 2
+    },
+    "botB": {
+      "life": 3,
+      "ammo": 0
+    }
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "botA": {
+        "chosen": "dodge",
+        "lifeBefore": 3,
+        "lifeAfter": 3,
+        "ammoBefore": 0,
+        "ammoAfter": 0,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.7058823529411765
+            },
+            {
+              "card": "dodge",
+              "probability": 0.29411764705882354
+            }
+          ],
+          "confidence": 0
+        },
+        "evScores": {
+          "reload": -0.20749999999999996,
+          "dodge": 0.0075
+        },
+        "notes": [
+          "Dodge wasted vs dry opponent"
+        ]
+      },
+      "botB": {
+        "chosen": "reload",
+        "lifeBefore": 3,
+        "lifeAfter": 3,
+        "ammoBefore": 0,
+        "ammoAfter": 1,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.7058823529411765
+            },
+            {
+              "card": "dodge",
+              "probability": 0.29411764705882354
+            }
+          ],
+          "confidence": 0
+        },
+        "evScores": {
+          "reload": 0.04411764705882353,
+          "dodge": -0.10588235294117647
+        },
+        "notes": []
+      },
+      "result": {
+        "turn": 1,
+        "playerCard": "dodge",
+        "opponentCard": "reload",
+        "playerLifeLost": 0,
+        "opponentLifeLost": 0,
+        "playerAmmoChange": 0,
+        "opponentAmmoChange": 1,
+        "narrative": "Você desviou do vento, oponente recarregou!",
+        "playerShieldUsed": false,
+        "opponentShieldUsed": false,
+        "playerDoubleShotReloaded": false,
+        "opponentDoubleShotReloaded": false
+      }
+    },
+    {
+      "turn": 2,
+      "botA": {
+        "chosen": "reload",
+        "lifeBefore": 3,
+        "lifeAfter": 2,
+        "ammoBefore": 0,
+        "ammoAfter": 1,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.3883495145631068
+            },
+            {
+              "card": "shot",
+              "probability": 0.3398058252427184
+            },
+            {
+              "card": "dodge",
+              "probability": 0.17475728155339804
+            },
+            {
+              "card": "counter",
+              "probability": 0.0970873786407767
+            }
+          ],
+          "confidence": 0.15
+        },
+        "evScores": {
+          "reload": 0.03865979381443299,
+          "dodge": -0.11134020618556702
+        },
+        "notes": []
+      },
+      "botB": {
+        "chosen": "shot",
+        "lifeBefore": 3,
+        "lifeAfter": 3,
+        "ammoBefore": 1,
+        "ammoAfter": 0,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.7422680412371134
+            },
+            {
+              "card": "dodge",
+              "probability": 0.2577319587628866
+            }
+          ],
+          "confidence": 0.15
+        },
+        "evScores": {
+          "reload": 0.05,
+          "shot": 0.4166666666666667,
+          "dodge": -0.1,
+          "counter": -0.25
+        },
+        "notes": [
+          "Good attack vs dry opponent"
+        ]
+      },
+      "result": {
+        "turn": 2,
+        "playerCard": "reload",
+        "opponentCard": "shot",
+        "playerLifeLost": 1,
+        "opponentLifeLost": 0,
+        "playerAmmoChange": 1,
+        "opponentAmmoChange": -1,
+        "narrative": "Atingido na recarga! Mas você ainda conseguiu recarregar!",
+        "playerShieldUsed": false,
+        "opponentShieldUsed": false,
+        "playerDoubleShotReloaded": false,
+        "opponentDoubleShotReloaded": false
+      }
+    },
+    {
+      "turn": 3,
+      "botA": {
+        "chosen": "counter",
+        "lifeBefore": 2,
+        "lifeAfter": 2,
+        "ammoBefore": 1,
+        "ammoAfter": 0,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.7058823529411764
+            },
+            {
+              "card": "dodge",
+              "probability": 0.29411764705882354
+            }
+          ],
+          "confidence": 0.3
+        },
+        "evScores": {
+          "reload": 0.03865979381443299,
+          "shot": 0.48092783505154646,
+          "dodge": -0.11134020618556702,
+          "counter": -0.261340206185567
+        },
+        "notes": []
+      },
+      "botB": {
+        "chosen": "reload",
+        "lifeBefore": 3,
+        "lifeAfter": 3,
+        "ammoBefore": 0,
+        "ammoAfter": 1,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.4173913043478261
+            },
+            {
+              "card": "shot",
+              "probability": 0.3652173913043478
+            },
+            {
+              "card": "dodge",
+              "probability": 0.13043478260869565
+            },
+            {
+              "card": "counter",
+              "probability": 0.08695652173913045
+            }
+          ],
+          "confidence": 0.3
+        },
+        "evScores": {
+          "reload": 0.04411764705882353,
+          "dodge": -0.10588235294117646
+        },
+        "notes": []
+      },
+      "result": {
+        "turn": 3,
+        "playerCard": "counter",
+        "opponentCard": "reload",
+        "playerLifeLost": 0,
+        "opponentLifeLost": 0,
+        "playerAmmoChange": -1,
+        "opponentAmmoChange": 1,
+        "narrative": "Você aguardou um tiro que não veio. Ele recarregou.",
+        "playerShieldUsed": false,
+        "opponentShieldUsed": false,
+        "playerDoubleShotReloaded": false,
+        "opponentDoubleShotReloaded": false
+      }
+    },
+    {
+      "turn": 4,
+      "botA": {
+        "chosen": "dodge",
+        "lifeBefore": 2,
+        "lifeAfter": 2,
+        "ammoBefore": 0,
+        "ammoAfter": 0,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.42477876106194695
+            },
+            {
+              "card": "shot",
+              "probability": 0.30973451327433627
+            },
+            {
+              "card": "dodge",
+              "probability": 0.1592920353982301
+            },
+            {
+              "card": "counter",
+              "probability": 0.10619469026548674
+            }
+          ],
+          "confidence": 0.44999999999999996
+        },
+        "evScores": {
+          "reload": -0.8931818181818182,
+          "dodge": -0.29318181818181815
+        },
+        "notes": []
+      },
+      "botB": {
+        "chosen": "shot",
+        "lifeBefore": 3,
+        "lifeAfter": 3,
+        "ammoBefore": 1,
+        "ammoAfter": 0,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.7755834829443448
+            },
+            {
+              "card": "dodge",
+              "probability": 0.22441651705565532
+            }
+          ],
+          "confidence": 0.44999999999999996
+        },
+        "evScores": {
+          "reload": 0.04411764705882353,
+          "shot": 3.9794117647058824,
+          "dodge": -0.10588235294117646,
+          "counter": -0.25588235294117645
+        },
+        "notes": [
+          "Good attack vs dry opponent"
+        ]
+      },
+      "result": {
+        "turn": 4,
+        "playerCard": "dodge",
+        "opponentCard": "shot",
+        "playerLifeLost": 0,
+        "opponentLifeLost": 0,
+        "playerAmmoChange": 0,
+        "opponentAmmoChange": -1,
+        "narrative": "Belo desvio! A bala passou raspando!",
+        "playerShieldUsed": false,
+        "opponentShieldUsed": false,
+        "playerDoubleShotReloaded": false,
+        "opponentDoubleShotReloaded": false
+      }
+    },
+    {
+      "turn": 5,
+      "botA": {
+        "chosen": "dodge",
+        "lifeBefore": 2,
+        "lifeAfter": 2,
+        "ammoBefore": 0,
+        "ammoAfter": 0,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.7058823529411764
+            },
+            {
+              "card": "dodge",
+              "probability": 0.29411764705882354
+            }
+          ],
+          "confidence": 0.6
+        },
+        "evScores": {
+          "reload": 0.03571428571428571,
+          "dodge": -0.11428571428571427
+        },
+        "notes": [
+          "Dodge wasted vs dry opponent"
+        ]
+      },
+      "botB": {
+        "chosen": "reload",
+        "lifeBefore": 3,
+        "lifeAfter": 3,
+        "ammoBefore": 0,
+        "ammoAfter": 1,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.7619047619047619
+            },
+            {
+              "card": "dodge",
+              "probability": 0.2380952380952381
+            }
+          ],
+          "confidence": 0.6
+        },
+        "evScores": {
+          "reload": 0.04411764705882353,
+          "dodge": -0.10588235294117646
+        },
+        "notes": []
+      },
+      "result": {
+        "turn": 5,
+        "playerCard": "dodge",
+        "opponentCard": "reload",
+        "playerLifeLost": 0,
+        "opponentLifeLost": 0,
+        "playerAmmoChange": 0,
+        "opponentAmmoChange": 1,
+        "narrative": "Você desviou do vento, oponente recarregou!",
+        "playerShieldUsed": false,
+        "opponentShieldUsed": false,
+        "playerDoubleShotReloaded": false,
+        "opponentDoubleShotReloaded": false
+      }
+    },
+    {
+      "turn": 6,
+      "botA": {
+        "chosen": "reload",
+        "lifeBefore": 2,
+        "lifeAfter": 1,
+        "ammoBefore": 0,
+        "ammoAfter": 1,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.36832412523020264
+            },
+            {
+              "card": "shot",
+              "probability": 0.32228360957642727
+            },
+            {
+              "card": "dodge",
+              "probability": 0.1988950276243094
+            },
+            {
+              "card": "counter",
+              "probability": 0.11049723756906078
+            }
+          ],
+          "confidence": 0.75
+        },
+        "evScores": {
+          "reload": -0.3455980066445183,
+          "dodge": -0.012209302325581385
+        },
+        "notes": []
+      },
+      "botB": {
+        "chosen": "shot",
+        "lifeBefore": 3,
+        "lifeAfter": 3,
+        "ammoBefore": 1,
+        "ammoAfter": 0,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.7755834829443448
+            },
+            {
+              "card": "dodge",
+              "probability": 0.22441651705565532
+            }
+          ],
+          "confidence": 0.75
+        },
+        "evScores": {
+          "reload": -0.17918968692449355,
+          "shot": 3.570534069981584,
+          "dodge": 0.009668508287292814,
+          "counter": 1.7933701657458565
+        },
+        "notes": [
+          "Good attack vs dry opponent"
+        ]
+      },
+      "result": {
+        "turn": 6,
+        "playerCard": "reload",
+        "opponentCard": "shot",
+        "playerLifeLost": 1,
+        "opponentLifeLost": 0,
+        "playerAmmoChange": 1,
+        "opponentAmmoChange": -1,
+        "narrative": "Atingido na recarga! Mas você ainda conseguiu recarregar!",
+        "playerShieldUsed": false,
+        "opponentShieldUsed": false,
+        "playerDoubleShotReloaded": false,
+        "opponentDoubleShotReloaded": false
+      }
+    },
+    {
+      "turn": 7,
+      "botA": {
+        "chosen": "dodge",
+        "lifeBefore": 1,
+        "lifeAfter": 1,
+        "ammoBefore": 1,
+        "ammoAfter": 1,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.608695652173913
+            },
+            {
+              "card": "dodge",
+              "probability": 0.3913043478260869
+            }
+          ],
+          "confidence": 0.8999999999999999
+        },
+        "evScores": {
+          "reload": 0.042993630573248405,
+          "shot": 0.4563694267515923,
+          "dodge": -0.10700636942675158,
+          "counter": -0.2570063694267516
+        },
+        "notes": [
+          "Dodge wasted vs dry opponent"
+        ]
+      },
+      "botB": {
+        "chosen": "reload",
+        "lifeBefore": 3,
+        "lifeAfter": 3,
+        "ammoBefore": 0,
+        "ammoAfter": 1,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.462762111352133
+            },
+            {
+              "card": "shot",
+              "probability": 0.32393347794649313
+            },
+            {
+              "card": "dodge",
+              "probability": 0.14099783080260306
+            },
+            {
+              "card": "counter",
+              "probability": 0.0723065798987708
+            }
+          ],
+          "confidence": 0.8999999999999999
+        },
+        "evScores": {
+          "reload": 4.88771021992238,
+          "dodge": 4.976228978007762
+        },
+        "notes": []
+      },
+      "result": {
+        "turn": 7,
+        "playerCard": "dodge",
+        "opponentCard": "reload",
+        "playerLifeLost": 0,
+        "opponentLifeLost": 0,
+        "playerAmmoChange": 0,
+        "opponentAmmoChange": 1,
+        "narrative": "Você desviou do vento, oponente recarregou!",
+        "playerShieldUsed": false,
+        "opponentShieldUsed": false,
+        "playerDoubleShotReloaded": false,
+        "opponentDoubleShotReloaded": false
+      }
+    },
+    {
+      "turn": 8,
+      "botA": {
+        "chosen": "reload",
+        "lifeBefore": 1,
+        "lifeAfter": 0,
+        "ammoBefore": 1,
+        "ammoAfter": 2,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.31360836288967703
+            },
+            {
+              "card": "shot",
+              "probability": 0.4116109762927011
+            },
+            {
+              "card": "dodge",
+              "probability": 0.18144483852902746
+            },
+            {
+              "card": "counter",
+              "probability": 0.09333582228859437
+            }
+          ],
+          "confidence": 1
+        },
+        "evScores": {
+          "reload": -0.513782765119068,
+          "shot": -0.13072640054822687,
+          "dodge": 0.02903888984067158,
+          "counter": 0.3323539489463765
+        },
+        "notes": []
+      },
+      "botB": {
+        "chosen": "shot",
+        "lifeBefore": 3,
+        "lifeAfter": 3,
+        "ammoBefore": 1,
+        "ammoAfter": 0,
+        "oppDistribution": {
+          "cards": [
+            {
+              "card": "reload",
+              "probability": 0.5363960887785193
+            },
+            {
+              "card": "shot",
+              "probability": 0.2346732888406022
+            },
+            {
+              "card": "dodge",
+              "probability": 0.15132702157380104
+            },
+            {
+              "card": "counter",
+              "probability": 0.07760360080707746
+            }
+          ],
+          "confidence": 1
+        },
+        "evScores": {
+          "reload": 5.052702702702703,
+          "shot": 34.590540540540545,
+          "dodge": 4.902702702702703,
+          "counter": 4.752702702702703
+        },
+        "notes": []
+      },
+      "result": {
+        "turn": 8,
+        "playerCard": "reload",
+        "opponentCard": "shot",
+        "playerLifeLost": 1,
+        "opponentLifeLost": 0,
+        "playerAmmoChange": 1,
+        "opponentAmmoChange": -1,
+        "narrative": "Atingido na recarga! Mas você ainda conseguiu recarregar!",
+        "playerShieldUsed": false,
+        "opponentShieldUsed": false,
+        "playerDoubleShotReloaded": false,
+        "opponentDoubleShotReloaded": false
+      }
+    }
+  ]
+}

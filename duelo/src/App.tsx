@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
+import { Analytics } from "@vercel/analytics/react";
 import { auth } from "./lib/firebase";
 import { loadStrategies } from "./lib/strategyLoader";
 import IndexPage from "./pages/index";
@@ -325,6 +326,7 @@ function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <Analytics />
     </AssetPreloader>
   );
 }
