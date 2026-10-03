@@ -20,13 +20,13 @@ Instructions for AI coding agents working on Big Bang Duel. Rules are labelled *
 
 ## Design system rules
 
-- **Active now:** keep the Western look in `duelo/DESIGN_SYSTEM.md` and the references in `Inspiration_images/`. Existing color/font names stay valid.
+- **Active now:** keep the Western look in `duelo/docs/archive/DESIGN_SYSTEM.md` and the references in `Inspiration_images/`. Existing color/font names stay valid.
 - **Active after T05:** colors, spacing and type come from semantic tokens in `tokens.css`. No new hardcoded hex values in components. Legacy token names remain as aliases (D1).
 - **Active after T07–T10:** build screens from primitives in `src/ui`. Do not add one-off buttons, cards or modals.
 
 ## Responsive rules
 
-- **Active now:** mobile-first. Keep safe-area handling (`duelo/NOTCH_SAFE_AREA.md`).
+- **Active now:** mobile-first. Keep safe-area handling (`duelo/docs/archive/NOTCH_SAFE_AREA.md`).
 - **Active after T11:** components size themselves with container queries, not viewport breakpoints.
 - **Active after T11:** at ≥1024 px non-battle pages render inside the desktop app frame with a side rail (D2). Battle pages are excluded.
 

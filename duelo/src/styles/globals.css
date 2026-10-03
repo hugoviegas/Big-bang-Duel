@@ -43,6 +43,12 @@
   --color-btn-brown: #4a2010;
   --color-nav-bg: #1e0e06;
 
+  /* Breakpoints — small-phone steps below the default sm (40rem).
+     rem keeps them sorted with Tailwind's defaults: 360px, 375px, 390px. */
+  --breakpoint-360: 22.5rem;
+  --breakpoint-xs: 23.4375rem;
+  --breakpoint-390: 24.375rem;
+
   /* Fonts */
   --font-family-western: "Rye", serif;
   --font-family-marker: "Permanent Marker", cursive;
